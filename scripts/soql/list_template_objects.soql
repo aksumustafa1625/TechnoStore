@@ -1,0 +1,1 @@
+SELECT QualifiedApiName, Label FROM EntityDefinition WHERE QualifiedApiName LIKE '%Template%' AND (QualifiedApiName LIKE '%Doc%' OR QualifiedApiName LIKE '%Contract%' OR QualifiedApiName LIKE '%Generat%') ORDER BY QualifiedApiName

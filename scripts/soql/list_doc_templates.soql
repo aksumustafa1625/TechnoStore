@@ -1,0 +1,1 @@
+SELECT Id, Name, Status, Type, UsageType, IsActive FROM DocumentTemplate ORDER BY CreatedDate DESC

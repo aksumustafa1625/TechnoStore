@@ -1,0 +1,1 @@
+SELECT ContextDefinitionVersion.ContextDefinition.DeveloperName, ContextDefinitionVersion.VersionNumber, ContextDefinitionVersion.IsActive, Title FROM ContextMapping WHERE Title LIKE '%ToCntr%' ORDER BY Title

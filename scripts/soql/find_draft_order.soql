@@ -1,0 +1,1 @@
+SELECT Id, OrderNumber, Status, AccountId, ContractId FROM Order WHERE Status = 'Draft' ORDER BY CreatedDate DESC LIMIT 5
