@@ -1,0 +1,1 @@
+SELECT Id, Name, Type, IsActive, ConfigureDuringSale, BasedOnId, BasedOn.Name, Family, StockKeepingUnit, SpecificationType, UsageModelType, IsAssetizable FROM Product2 WHERE Id IN ('01taj00000QmKgdAAF','01taj00000Qp7IFAAZ','01taj00000QmKgcAAF','01taj00000QmKgeAAF') ORDER BY Name

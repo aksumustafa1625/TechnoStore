@@ -1,0 +1,1 @@
+SELECT Id, DeveloperName, MasterLabel, DisplayName, InheritedFrom, ClonedFrom FROM ContextDefinition WHERE DeveloperName LIKE '%Contract%' OR DeveloperName LIKE '%Sales%' OR DeveloperName LIKE '%Order%' OR MasterLabel LIKE '%Contract%'

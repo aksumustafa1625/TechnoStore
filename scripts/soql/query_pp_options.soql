@@ -1,0 +1,1 @@
+SELECT Id, ProcedurePlanSectionId, ExpressionSetDefinitionId, ExpressionSetApiName, PrimaryObject, Priority, DecisionTableId, ApexClassId FROM ProcedurePlanOption

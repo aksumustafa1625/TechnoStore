@@ -1,0 +1,1 @@
+SELECT Id, Name, UniqueName, LastModifiedDate FROM CalculationProcedure WHERE Name IN ('Product Discovery Pricing Procedure','Revenue Management Default Pricing Procedure V1')

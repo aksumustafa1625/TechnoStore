@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Name__c</fullName>
+    <label>Contract Name</label>
+    <description>Contract Name field to support Order to Contract mapping. This field will be populated from Order.Name when creating contracts from orders.</description>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <externalId>false</externalId>
+    <unique>false</unique>
+    <caseSensitive>false</caseSensitive>
+</CustomField>

@@ -1,0 +1,1 @@
+SELECT ProductId, Product.Name, Product.IsActive, ProductCategory.Name FROM ProductCategoryProduct WHERE ProductCategory.Catalog.Name = 'TechStore Electronics Catalog' AND ProductCategory.Name = 'Laptop'

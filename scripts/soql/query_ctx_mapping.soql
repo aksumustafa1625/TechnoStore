@@ -1,0 +1,1 @@
+SELECT Id, Title, Description, IsDefault, InheritedFrom FROM ContextMapping WHERE ContextDefinitionVersionId = '11paj00000PUcCjAAL'

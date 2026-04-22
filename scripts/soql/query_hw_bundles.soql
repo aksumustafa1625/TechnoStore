@@ -1,0 +1,1 @@
+SELECT Id, Name, ProductCode, IsActive, Type FROM Product2 WHERE Name LIKE '%Bundle%' OR Name LIKE '%Laptop Basic%' OR Name LIKE '%Laptop Pro%' ORDER BY Name

@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "attributes": {"type": "ProductConfigurationFlow", "referenceId": "ConfigFlowRef1"},
+      "FlowIdentifier": "TechStore_Product_Configurator",
+      "Status": "Active",
+      "IsDefault": true
+    }
+  ]
+}

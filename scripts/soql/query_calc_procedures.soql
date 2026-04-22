@@ -1,0 +1,1 @@
+SELECT Id, Name, UniqueName, MigrationStatus FROM CalculationProcedure ORDER BY Name

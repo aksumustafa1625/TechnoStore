@@ -1,0 +1,1 @@
+SELECT Id, ApiName, Label, ProcessType, IsActive, IsTemplate, NamespacePrefix FROM FlowDefinitionView WHERE ProcessType = 'Flow' AND IsActive = true ORDER BY NamespacePrefix, ApiName LIMIT 200

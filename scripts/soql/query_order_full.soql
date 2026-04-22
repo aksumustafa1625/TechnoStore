@@ -1,0 +1,1 @@
+SELECT Id, Name, OrderNumber, AccountId, Account.Name, Account.AccountNumber, BillToContactId, ShipToContactId, QuoteId, ContractId, Status, TotalAmount, OrderReferenceNumber, PoNumber, Type, Description, EffectiveDate, EndDate FROM Order WHERE Id = '801aj00002XQcC5AAL'

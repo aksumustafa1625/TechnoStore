@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOMemory" },
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXJAA0",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 1
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOStorage" },
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXNAA0",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 2
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOProcessor" },
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXMAA0",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 3
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOScreenSize" },
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXHAA0",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 4
+    }
+  ]
+}

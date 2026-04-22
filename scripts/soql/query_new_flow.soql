@@ -1,0 +1,1 @@
+SELECT Id, DurableId, ApiName, Label, ProcessType, IsActive, IsTemplate FROM FlowDefinitionView WHERE Label LIKE '%TechStore%'

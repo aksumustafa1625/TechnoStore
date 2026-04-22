@@ -1,0 +1,1 @@
+SELECT Id, ContextDefinitionId, ContextDefinition.DeveloperName, VersionNumber, IsActive FROM ContextDefinitionVersion WHERE ContextDefinition.DeveloperName = 'Custom_ContractsContext' ORDER BY VersionNumber DESC

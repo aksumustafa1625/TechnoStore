@@ -1,0 +1,1 @@
+SELECT Id, ContextAttribute.Title, ContextAttribute.FieldType, ContextAttribute.IsKey, ContextInputAttributeName FROM ContextAttributeMapping WHERE ContextNodeMappingId = '11baj00000Hqm6uAAB' ORDER BY ContextAttribute.Title

@@ -1,0 +1,1 @@
+SELECT Q.Id, Q.Name, Q.Status, Q.AccountId, Q.Account.Name, Q.GrandTotal, (SELECT Id FROM Contracts) FROM Quote Q ORDER BY Q.CreatedDate DESC LIMIT 10

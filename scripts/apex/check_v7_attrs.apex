@@ -1,0 +1,4 @@
+// Check what version my attribute patches landed on, and what v7 actually has
+for (ContextAttributeMapping am : [SELECT Id, ContextAttribute.Title, ContextInputAttributeName, ContextNodeMapping.Object, ContextNodeMapping.ContextMapping.Title, ContextNodeMapping.ContextMapping.ContextDefinitionVersion.VersionNumber, ContextNodeMapping.ContextMapping.ContextDefinitionVersion.IsActive FROM ContextAttributeMapping WHERE ContextAttribute.Title = 'Name' AND ContextNodeMapping.ContextMapping.Title LIKE '%ToCntr%']) {
+    System.debug('Attr='+am.Id+' | '+am.ContextNodeMapping.Object+' | title=Name | input='+am.ContextInputAttributeName+' | mapping='+am.ContextNodeMapping.ContextMapping.Title+' | v='+am.ContextNodeMapping.ContextMapping.ContextDefinitionVersion.VersionNumber+' | active='+am.ContextNodeMapping.ContextMapping.ContextDefinitionVersion.IsActive);
+}

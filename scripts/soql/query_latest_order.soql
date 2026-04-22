@@ -1,0 +1,1 @@
+SELECT Id, Name, OrderNumber, AccountId, Account.Name, QuoteId, Quote.Name, Status, TotalAmount, ContractId, EffectiveDate, EndDate FROM Order ORDER BY CreatedDate DESC LIMIT 5

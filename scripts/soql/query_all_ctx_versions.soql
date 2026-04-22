@@ -1,0 +1,1 @@
+SELECT Id, ContextDefinition.DeveloperName, VersionNumber, IsActive FROM ContextDefinitionVersion ORDER BY ContextDefinition.DeveloperName, VersionNumber

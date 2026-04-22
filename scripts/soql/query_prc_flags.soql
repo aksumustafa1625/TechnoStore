@@ -1,0 +1,1 @@
+SELECT Id, ChildProduct.Name, ParentProduct.Name, IsComponentRequired, IsDefaultComponent FROM ProductRelatedComponent ORDER BY ParentProduct.Name, Sequence

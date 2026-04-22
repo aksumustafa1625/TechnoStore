@@ -1,0 +1,1 @@
+SELECT Id, OrderNumber, Status, ContractId, TotalAmount, AccountId, Account.Name FROM Order WHERE TotalAmount = 149 ORDER BY CreatedDate DESC LIMIT 5

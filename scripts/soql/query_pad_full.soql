@@ -1,0 +1,1 @@
+SELECT Id, Name, Product2.Name, AttributeDefinitionId, AttributeDefinition.Name, ProductClassificationAttributeId, IsRequired, Sequence FROM ProductAttributeDefinition WHERE Product2.Name = 'Laptop Pro Bundle' ORDER BY Sequence

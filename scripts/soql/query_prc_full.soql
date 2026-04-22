@@ -1,0 +1,1 @@
+SELECT Id, ParentProduct.Name, ChildProduct.Name, ProductComponentGroupId, ProductComponentGroup.Name, Quantity, MinQuantity, MaxQuantity, DoesBundlePriceIncludeChild, QuantityScaleMethod FROM ProductRelatedComponent WHERE ParentProduct.Name = 'Home Office Bundle' ORDER BY Sequence

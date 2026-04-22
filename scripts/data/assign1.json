@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignLaptop"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78DEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+SELECT Id, Title, ContextDefinitionVersionId, ContextDefinitionVersion.ContextDefinition.DeveloperName, ContextDefinitionVersion.VersionNumber, ContextDefinitionVersion.IsActive, IsDefault FROM ContextMapping WHERE Title LIKE '%Quote%' OR Title LIKE '%Cntr%' ORDER BY Title

@@ -1,0 +1,1 @@
+SELECT Id, Name, ContractId, Product2Id, Quantity, TotalPrice FROM SalesContractLine WHERE ContractId = '800aj00002YeMRqAAN'

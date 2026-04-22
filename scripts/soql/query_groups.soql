@@ -1,0 +1,1 @@
+SELECT Id, Name, ParentProduct.Name, MinBundleComponents, MaxBundleComponents FROM ProductComponentGroup ORDER BY ParentProduct.Name, Name

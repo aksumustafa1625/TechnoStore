@@ -1,0 +1,1 @@
+SELECT ProductId, Product.Name, Product.ProductCode FROM ProductCategoryProduct WHERE ProductCategory.Catalog.Name = 'TechStore Electronics Catalog' AND ProductId NOT IN (SELECT Product2Id FROM PricebookEntry WHERE Pricebook2.IsStandard = true AND IsActive = true)

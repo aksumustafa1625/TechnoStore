@@ -1,0 +1,1 @@
+SELECT Id, Name, UniqueName FROM CalculationProcedure WHERE Name LIKE '%Pricing%' OR Name LIKE '%Revenue%' ORDER BY Name LIMIT 20

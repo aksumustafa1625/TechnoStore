@@ -1,0 +1,19 @@
+{
+  "records": [
+    {"attributes": {"type": "PricebookEntry", "referenceId": "HO_Vol"}, "Pricebook2Id": "01saj00000JJ3VVAA1", "Product2Id": "01taj00000Qp7IFAAZ", "UnitPrice": 1279.20, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "HO_Par"}, "Pricebook2Id": "01saj00000JJ3X7AAL", "Product2Id": "01taj00000Qp7IFAAZ", "UnitPrice": 1119.30, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "HO_Emp"}, "Pricebook2Id": "01saj00000JJ3YjAAL", "Product2Id": "01taj00000Qp7IFAAZ", "UnitPrice": 959.40, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "CS_Vol"}, "Pricebook2Id": "01saj00000JJ3VVAA1", "Product2Id": "01taj00000Qp7IHAAZ", "UnitPrice": 1159.20, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "CS_Par"}, "Pricebook2Id": "01saj00000JJ3X7AAL", "Product2Id": "01taj00000Qp7IHAAZ", "UnitPrice": 1014.30, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "CS_Emp"}, "Pricebook2Id": "01saj00000JJ3YjAAL", "Product2Id": "01taj00000Qp7IHAAZ", "UnitPrice": 869.40, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "GS_Vol"}, "Pricebook2Id": "01saj00000JJ3VVAA1", "Product2Id": "01taj00000Qp7IEAAZ", "UnitPrice": 879.20, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "GS_Par"}, "Pricebook2Id": "01saj00000JJ3X7AAL", "Product2Id": "01taj00000Qp7IEAAZ", "UnitPrice": 769.30, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "GS_Emp"}, "Pricebook2Id": "01saj00000JJ3YjAAL", "Product2Id": "01taj00000Qp7IEAAZ", "UnitPrice": 659.40, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "NS_Vol"}, "Pricebook2Id": "01saj00000JJ3VVAA1", "Product2Id": "01taj00000Qp7IIAAZ", "UnitPrice": 799.20, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "NS_Par"}, "Pricebook2Id": "01saj00000JJ3X7AAL", "Product2Id": "01taj00000Qp7IIAAZ", "UnitPrice": 699.30, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "NS_Emp"}, "Pricebook2Id": "01saj00000JJ3YjAAL", "Product2Id": "01taj00000Qp7IIAAZ", "UnitPrice": 599.40, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "SH_Vol"}, "Pricebook2Id": "01saj00000JJ3VVAA1", "Product2Id": "01taj00000Qp7IGAAZ", "UnitPrice": 223.20, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "SH_Par"}, "Pricebook2Id": "01saj00000JJ3X7AAL", "Product2Id": "01taj00000Qp7IGAAZ", "UnitPrice": 195.30, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"},
+    {"attributes": {"type": "PricebookEntry", "referenceId": "SH_Emp"}, "Pricebook2Id": "01saj00000JJ3YjAAL", "Product2Id": "01taj00000Qp7IGAAZ", "UnitPrice": 167.40, "IsActive": true, "ProductSellingModelId": "0jPaj000000EWphEAG"}
+  ]
+}

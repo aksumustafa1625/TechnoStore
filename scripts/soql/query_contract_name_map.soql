@@ -1,0 +1,1 @@
+SELECT Id, ContextInputAttributeName, ContextNodeMappingId, ContextAttributeId, InheritedFrom, Description FROM ContextAttributeMapping WHERE ContextNodeMappingId IN ('11jaj000036uLCsAAM', '11jaj000036uLCvAAM')

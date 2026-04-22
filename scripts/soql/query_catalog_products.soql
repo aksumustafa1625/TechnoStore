@@ -1,0 +1,1 @@
+SELECT Id, Name, ProductCode, IsActive FROM Product2 WHERE IsActive = true ORDER BY Name LIMIT 20

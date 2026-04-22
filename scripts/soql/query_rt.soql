@@ -1,0 +1,1 @@
+SELECT Id, DeveloperName, Name, SobjectType, IsActive FROM RecordType WHERE SobjectType = 'Contract' OR SobjectType = 'Order' OR SobjectType = 'Quote' OR SobjectType = 'Opportunity' ORDER BY SobjectType

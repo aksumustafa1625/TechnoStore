@@ -1,0 +1,1 @@
+SELECT Id, OrderId, Product2Id, Product2.Name, PricebookEntryId, PricebookEntry.Name, Quantity, UnitPrice, TotalPrice, Description, ServiceDate, EndDate FROM OrderItem WHERE OrderId = '801aj00002XQcC5AAL'

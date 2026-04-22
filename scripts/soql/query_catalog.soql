@@ -1,0 +1,1 @@
+SELECT Id, Name, CatalogType, EffectiveStartDate, EffectiveEndDate FROM ProductCatalog

@@ -1,0 +1,92 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOMemory" },
+      "Name": "Home Office Bundle-Memory",
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXJAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBNEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 1
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOStorage" },
+      "Name": "Home Office Bundle-Storage",
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXNAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBOEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 2
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOProcessor" },
+      "Name": "Home Office Bundle-Processor",
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXMAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBPEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 3
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "HOScreenSize" },
+      "Name": "Home Office Bundle-Screen Size",
+      "Product2Id": "01taj00000Qp7IFAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXHAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBREAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 4
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "CSMemory" },
+      "Name": "Creator Studio Bundle-Memory",
+      "Product2Id": "01taj00000Qp7IHAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXJAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBNEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 1
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "CSStorage" },
+      "Name": "Creator Studio Bundle-Storage",
+      "Product2Id": "01taj00000Qp7IHAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXNAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBOEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 2
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "CSProcessor" },
+      "Name": "Creator Studio Bundle-Processor",
+      "Product2Id": "01taj00000Qp7IHAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXMAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBPEAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 3
+    },
+    {
+      "attributes": { "type": "ProductAttributeDefinition", "referenceId": "CSScreenSize" },
+      "Name": "Creator Studio Bundle-Screen Size",
+      "Product2Id": "01taj00000Qp7IHAAZ",
+      "AttributeDefinitionId": "0tjaj000000FbXHAA0",
+      "ProductClassificationAttributeId": "11Caj00003zgbBREAY",
+      "IsRequired": false,
+      "IsHidden": false,
+      "IsReadOnly": false,
+      "Sequence": 4
+    }
+  ]
+}

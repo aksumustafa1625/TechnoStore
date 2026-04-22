@@ -1,0 +1,1 @@
+SELECT Id, Name, ContractId, Product2Id, Quantity, TotalPrice FROM SalesContractLine WHERE ContractId IN ('800aj00002YgU9xAAF','800aj00002YgUBZAA3','800aj00002YfNDmAAN','800aj00002YfjKvAAJ','800aj00002YMuuRAAT','800aj00002YM0JKAA1') ORDER BY ContractId LIMIT 20

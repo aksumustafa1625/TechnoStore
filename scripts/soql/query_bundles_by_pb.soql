@@ -1,0 +1,1 @@
+SELECT Product2.Name, Pricebook2.Name, UnitPrice, IsActive, ProductSellingModelId FROM PricebookEntry WHERE Product2.Type = 'Bundle' AND Product2.Name IN ('Home Office Bundle','Creator Studio Bundle','Gaming Starter Pack','Network Security Kit','Smart Home Starter','Laptop Basic Bundle','Laptop Pro Bundle','Printer Bundle') ORDER BY Product2.Name, Pricebook2.Name

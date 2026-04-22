@@ -1,0 +1,1 @@
+SELECT Id, Name, Pricebook2Id, Pricebook2.Name, LastModifiedDate FROM Quote ORDER BY LastModifiedDate DESC LIMIT 5

@@ -1,0 +1,1 @@
+SELECT Id, ContextAttribute.Title, ContextInputAttributeName, ContextNodeMapping.Object, ContextNodeMapping.ContextMapping.Title, ContextNodeMapping.ContextMapping.ContextDefinitionVersion.ContextDefinition.DeveloperName FROM ContextAttributeMapping WHERE ContextAttribute.Title = 'Name' ORDER BY ContextNodeMapping.ContextMapping.Title

@@ -1,0 +1,1 @@
+SELECT Id, ContextMapping.Title, Object, ContextNodeId, MappedContextDefinition FROM ContextNodeMapping WHERE ContextMapping.Title IN ('QuoteToCntrHydrationMapping','QuoteToCntrPersistenceMapping','OrderToCntrHydrationMapping','OrderToCntrPersistenceMapping') AND ContextMapping.ContextDefinitionVersion.IsActive = true

@@ -1,0 +1,1 @@
+SELECT Id, Title, DataType, FieldType, IsKey, IsValue, ContextNodeId, DisplayName, InheritedFrom FROM ContextAttribute WHERE Title = 'Name' LIMIT 50

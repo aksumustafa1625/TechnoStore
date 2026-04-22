@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "ProductConfigFlowAssignment", "referenceId": "AssignBundle" },
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000016PWgfEAG",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    }
+  ]
+}

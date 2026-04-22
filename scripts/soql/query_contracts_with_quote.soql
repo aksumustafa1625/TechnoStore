@@ -1,0 +1,1 @@
+SELECT Id, ContractNumber, SourceQuoteId, Status FROM Contract WHERE SourceQuoteId != null ORDER BY CreatedDate DESC LIMIT 10

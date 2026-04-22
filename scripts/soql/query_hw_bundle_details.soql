@@ -1,0 +1,1 @@
+SELECT Id, ParentProduct.Name, ChildProduct.Name, ProductComponentGroupId, Quantity, IsComponentRequired, IsDefaultComponent FROM ProductRelatedComponent WHERE ParentProductId IN ('01taj00000QmKgcAAF','01taj00000QmKgdAAF','01taj00000QmKgeAAF','01taj00000QmKh0AAF') ORDER BY ParentProduct.Name, Sequence

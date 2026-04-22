@@ -1,0 +1,1 @@
+SELECT CalculationProcedure.Name, VersionNumber, IsEnabled FROM CalculationProcedureVersion ORDER BY CalculationProcedure.Name

@@ -1,0 +1,1 @@
+SELECT Product2.Name, Pricebook2.Name, UnitPrice, IsActive, ProductSellingModelId FROM PricebookEntry WHERE Product2.Name IN ('Home Office Bundle', 'TechNova ProBook 15', 'Monitor 24" IPS', 'Wireless Combo Set', 'Microsoft 365 Personal', 'TechCover 1 Yıl') AND Pricebook2.Name = 'TechStore Summer Campaign' ORDER BY Product2.Name

@@ -1,0 +1,1 @@
+SELECT Id, ContractNumber, Status, AccountId, Account.Name, SourceQuoteId, StartDate, EndDate, ContractTerm FROM Contract WHERE Id = '800aj00002YM0JKAA1'

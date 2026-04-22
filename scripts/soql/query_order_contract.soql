@@ -1,0 +1,1 @@
+SELECT Id, OrderNumber, Status, ContractId, Contract.ContractNumber, Contract.Status FROM Order WHERE Id = '801aj00002XQcC5AAL'

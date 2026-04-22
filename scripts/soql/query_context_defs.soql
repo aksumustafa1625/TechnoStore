@@ -1,0 +1,1 @@
+SELECT Id, DeveloperName, MasterLabel, NamespacePrefix FROM ContextDefinition ORDER BY DeveloperName

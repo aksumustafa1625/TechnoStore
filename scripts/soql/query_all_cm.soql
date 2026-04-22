@@ -1,0 +1,1 @@
+SELECT Id, Title, ContextDefinitionVersion.ContextDefinition.DeveloperName, ContextDefinitionVersion.VersionNumber, ContextDefinitionVersion.IsActive FROM ContextMapping ORDER BY ContextDefinitionVersion.ContextDefinition.DeveloperName, Title

@@ -1,0 +1,1 @@
+SELECT Id, ApiName, Label, ProcessType, IsActive FROM FlowDefinitionView WHERE Label LIKE '%Configurator%'

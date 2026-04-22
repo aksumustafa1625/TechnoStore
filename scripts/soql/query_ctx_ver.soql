@@ -1,0 +1,1 @@
+SELECT Id, ContextDefinitionId, VersionNumber, IsActive, StartDate, EndDate FROM ContextDefinitionVersion WHERE ContextDefinitionId = '11Oaj000000xL21EAE'

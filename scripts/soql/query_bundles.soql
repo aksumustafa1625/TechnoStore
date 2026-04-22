@@ -1,0 +1,1 @@
+SELECT ParentProduct.Name, ChildProduct.Name, ChildProductClassification.Name, Quantity, MaxQuantity FROM ProductRelatedComponent ORDER BY ParentProduct.Name LIMIT 100

@@ -1,0 +1,1 @@
+SELECT Id, ContextInputAttributeName, ContextNodeMappingId, ContextAttributeId, InheritedFrom FROM ContextAttributeMapping WHERE ContextNodeMappingId IN ('11jaj000036uLCrAAM', '11jaj000036uLCuAAM') LIMIT 20

@@ -1,0 +1,1 @@
+SELECT Id, Name, Product2Id, Product2.Name, ProductSellingModelId, ProductSellingModel.Name, ProductSellingModel.SellingModelType FROM ProductSellingModelOption WHERE Product2.Name = 'ActionCam X3 Waterproof'

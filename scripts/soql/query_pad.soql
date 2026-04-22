@@ -1,0 +1,1 @@
+SELECT Id, Product2Id, Product2.Name, AttributeDefinitionId, AttributeDefinition.Name, IsRequired, IsHidden, IsReadOnly, Sequence FROM ProductAttributeDefinition WHERE Product2Id IN ('01taj00000QmKgdAAF','01taj00000Qp7IFAAZ') ORDER BY Product2.Name, Sequence

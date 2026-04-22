@@ -1,0 +1,1 @@
+SELECT Pricebook2.Name, COUNT(Id) cnt FROM PricebookEntry WHERE IsActive = true AND ProductSellingModelId != null GROUP BY Pricebook2.Name

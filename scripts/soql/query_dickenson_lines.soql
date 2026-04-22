@@ -1,0 +1,1 @@
+SELECT Id, QuoteId, LineNumber, Product2.Name, Quantity FROM QuoteLineItem WHERE QuoteId = '0Q0aj00000247wDCAQ' LIMIT 10

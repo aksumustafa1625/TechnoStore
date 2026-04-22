@@ -1,0 +1,1 @@
+SELECT Id, Name, Status, AccountId, Account.Name FROM Quote WHERE AccountId != null AND CreatedDate = LAST_N_DAYS:2 ORDER BY CreatedDate DESC LIMIT 5

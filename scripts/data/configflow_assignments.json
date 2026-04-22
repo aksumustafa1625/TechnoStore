@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignLaptop"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78DEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignTablet"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78FEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignWorkstation"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78EEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignExternalMonitor"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78GEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignGamingMonitor"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78HEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignPremiumSupport"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78LEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    },
+    {
+      "attributes": {"type": "ProductConfigFlowAssignment", "referenceId": "AssignWarrantyService"},
+      "ProductConfigurationFlowId": "127aj000000DNEvAAO",
+      "ProductClassificationId": "11Baj000015O78KEAS",
+      "AssignmentType": "PrimaryConfiguratorFlow"
+    }
+  ]
+}

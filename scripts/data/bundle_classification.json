@@ -1,0 +1,10 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "ProductClassification", "referenceId": "BundleClassRef" },
+      "Name": "Bundle Container",
+      "Code": "BUNDLE_CONTAINER",
+      "Status": "Active"
+    }
+  ]
+}

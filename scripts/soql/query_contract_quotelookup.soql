@@ -1,0 +1,1 @@
+SELECT Id, ContractNumber, SourceQuoteId, AccountId, Account.Name, Status, CreatedDate FROM Contract ORDER BY CreatedDate DESC LIMIT 5

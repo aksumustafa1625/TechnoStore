@@ -1,0 +1,1 @@
+SELECT Id, ContextAttribute.Title, ContextInputAttributeName, ContextNodeMapping.Object, ContextNodeMapping.ContextMapping.Title FROM ContextAttributeMapping WHERE ContextAttribute.Title = 'Name' AND ContextNodeMapping.ContextMapping.Title LIKE '%ToCntr%'

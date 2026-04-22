@@ -1,0 +1,1 @@
+SELECT Product2.Name, Pricebook2.Name, UnitPrice, IsActive, ProductSellingModelId FROM PricebookEntry WHERE Product2Id IN ('01taj00000QnnlNAAR','01taj00000QnnlOAAR','01taj00000QnnlPAAR','01taj00000QnnlQAAR','01taj00000QnnlRAAR') AND Pricebook2.Name = 'TechStore Summer Campaign'

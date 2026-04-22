@@ -1,0 +1,1 @@
+SELECT ProductId, Product.Name, Product.ProductCode FROM ProductCategoryProduct WHERE ProductCategory.Catalog.Name = 'TechStore Electronics Catalog' AND ProductId NOT IN (SELECT Product2Id FROM PricebookEntry WHERE Pricebook2.Name = 'TechStore Summer Campaign' AND IsActive = true AND ProductSellingModelId != null) ORDER BY Product.Name LIMIT 200

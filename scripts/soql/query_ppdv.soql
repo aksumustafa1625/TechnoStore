@@ -1,0 +1,1 @@
+SELECT Id, DeveloperName, ContextDefinition, IsActive, EffectiveFrom, EffectiveTo, ProcedurePlanDefinitionId FROM ProcedurePlanDefinitionVersion

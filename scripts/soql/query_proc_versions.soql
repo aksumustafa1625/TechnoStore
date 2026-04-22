@@ -1,0 +1,1 @@
+SELECT Id, CalculationProcedure.Name, VersionNumber, IsEnabled, StartDateTime, EndDateTime FROM CalculationProcedureVersion WHERE CalculationProcedure.Name IN ('Product Discovery Pricing Procedure','Revenue Management Default Pricing Procedure V1') ORDER BY CalculationProcedure.Name, VersionNumber

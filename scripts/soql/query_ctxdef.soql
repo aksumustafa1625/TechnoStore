@@ -1,0 +1,1 @@
+SELECT Id, DeveloperName, MasterLabel, IsActive, ContextType FROM ContextDefinition WHERE DeveloperName LIKE '%BrowseProducts%' OR MasterLabel LIKE '%Browse%'
