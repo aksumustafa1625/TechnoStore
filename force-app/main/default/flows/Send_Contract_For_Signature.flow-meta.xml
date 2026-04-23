@@ -1,36 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
-    <actionCalls>
-        <name>Submit_Action</name>
-        <label>Submit for Approval</label>
-        <locationX>50</locationX>
-        <locationY>566</locationY>
-        <actionName>submit</actionName>
-        <actionType>submit</actionType>
-        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
-        <inputParameters>
-            <name>objectId</name>
-            <value>
-                <elementReference>recordId</elementReference>
-            </value>
-        </inputParameters>
-        <inputParameters>
-            <name>comments</name>
-            <value>
-                <elementReference>Comments</elementReference>
-            </value>
-        </inputParameters>
-        <connector>
-            <targetReference>Success_Screen</targetReference>
-        </connector>
-        <faultConnector>
-            <targetReference>Error_Screen</targetReference>
-        </faultConnector>
-    </actionCalls>
     <apiVersion>63.0</apiVersion>
     <decisions>
-        <name>Is_Contract_Draft</name>
-        <label>Is Contract in Draft?</label>
+        <name>Is_Contract_Negotiating</name>
+        <label>Is Contract in Negotiating?</label>
         <locationX>176</locationX>
         <locationY>278</locationY>
         <defaultConnector>
@@ -44,18 +17,18 @@
                 <leftValueReference>Get_Contract.Status</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
-                    <stringValue>Draft</stringValue>
+                    <stringValue>Negotiating</stringValue>
                 </rightValue>
             </conditions>
             <connector>
-                <targetReference>Comments_Screen</targetReference>
+                <targetReference>Signer_Email_Screen</targetReference>
             </connector>
             <label>Yes</label>
         </rules>
     </decisions>
-    <description>Submits the current Contract record to the Standard_Contract_Approval process. Validates Status=Draft before submitting. Bypasses the broken CLM Submit for Approval state action.</description>
-    <interviewLabel>Submit Contract for Approval {!$Flow.CurrentDateTime}</interviewLabel>
-    <label>Submit Contract for Approval</label>
+    <description>Sends the Contract for e-signature: validates Status=Negotiating, captures signer email, transitions Contract to Awaiting Signature. Bypasses the broken CLM Send for Signature state action.</description>
+    <interviewLabel>Send Contract for Signature {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Send Contract for Signature</label>
     <processMetadataValues>
         <name>BuilderType</name>
         <value>
@@ -82,7 +55,7 @@
         <locationY>134</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>Is_Contract_Draft</targetReference>
+            <targetReference>Is_Contract_Negotiating</targetReference>
         </connector>
         <filterLogic>and</filterLogic>
         <filters>
@@ -96,18 +69,57 @@
         <object>Contract</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
+    <recordUpdates>
+        <name>Update_Contract_Status</name>
+        <label>Update Contract to Awaiting Signature</label>
+        <locationX>50</locationX>
+        <locationY>566</locationY>
+        <connector>
+            <targetReference>Success_Screen</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Error_Screen</targetReference>
+        </faultConnector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </filters>
+        <inputAssignments>
+            <field>Status</field>
+            <value>
+                <stringValue>Awaiting Signature</stringValue>
+            </value>
+        </inputAssignments>
+        <object>Contract</object>
+    </recordUpdates>
     <runInMode>DefaultMode</runInMode>
     <screens>
-        <name>Comments_Screen</name>
-        <label>Submit for Approval</label>
+        <name>Signer_Email_Screen</name>
+        <label>Send for Signature</label>
         <locationX>50</locationX>
         <locationY>422</locationY>
         <allowBack>false</allowBack>
         <allowFinish>true</allowFinish>
         <allowPause>false</allowPause>
         <connector>
-            <targetReference>Submit_Action</targetReference>
+            <targetReference>Update_Contract_Status</targetReference>
         </connector>
+        <fields>
+            <name>Instructions</name>
+            <fieldText>&lt;p&gt;This will move the contract to &lt;strong&gt;Awaiting Signature&lt;/strong&gt;. Provide the signer&apos;s email below (used for notification).&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>SignerEmail</name>
+            <dataType>String</dataType>
+            <fieldText>Signer Email</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>true</isRequired>
+        </fields>
         <fields>
             <name>Comments</name>
             <fieldText>Comments (optional)</fieldText>
@@ -119,7 +131,7 @@
     </screens>
     <screens>
         <name>Wrong_Status_Screen</name>
-        <label>Cannot Submit</label>
+        <label>Cannot Send</label>
         <locationX>302</locationX>
         <locationY>422</locationY>
         <allowBack>false</allowBack>
@@ -127,7 +139,7 @@
         <allowPause>false</allowPause>
         <fields>
             <name>WrongStatusText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;Cannot submit this contract for approval.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;The contract must be in &lt;strong&gt;Draft&lt;/strong&gt; status (current status: {!Get_Contract.Status}).&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;Cannot send this contract for signature.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;The contract must be in &lt;strong&gt;Negotiating&lt;/strong&gt; status (current status: {!Get_Contract.Status}). Approve the contract first, then try again.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <showFooter>true</showFooter>
@@ -143,7 +155,7 @@
         <allowPause>false</allowPause>
         <fields>
             <name>ErrorText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;Could not submit for approval.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;{!$Flow.FaultMessage}&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;Could not send for signature.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;{!$Flow.FaultMessage}&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <showFooter>true</showFooter>
@@ -151,7 +163,7 @@
     </screens>
     <screens>
         <name>Success_Screen</name>
-        <label>Submitted</label>
+        <label>Sent</label>
         <locationX>50</locationX>
         <locationY>710</locationY>
         <allowBack>false</allowBack>
@@ -159,14 +171,14 @@
         <allowPause>false</allowPause>
         <fields>
             <name>SuccessText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;Contract submitted for approval successfully.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;The approver will be notified shortly.&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;Contract sent for signature.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Status updated to &lt;strong&gt;Awaiting Signature&lt;/strong&gt;. Notify {!SignerEmail} to sign the document.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <showFooter>true</showFooter>
         <showHeader>true</showHeader>
     </screens>
     <start>
-        <locationX>176</locationX>
+        <locationX>50</locationX>
         <locationY>0</locationY>
         <connector>
             <targetReference>Get_Contract</targetReference>

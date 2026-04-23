@@ -1,0 +1,106 @@
+﻿{
+  "status": 0,
+  "result": {
+    "checkOnly": false,
+    "completedDate": "2026-04-23T15:10:34.000Z",
+    "createdBy": "005aj00000UuoAY",
+    "createdByName": "MUSTAFA AKSU",
+    "createdDate": "2026-04-23T15:08:00.000Z",
+    "details": {
+      "componentSuccesses": [
+        {
+          "changed": false,
+          "columnNumber": 15,
+          "componentType": "Flow",
+          "created": false,
+          "createdDate": "2026-04-23T15:10:32.000Z",
+          "deleted": false,
+          "fileName": "flows/Activate_Contract_Custom.flow",
+          "fullName": "Activate_Contract_Custom",
+          "lineNumber": 227,
+          "problem": "Call_Assetize (Subflow) - The referenced flow Assetize_From_Order_Subflow has no active version. Ensure it has an active version before you activate the flow Activate Contract.",
+          "problemType": "Info",
+          "success": true
+        },
+        {
+          "changed": true,
+          "componentType": "Flow",
+          "created": false,
+          "createdDate": "2026-04-23T15:10:34.000Z",
+          "deleted": false,
+          "fileName": "flows/Activate_Contract_Custom.flow",
+          "fullName": "Activate_Contract_Custom",
+          "id": "301aj00002dE7DRAA0",
+          "success": true
+        },
+        {
+          "changed": true,
+          "componentType": "Flow",
+          "created": true,
+          "createdDate": "2026-04-23T15:10:34.000Z",
+          "deleted": false,
+          "fileName": "flows/Assetize_From_Order_Subflow.flow",
+          "fullName": "Assetize_From_Order_Subflow",
+          "id": "301aj00002dE7DSAA0",
+          "success": true
+        },
+        {
+          "changed": true,
+          "componentType": "",
+          "created": false,
+          "createdDate": "2026-04-23T15:10:34.000Z",
+          "deleted": false,
+          "fileName": "package.xml",
+          "fullName": "package.xml",
+          "success": true
+        }
+      ],
+      "runTestResult": {
+        "numFailures": 0,
+        "numTestsRun": 0,
+        "totalTime": 0,
+        "codeCoverage": [],
+        "codeCoverageWarnings": [],
+        "failures": [],
+        "flowCoverage": [],
+        "flowCoverageWarnings": [],
+        "successes": []
+      },
+      "componentFailures": []
+    },
+    "done": true,
+    "id": "0Afaj00000YqFaUCAV",
+    "ignoreWarnings": false,
+    "lastModifiedDate": "2026-04-23T15:10:34.000Z",
+    "numberComponentErrors": 0,
+    "numberComponentsDeployed": 2,
+    "numberComponentsTotal": 2,
+    "numberFiles": "4",
+    "numberTestErrors": 0,
+    "numberTestsCompleted": 0,
+    "numberTestsTotal": 0,
+    "rollbackOnError": true,
+    "runTestsEnabled": false,
+    "startDate": "2026-04-23T15:10:25.000Z",
+    "status": "Succeeded",
+    "success": true,
+    "zipSize": 3896,
+    "files": [
+      {
+        "fullName": "Activate_Contract_Custom",
+        "type": "Flow",
+        "state": "Changed",
+        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\flows\\Activate_Contract_Custom.flow-meta.xml"
+      },
+      {
+        "fullName": "Assetize_From_Order_Subflow",
+        "type": "Flow",
+        "state": "Created",
+        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\flows\\Assetize_From_Order_Subflow.flow-meta.xml"
+      }
+    ],
+    "zipFileCount": 3,
+    "deployUrl": "https://your-org.develop.my.salesforce.com/lightning/setup/DeployStatus/page?address=%2Fchangemgmt%2FmonitorDeploymentsDetails.apexp%3FasyncId%3D0Afaj00000YqFaUCAV%26retURL%3D%252Fchangemgmt%252FmonitorDeployment.apexp"
+  },
+  "warnings": []
+}

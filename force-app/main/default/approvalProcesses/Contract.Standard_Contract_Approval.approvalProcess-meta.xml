@@ -26,6 +26,12 @@
         <formula>ISPICKVAL(Status, &quot;Draft&quot;)</formula>
     </entryCriteria>
     <recordEditability>AdminOnly</recordEditability>
+    <finalApprovalActions>
+        <action>
+            <name>Set_Status_Negotiating</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
     <finalApprovalRecordLock>false</finalApprovalRecordLock>
     <finalRejectionActions>
         <action>
