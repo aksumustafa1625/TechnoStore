@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>Quote_Record_Page</members>
-        <name>FlexiPage</name>
-    </types>
-    <types>
-        <members>Quote-Quote Layout</members>
-        <name>Layout</name>
+        <members>Contract.Link_Assets_To_Contract_Custom</members>
+        <name>QuickAction</name>
     </types>
     <version>66.0</version>
 </Package>

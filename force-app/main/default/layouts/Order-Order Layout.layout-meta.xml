@@ -54,14 +54,6 @@
                 <field>TotalAmount</field>
             </layoutItems>
             <layoutItems>
-                <behavior>Readonly</behavior>
-                <field>Tax_Amount__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Readonly</behavior>
-                <field>Total_With_Tax__c</field>
-            </layoutItems>
-            <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Type</field>
             </layoutItems>
@@ -187,6 +179,9 @@
     <relatedLists>
         <fields>Name</fields>
         <relatedList>AppUsageAssignment</relatedList>
+    </relatedLists>
+    <relatedLists>
+        <relatedList>BillingSchedules</relatedList>
     </relatedLists>
     <relatedLists>
         <relatedList>RelatedEntityHistoryList</relatedList>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <actionCalls>
+        <name>Create_Billing_Schedules</name>
+        <label>Create Billing Schedules</label>
+        <locationX>176</locationX>
+        <locationY>290</locationY>
+        <actionName>createBillingSchedulesFromBillingTransaction</actionName>
+        <actionType>createBillingSchedulesFromBillingTransaction</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>billingTransactionId</name>
+            <value>
+                <elementReference>Loop_Orders.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>createBillingSchedulesFromBillingTransaction</nameSegment>
+        <offset>0</offset>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+        <connector>
+            <targetReference>Loop_Orders</targetReference>
+        </connector>
+    </actionCalls>
+    <description>Triggers when Contract.Status changes to Signed. Finds Activated Orders for the same Account and generates Billing Schedules. Replaces the obsolete Order activation-based flow so billing only starts after legal signature.</description>
+    <environments>Default</environments>
+    <interviewLabel>Contract Signed To Billing Schedule {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Contract Signed To Billing Schedule</label>
+    <loops>
+        <name>Loop_Orders</name>
+        <label>Loop Activated Orders</label>
+        <locationX>176</locationX>
+        <locationY>170</locationY>
+        <collectionReference>Get_Activated_Orders</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Create_Billing_Schedules</targetReference>
+        </nextValueConnector>
+    </loops>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_Activated_Orders</name>
+        <label>Get Activated Orders for Account</label>
+        <locationX>176</locationX>
+        <locationY>50</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Loop_Orders</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>AccountId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.AccountId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Status</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Activated</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <object>Order</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Activated_Orders</targetReference>
+        </connector>
+        <doesRequireRecordChangedToMeetCriteria>true</doesRequireRecordChangedToMeetCriteria>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Status</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Signed</stringValue>
+            </value>
+        </filters>
+        <object>Contract</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <scheduledPaths>
+            <connector>
+                <targetReference>Get_Activated_Orders</targetReference>
+            </connector>
+            <pathType>AsyncAfterCommit</pathType>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

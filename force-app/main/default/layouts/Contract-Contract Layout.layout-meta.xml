@@ -200,7 +200,7 @@
             <sortOrder>0</sortOrder>
         </platformActionListItems>
         <platformActionListItems>
-            <actionName>Contract.Send_For_Signature_Custom</actionName>
+            <actionName>Contract.Send_Via_DocuSign</actionName>
             <actionType>QuickAction</actionType>
             <sortOrder>1</sortOrder>
         </platformActionListItems>

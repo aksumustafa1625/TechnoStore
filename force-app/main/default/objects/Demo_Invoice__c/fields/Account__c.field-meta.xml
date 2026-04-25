@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account__c</fullName>
+    <label>Account</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Demo Invoices</relationshipLabel>
+    <relationshipName>Demo_Invoices</relationshipName>
+    <required>false</required>
+    <type>Lookup</type>
+</CustomField>
