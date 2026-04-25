@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <assignments>
+        <name>Set_Order_Total_Override</name>
+        <label>Set Order Total With Tax via Override</label>
+        <locationX>176</locationX>
+        <locationY>288</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.TotalAmountOverride</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>TotalWithTax</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.AdjustmentDistributionLogic</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>Proportionate</stringValue>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <description>Before-save flow: sets Order.TotalAmountOverride = TotalAmount * 1.19 so GrandTotal includes 19% tax.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>TotalWithTax</name>
+        <dataType>Number</dataType>
+        <expression>ROUND({!$Record.TotalAmount} * 1.19, 2)</expression>
+        <scale>2</scale>
+    </formulas>
+    <interviewLabel>Auto Populate Order Tax {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Auto Populate Order Tax</label>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Order_Total_Override</targetReference>
+        </connector>
+        <filterFormula>AND(NOT(ISBLANK({!$Record.TotalAmount})), {!$Record.TotalAmount} &gt; 0)</filterFormula>
+        <object>Order</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Obsolete</status>
+</Flow>

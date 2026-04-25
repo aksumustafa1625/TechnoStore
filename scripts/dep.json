@@ -2,28 +2,28 @@
   "status": 0,
   "result": {
     "checkOnly": false,
-    "completedDate": "2026-04-24T22:01:09.000Z",
+    "completedDate": "2026-04-24T23:36:55.000Z",
     "createdBy": "005aj00000UuoAY",
     "createdByName": "MUSTAFA AKSU",
-    "createdDate": "2026-04-24T22:01:07.000Z",
+    "createdDate": "2026-04-24T23:36:54.000Z",
     "details": {
       "componentSuccesses": [
         {
           "changed": true,
-          "componentType": "FlexiPage",
+          "componentType": "Layout",
           "created": false,
-          "createdDate": "2026-04-24T22:01:09.000Z",
+          "createdDate": "2026-04-24T23:36:55.000Z",
           "deleted": false,
-          "fileName": "flexipages/Quote_Record_Page.flexipage",
-          "fullName": "Quote_Record_Page",
-          "id": "0M0aj00000CRmBbCAL",
+          "fileName": "layouts/Order-Order Layout.layout",
+          "fullName": "Order-Order Layout",
+          "id": "00haj00000WMzmGAAT",
           "success": true
         },
         {
           "changed": true,
           "componentType": "",
           "created": false,
-          "createdDate": "2026-04-24T22:01:09.000Z",
+          "createdDate": "2026-04-24T23:36:55.000Z",
           "deleted": false,
           "fileName": "package.xml",
           "fullName": "package.xml",
@@ -44,9 +44,9 @@
       "componentFailures": []
     },
     "done": true,
-    "id": "0Afaj00000YutPdCAJ",
+    "id": "0Afaj00000Yv0ZBCAZ",
     "ignoreWarnings": false,
-    "lastModifiedDate": "2026-04-24T22:01:09.000Z",
+    "lastModifiedDate": "2026-04-24T23:36:55.000Z",
     "numberComponentErrors": 0,
     "numberComponentsDeployed": 1,
     "numberComponentsTotal": 1,
@@ -56,20 +56,20 @@
     "numberTestsTotal": 0,
     "rollbackOnError": true,
     "runTestsEnabled": false,
-    "startDate": "2026-04-24T22:01:07.000Z",
+    "startDate": "2026-04-24T23:36:54.000Z",
     "status": "Succeeded",
     "success": true,
-    "zipSize": 1424,
+    "zipSize": 1816,
     "files": [
       {
-        "fullName": "Quote_Record_Page",
-        "type": "FlexiPage",
+        "fullName": "Order-Order Layout",
+        "type": "Layout",
         "state": "Changed",
-        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\flexipages\\Quote_Record_Page.flexipage-meta.xml"
+        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\layouts\\Order-Order Layout.layout-meta.xml"
       }
     ],
     "zipFileCount": 2,
-    "deployUrl": "https://your-org.develop.my.salesforce.com/lightning/setup/DeployStatus/page?address=%2Fchangemgmt%2FmonitorDeploymentsDetails.apexp%3FasyncId%3D0Afaj00000YutPdCAJ%26retURL%3D%252Fchangemgmt%252FmonitorDeployment.apexp"
+    "deployUrl": "https://your-org.develop.my.salesforce.com/lightning/setup/DeployStatus/page?address=%2Fchangemgmt%2FmonitorDeploymentsDetails.apexp%3FasyncId%3D0Afaj00000Yv0ZBCAZ%26retURL%3D%252Fchangemgmt%252FmonitorDeployment.apexp"
   },
   "warnings": []
 }
