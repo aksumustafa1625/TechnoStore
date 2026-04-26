@@ -1,8 +1,13 @@
+import os
 import subprocess
 import json
+import sys
 
-TOKEN = "REDACTED-SESSION-TOKEN"
-URL = "https://your-org.develop.my.salesforce.com"
+TOKEN = os.environ.get("SF_ACCESS_TOKEN")
+URL = os.environ.get("SF_INSTANCE_URL", "https://your-org.develop.my.salesforce.com")
+
+if not TOKEN:
+    sys.exit("SF_ACCESS_TOKEN env var required. Get one with: sf org display --target-org TechnoStore --json | jq -r .result.accessToken")
 
 fields = [
     ("OwnerName", 'Owner.FirstName & " " & Owner.LastName'),
