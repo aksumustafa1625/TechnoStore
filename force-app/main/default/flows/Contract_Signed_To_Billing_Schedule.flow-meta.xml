@@ -8,6 +8,12 @@
         <locationY>290</locationY>
         <actionName>createBillingSchedulesFromBillingTransaction</actionName>
         <actionType>createBillingSchedulesFromBillingTransaction</actionType>
+        <connector>
+            <targetReference>Loop_Orders</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Loop_Orders</targetReference>
+        </faultConnector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>billingTransactionId</name>
@@ -18,9 +24,6 @@
         <nameSegment>createBillingSchedulesFromBillingTransaction</nameSegment>
         <offset>0</offset>
         <storeOutputAutomatically>true</storeOutputAutomatically>
-        <connector>
-            <targetReference>Loop_Orders</targetReference>
-        </connector>
     </actionCalls>
     <description>Triggers when Contract.Status changes to Signed. Finds Activated Orders for the same Account and generates Billing Schedules. Replaces the obsolete Order activation-based flow so billing only starts after legal signature.</description>
     <environments>Default</environments>

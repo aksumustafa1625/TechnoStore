@@ -119,6 +119,9 @@
         <connector>
             <targetReference>Result_Screen</targetReference>
         </connector>
+        <faultConnector>
+            <targetReference>Result_Screen</targetReference>
+        </faultConnector>
         <filterLogic>and</filterLogic>
         <filters>
             <field>Id</field>

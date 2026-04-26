@@ -8,6 +8,9 @@
         <locationY>492</locationY>
         <actionName>createOrUpdateAssetFromOrder</actionName>
         <actionType>createOrUpdateAssetFromOrder</actionType>
+        <faultConnector>
+            <targetReference>Skip_Already_Assetized</targetReference>
+        </faultConnector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>orderId</name>
@@ -18,6 +21,19 @@
         <nameSegment>createOrUpdateAssetFromOrder</nameSegment>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </actionCalls>
+    <assignments>
+        <name>Skip_Already_Assetized</name>
+        <label>Skip Already Assetized</label>
+        <locationX>110</locationX>
+        <locationY>600</locationY>
+        <assignmentItems>
+            <assignToReference>SkipReason</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>Order already assetized; silently skipped to avoid error email.</stringValue>
+            </value>
+        </assignmentItems>
+    </assignments>
     <apiVersion>61.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <decisions>
@@ -119,5 +135,12 @@
         <isInput>false</isInput>
         <isOutput>false</isOutput>
         <objectType>AppUsageAssignment</objectType>
+    </variables>
+    <variables>
+        <name>SkipReason</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
     </variables>
 </Flow>

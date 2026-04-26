@@ -2,28 +2,28 @@
   "status": 0,
   "result": {
     "checkOnly": false,
-    "completedDate": "2026-04-25T15:23:10.000Z",
+    "completedDate": "2026-04-25T18:04:37.000Z",
     "createdBy": "005aj00000UuoAY",
     "createdByName": "MUSTAFA AKSU",
-    "createdDate": "2026-04-25T15:22:18.000Z",
+    "createdDate": "2026-04-25T18:04:31.000Z",
     "details": {
       "componentSuccesses": [
         {
-          "changed": false,
-          "componentType": "ApexClass",
+          "changed": true,
+          "componentType": "Flow",
           "created": false,
-          "createdDate": "2026-04-25T15:23:09.000Z",
+          "createdDate": "2026-04-25T18:04:36.000Z",
           "deleted": false,
-          "fileName": "classes/GenerateOrderInvoiceService.cls",
-          "fullName": "GenerateOrderInvoiceService",
-          "id": "01paj00000QPDSvAAP",
+          "fileName": "flows/Contract_Signed_To_Billing_Schedule.flow",
+          "fullName": "Contract_Signed_To_Billing_Schedule",
+          "id": "301aj00002kG0LWAA0",
           "success": true
         },
         {
           "changed": true,
           "componentType": "",
           "created": false,
-          "createdDate": "2026-04-25T15:23:10.000Z",
+          "createdDate": "2026-04-25T18:04:36.000Z",
           "deleted": false,
           "fileName": "package.xml",
           "fullName": "package.xml",
@@ -44,38 +44,32 @@
       "componentFailures": []
     },
     "done": true,
-    "id": "0Afaj00000YwLenCAF",
+    "id": "0Afaj00000Ywg4vCAB",
     "ignoreWarnings": false,
-    "lastModifiedDate": "2026-04-25T15:23:10.000Z",
+    "lastModifiedDate": "2026-04-25T18:04:37.000Z",
     "numberComponentErrors": 0,
     "numberComponentsDeployed": 1,
     "numberComponentsTotal": 1,
-    "numberFiles": "4",
+    "numberFiles": "3",
     "numberTestErrors": 0,
     "numberTestsCompleted": 0,
     "numberTestsTotal": 0,
     "rollbackOnError": true,
     "runTestsEnabled": false,
-    "startDate": "2026-04-25T15:23:08.000Z",
+    "startDate": "2026-04-25T18:04:31.000Z",
     "status": "Succeeded",
     "success": true,
-    "zipSize": 1688,
+    "zipSize": 1665,
     "files": [
       {
-        "fullName": "GenerateOrderInvoiceService",
-        "type": "ApexClass",
-        "state": "Unchanged",
-        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\classes\\GenerateOrderInvoiceService.cls"
-      },
-      {
-        "fullName": "GenerateOrderInvoiceService",
-        "type": "ApexClass",
-        "state": "Unchanged",
-        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\classes\\GenerateOrderInvoiceService.cls-meta.xml"
+        "fullName": "Contract_Signed_To_Billing_Schedule",
+        "type": "Flow",
+        "state": "Changed",
+        "filePath": "C:\\Users\\DELL\\Documents\\Projects\\TechnoStore\\force-app\\main\\default\\flows\\Contract_Signed_To_Billing_Schedule.flow-meta.xml"
       }
     ],
-    "zipFileCount": 3,
-    "deployUrl": "https://your-org.develop.my.salesforce.com/lightning/setup/DeployStatus/page?address=%2Fchangemgmt%2FmonitorDeploymentsDetails.apexp%3FasyncId%3D0Afaj00000YwLenCAF%26retURL%3D%252Fchangemgmt%252FmonitorDeployment.apexp"
+    "zipFileCount": 2,
+    "deployUrl": "https://your-org.develop.my.salesforce.com/lightning/setup/DeployStatus/page?address=%2Fchangemgmt%2FmonitorDeploymentsDetails.apexp%3FasyncId%3D0Afaj00000Ywg4vCAB%26retURL%3D%252Fchangemgmt%252FmonitorDeployment.apexp"
   },
   "warnings": []
 }

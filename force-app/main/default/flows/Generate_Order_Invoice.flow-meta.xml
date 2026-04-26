@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <actionCalls>
+        <name>Generate_Invoice</name>
+        <label>Generate Invoice</label>
+        <locationX>176</locationX>
+        <locationY>170</locationY>
+        <actionName>GenerateOrderInvoiceService</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>Result_Screen</targetReference>
+        </connector>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>orderId</name>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </inputParameters>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
+    <description>One-click invoice generation from Order. Creates a Demo_Invoice__c record using the Order's BillingSchedule data.</description>
+    <environments>Default</environments>
+    <interviewLabel>Generate Order Invoice {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Generate Order Invoice</label>
+    <processType>Flow</processType>
+    <screens>
+        <name>Result_Screen</name>
+        <label>Invoice Generated</label>
+        <locationX>176</locationX>
+        <locationY>290</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>resultDisplay</name>
+            <fieldText>&lt;p&gt;&lt;b&gt;Status:&lt;/b&gt; {!Generate_Invoice.status}&lt;/p&gt;&lt;p&gt;{!Generate_Invoice.message}&lt;/p&gt;&lt;p&gt;Open the Order Related tab to view the new Demo Invoice.&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <showFooter>true</showFooter>
+        <showHeader>true</showHeader>
+    </screens>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Generate_Invoice</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>recordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>
