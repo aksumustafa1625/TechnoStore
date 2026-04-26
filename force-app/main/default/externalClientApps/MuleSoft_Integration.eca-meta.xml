@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>demo-recipient@example.com</contactEmail>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>MuleSoft Integration</label>
+    <orgScopedExternalApp>ORG-TS-DEMO:MuleSoft_Integration</orgScopedExternalApp>
+</ExternalClientApplication>
