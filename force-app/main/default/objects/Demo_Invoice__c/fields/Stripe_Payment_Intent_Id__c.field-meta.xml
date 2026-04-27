@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Stripe_Payment_Intent_Id__c</fullName>
+    <description>Stripe Payment Intent ID. Used for idempotency and to correlate webhook callbacks back to the originating invoice.</description>
+    <externalId>true</externalId>
+    <label>Stripe Payment Intent Id</label>
+    <length>100</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
