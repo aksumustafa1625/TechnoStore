@@ -1,0 +1,128 @@
+.payment-journey-card {
+    border-radius: 8px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.status-paid {
+    background-color: #dcefdc;
+    color: #2e844a;
+}
+
+.status-sent {
+    background-color: #cfe5ff;
+    color: #014486;
+}
+
+.status-failed {
+    background-color: #fde7ea;
+    color: #ba0517;
+}
+
+.status-pending {
+    background-color: #ecebea;
+    color: #706e6b;
+}
+
+.journey {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.journey li {
+    display: flex;
+    padding: 10px 0;
+    position: relative;
+}
+
+.journey li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 28px;
+    bottom: -10px;
+    width: 2px;
+    background: #dddbda;
+    z-index: 0;
+}
+
+.journey li.done::before {
+    background: #2e844a;
+}
+
+.journey li.current::before {
+    background: linear-gradient(to bottom, #1589EE 0%, #dddbda 100%);
+}
+
+.step-icon {
+    flex: 0 0 24px;
+    margin-right: 12px;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+    background: white;
+    height: 24px;
+}
+
+.step-content {
+    flex: 1;
+    padding-top: 1px;
+}
+
+.step-title {
+    font-weight: 600;
+    color: #181818;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.step-detail {
+    font-size: 12px;
+    color: #706e6b;
+    margin: 2px 0 0 0;
+    line-height: 1.4;
+}
+
+.journey li.pending .step-title {
+    color: #706e6b;
+    font-weight: 500;
+}
+
+.journey li.pending .step-detail {
+    color: #b0adab;
+}
+
+.journey li.current .step-title {
+    color: #014486;
+    font-weight: 700;
+}
+
+.journey li.current .step-detail {
+    color: #1589EE;
+    font-style: italic;
+}
+
+.journey li.done .step-title {
+    color: #181818;
+}
+
+.journey li.current {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}

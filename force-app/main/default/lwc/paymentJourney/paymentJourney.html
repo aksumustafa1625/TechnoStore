@@ -1,0 +1,38 @@
+<template>
+    <article class="slds-card payment-journey-card">
+        <div class="slds-card__header">
+            <header class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:money" size="small" alternative-text="Payment Journey"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="slds-text-heading_small slds-text-color_default">Payment Journey</span>
+                    </h2>
+                    <p class="slds-text-body_small slds-text-color_weak">Live integration timeline</p>
+                </div>
+                <div class="slds-no-flex">
+                    <span class={statusBadgeClass}>{status}</span>
+                </div>
+            </header>
+        </div>
+        <div class="slds-card__body slds-card__body_inner">
+            <ul class="journey">
+                <template for:each={steps} for:item="step">
+                    <li key={step.key} class={step.itemClass}>
+                        <div class="step-icon">
+                            <lightning-icon icon-name={step.iconName} size="x-small" variant={step.iconVariant}></lightning-icon>
+                        </div>
+                        <div class="step-content">
+                            <p class="step-title">{step.title}</p>
+                            <p class="step-detail">{step.detail}</p>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </div>
+        <div class="slds-card__footer">
+            <p class="slds-text-body_small slds-text-color_weak slds-text-align_center">Powered by MuleSoft &amp; Stripe</p>
+        </div>
+    </article>
+</template>
