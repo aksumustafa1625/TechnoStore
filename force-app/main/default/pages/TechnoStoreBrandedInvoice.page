@@ -1,0 +1,355 @@
+<apex:page renderAs="pdf" applyHtmlTag="true" applyBodyTag="false" showHeader="false" sidebar="false"
+           standardStylesheets="false" controller="InvoicePdfController" cache="false">
+<head>
+    <title>Invoice {!invoice.DocumentNumber}</title>
+    <style type="text/css">
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #1F2937; font-size: 10pt; line-height: 1.5;
+        }
+        .page { width: 100%; }
+
+        /* HEADER */
+        .header {
+            background-color: #1B4F72;
+            color: #FFFFFF;
+            padding: 28pt 36pt 24pt 36pt;
+            border-bottom: 4pt solid #5469D4;
+        }
+        .header-table { width: 100%; }
+        .header-table td { vertical-align: middle; }
+        .brand-logo {
+            background-color: #5469D4;
+            color: #FFFFFF;
+            font-size: 24pt;
+            font-weight: 900;
+            text-align: center;
+            border-radius: 8pt;
+            padding: 0;
+            width: 50pt; height: 50pt;
+        }
+        .brand-text { padding-left: 14pt; }
+        .brand-name {
+            font-size: 24pt; font-weight: 700;
+            line-height: 1.05; letter-spacing: -0.5pt;
+            color: #FFFFFF;
+        }
+        .brand-tagline {
+            font-size: 7.5pt;
+            color: #B6C0D1;
+            letter-spacing: 2.5pt;
+            font-weight: 600;
+            margin-top: 4pt;
+        }
+        .header-right { text-align: right; }
+        .invoice-label {
+            font-size: 10pt;
+            color: #B6C0D1;
+            letter-spacing: 4pt;
+            font-weight: 600;
+        }
+        .invoice-number {
+            font-size: 22pt;
+            font-weight: 700;
+            margin-top: 6pt;
+            letter-spacing: -0.5pt;
+            color: #FFFFFF;
+        }
+
+        /* BODY */
+        .body-section { padding: 24pt 36pt 0 36pt; }
+
+        .info-grid { width: 100%; margin-bottom: 24pt; }
+        .info-grid > tbody > tr > td { vertical-align: top; padding: 0; }
+        .info-grid .left-col { width: 50%; padding-right: 16pt; }
+        .info-grid .right-col {
+            width: 50%; padding-left: 24pt;
+            border-left: 1pt solid #E5E7EB;
+        }
+
+        .section-label {
+            font-size: 8pt;
+            color: #5469D4;
+            letter-spacing: 2pt;
+            font-weight: 700;
+            margin-bottom: 8pt;
+            text-transform: uppercase;
+        }
+        .company-name {
+            font-size: 13pt; font-weight: 700;
+            color: #1B4F72; margin-bottom: 4pt;
+        }
+        .contact-name {
+            font-size: 9.5pt; color: #6B7280; margin-bottom: 6pt;
+        }
+        .address-line { color: #374151; margin-bottom: 1pt; font-size: 9.5pt; }
+        .email-line {
+            color: #5469D4;
+            margin-top: 6pt;
+            font-size: 9pt;
+        }
+
+        .invoice-details-table { width: 100%; }
+        .invoice-details-table td {
+            padding: 4pt 0;
+            font-size: 9.5pt;
+        }
+        .invoice-details-table td.label { color: #6B7280; width: 45%; }
+        .invoice-details-table td.value {
+            font-weight: 600; color: #1F2937; text-align: right;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3pt 10pt;
+            border-radius: 14pt;
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 0.8pt;
+        }
+        .badge-paid { background-color: #D1FAE5; color: #065F46; }
+        .badge-pending { background-color: #FED7AA; color: #9A3412; }
+        .badge-draft { background-color: #E5E7EB; color: #374151; }
+        .badge-failed { background-color: #FECACA; color: #991B1B; }
+
+        /* LINE ITEMS */
+        .items-section { padding: 0 36pt; margin-bottom: 18pt; }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .items-table thead { background-color: #F3F4F6; }
+        .items-table th {
+            padding: 10pt 10pt;
+            font-size: 7.5pt;
+            text-align: left;
+            color: #6B7280;
+            font-weight: 700;
+            letter-spacing: 1pt;
+            text-transform: uppercase;
+            border-bottom: 2pt solid #1B4F72;
+        }
+        .items-table th.num { text-align: right; }
+        .items-table td {
+            padding: 12pt 10pt;
+            border-bottom: 1pt solid #E5E7EB;
+            font-size: 9.5pt;
+            color: #1F2937;
+            vertical-align: top;
+        }
+        .items-table td.num { text-align: right; }
+        .items-table td.product {
+            font-weight: 600; color: #1B4F72;
+        }
+        .items-table td.period {
+            font-size: 8.5pt; color: #6B7280;
+        }
+        .items-table td.line-total { font-weight: 700; color: #1F2937; }
+
+        /* TOTALS */
+        .totals-section { padding: 0 36pt; margin-bottom: 24pt; }
+        .totals-wrap { width: 100%; }
+        .totals-wrap > tbody > tr > td.spacer { width: 60%; }
+        .totals-wrap > tbody > tr > td.totals-cell { vertical-align: top; }
+        .totals-table { width: 100%; border-collapse: collapse; }
+        .totals-table td { padding: 6pt 0; font-size: 10pt; }
+        .totals-table td.label-cell {
+            color: #6B7280; text-align: right; padding-right: 20pt;
+        }
+        .totals-table td.amount-cell {
+            text-align: right; color: #1F2937; font-weight: 600;
+        }
+        .totals-table tr.total-row td {
+            border-top: 2pt solid #1B4F72;
+            padding-top: 10pt;
+            font-size: 14pt;
+            font-weight: 700;
+            color: #1B4F72;
+        }
+
+        /* PAYMENT INFO */
+        .payment-section {
+            margin: 0 36pt 24pt 36pt;
+            padding: 16pt 20pt;
+            background-color: #F9FAFB;
+            border-left: 4pt solid #5469D4;
+        }
+        .payment-section .section-label { margin-bottom: 10pt; }
+        .payment-table { width: 100%; }
+        .payment-table td { padding: 3pt 0; font-size: 9.5pt; }
+        .payment-table td.label { color: #6B7280; width: 30%; }
+
+        /* THANK YOU NOTE */
+        .thanks {
+            margin: 0 36pt 18pt 36pt;
+            text-align: center;
+            font-size: 9.5pt;
+            color: #5469D4;
+            font-style: italic;
+        }
+
+        /* FOOTER */
+        .footer {
+            padding: 16pt 36pt 24pt 36pt;
+            text-align: center;
+            border-top: 1pt solid #E5E7EB;
+            color: #6B7280;
+            font-size: 7.5pt;
+            line-height: 1.6;
+        }
+        .footer .footer-bold { color: #1B4F72; font-weight: 700; font-size: 8pt; }
+        .footer .powered-by {
+            margin-top: 6pt;
+            color: #9CA3AF;
+            letter-spacing: 1.5pt;
+            font-size: 6.5pt;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <!-- HEADER -->
+        <div class="header">
+            <table class="header-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>
+                        <table cellspacing="0" cellpadding="0"><tr>
+                            <td class="brand-logo">&#9889;</td>
+                            <td class="brand-text">
+                                <div class="brand-name">TechnoStore</div>
+                                <div class="brand-tagline">REVENUE CLOUD EXCELLENCE</div>
+                            </td>
+                        </tr></table>
+                    </td>
+                    <td class="header-right">
+                        <div class="invoice-label">INVOICE</div>
+                        <div class="invoice-number">{!invoice.DocumentNumber}</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- BODY -->
+        <div class="body-section">
+            <table class="info-grid" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td class="left-col">
+                        <div class="section-label">BILL TO</div>
+                        <div class="company-name">{!invoice.BillingAccount.Name}</div>
+                        <div class="contact-name">{!invoice.BillToContact.Name}</div>
+                        <apex:outputText escape="false" rendered="{!NOT(ISBLANK(invoice.BillingAccount.BillingStreet))}"><div class="address-line">{!invoice.BillingAccount.BillingStreet}</div></apex:outputText>
+                        <div class="address-line">{!invoice.BillingAccount.BillingPostalCode} {!invoice.BillingAccount.BillingCity}</div>
+                        <apex:outputText escape="false" rendered="{!NOT(ISBLANK(invoice.BillingAccount.BillingCountry))}"><div class="address-line">{!invoice.BillingAccount.BillingCountry}</div></apex:outputText>
+                        <div class="email-line">{!invoice.BillToContact.Email}</div>
+                    </td>
+                    <td class="right-col">
+                        <div class="section-label">INVOICE DETAILS</div>
+                        <table class="invoice-details-table" cellspacing="0" cellpadding="0">
+                            <tr><td class="label">Issue Date</td><td class="value">{!issueDate}</td></tr>
+                            <tr><td class="label">Due Date</td><td class="value">{!dueDateStr}</td></tr>
+                            <tr><td class="label">Reference</td><td class="value">{!invoice.DocumentNumber}</td></tr>
+                            <tr><td class="label">Order Type</td><td class="value">{!fulfillmentLabel}</td></tr>
+                            <tr><td class="label">Status</td>
+                                <td class="value">
+                                    <span class="badge badge-{!paymentStatusKey}">{!paymentStatusLabel}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- LINE ITEMS -->
+        <div class="items-section">
+            <table class="items-table" cellspacing="0" cellpadding="0">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Period</th>
+                        <th class="num">Qty</th>
+                        <th class="num">Unit Price</th>
+                        <th class="num">Tax</th>
+                        <th class="num">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <apex:repeat value="{!lineWrappers}" var="lw">
+                        <tr>
+                            <td class="product">{!lw.productName}</td>
+                            <td class="period">{!lw.periodStr}</td>
+                            <td class="num">{!lw.quantityStr}</td>
+                            <td class="num">{!lw.unitPriceFormatted}</td>
+                            <td class="num">{!lw.taxFormatted}</td>
+                            <td class="num line-total">{!lw.lineTotalFormatted}</td>
+                        </tr>
+                    </apex:repeat>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TOTALS -->
+        <div class="totals-section">
+            <table class="totals-wrap" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td class="spacer"></td>
+                    <td class="totals-cell">
+                        <table class="totals-table" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td class="label-cell">Subtotal</td>
+                                <td class="amount-cell">{!subtotalFormatted}</td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Tax</td>
+                                <td class="amount-cell">{!taxFormatted}</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td class="label-cell">TOTAL</td>
+                                <td class="amount-cell">{!totalFormatted}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- PAYMENT INFO -->
+        <div class="payment-section">
+            <div class="section-label">PAYMENT INFORMATION</div>
+            <table class="payment-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td class="label">Payment Method</td>
+                    <td>Stripe — Credit Card &middot; Apple Pay &middot; Link</td>
+                </tr>
+                <tr>
+                    <td class="label">Payment Status</td>
+                    <td><span class="badge badge-{!paymentStatusKey}">{!paymentStatusLabel}</span></td>
+                </tr>
+                <tr>
+                    <td class="label">Paid On</td>
+                    <td>{!paidDateStr}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- THANK YOU -->
+        <div class="thanks">
+            Thank you for choosing TechnoStore — your trusted EU partner for revenue automation.
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-bold">TechnoStore GmbH</div>
+            <div>Friedrichstraße 100 &middot; 10117 Berlin &middot; Germany</div>
+            <div>support@technostore.com &middot; technostore.de &middot; VAT: DE123456789</div>
+            <div class="powered-by">Powered by Salesforce Revenue Cloud &middot; Stripe &middot; MuleSoft &middot; Sendcloud</div>
+        </div>
+
+    </div>
+</body>
+</apex:page>
