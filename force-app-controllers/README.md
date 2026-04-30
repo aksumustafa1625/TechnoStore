@@ -13,6 +13,8 @@ These classes follow the **MVC controller** pattern:
 |---|---|---|
 | `RevenuePulseController` | `@AuraEnabled(cacheable=true)` | `revenuePulse` LWC (Revenue Pulse tab) |
 | `InvoicePdfController` | Visualforce backing class | `TechnoStoreBrandedInvoice.page`, `TechnoStoreInvoicePreviewPdf.page` |
+| `CreateContractController` | `@AuraEnabled` | Q2C "Create Contract" custom flow / button on Order |
+| `UpdateContractController` | `@AuraEnabled` | Q2C contract update button |
 
 ## Conventions
 
