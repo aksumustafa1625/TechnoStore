@@ -15,6 +15,9 @@
     },
     {
       "path": "force-app-actions"
+    },
+    {
+      "path": "force-app-tests"
     }
   ],
   "name": "TechnoStore",

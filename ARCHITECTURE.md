@@ -31,10 +31,14 @@ TechnoStore/
 │   └── main/default/classes/
 │       └── DocuSignConnectWebhook.cls
 │
-└── force-app-actions/                  ← Agentforce / Einstein Copilot invocable actions
+├── force-app-actions/                  ← Agentforce / Einstein Copilot invocable actions
+│   └── main/default/classes/
+│       ├── GetRevenueSummaryAction.cls
+│       └── SendPaymentRemindersAction.cls
+│
+└── force-app-tests/                     ← Apex unit tests for our custom classes (placeholder, empty)
     └── main/default/classes/
-        ├── GetRevenueSummaryAction.cls
-        └── SendPaymentRemindersAction.cls
+        └── (future *Test.cls files — co-locate or separate, see force-app-tests/README.md)
 ```
 
 ## Why this layout
@@ -73,7 +77,8 @@ TechnoStore/
     { "path": "force-app-controllers" },
     { "path": "force-app-services" },
     { "path": "force-app-handlers" },
-    { "path": "force-app-actions" }
+    { "path": "force-app-actions" },
+    { "path": "force-app-tests" }
   ]
 }
 ```
