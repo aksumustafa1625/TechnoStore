@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <actionCalls>
+        <name>Send_Shipping_Notification</name>
+        <label>Send Shipping Notification</label>
+        <locationX>176</locationX>
+        <locationY>278</locationY>
+        <actionName>emailSimple</actionName>
+        <actionType>emailSimple</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>emailBody</name>
+            <value>
+                <stringValue>&lt;html&gt;&lt;body style=&quot;margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;&quot;&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#f4f6f9;padding:40px 20px;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;table width=&quot;600&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;background-color:#1B4F72;padding:32px 40px;text-align:center;&quot;&gt;&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; align=&quot;center&quot; style=&quot;margin:0 auto;&quot;&gt;&lt;tr&gt;&lt;td width=&quot;50&quot; height=&quot;50&quot; style=&quot;background-color:#FF6B35;border-radius:10px;text-align:center;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:900;line-height:50px;&quot;&gt;&amp;#128230;&lt;/td&gt;&lt;td style=&quot;padding-left:14px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-align:left;vertical-align:middle;&quot;&gt;&lt;div style=&quot;font-size:24px;font-weight:700;line-height:26px;letter-spacing:-0.3px;color:#ffffff;&quot;&gt;TechnoStore&lt;/div&gt;&lt;div style=&quot;font-size:9px;color:#a8b2c1;letter-spacing:2.5px;font-weight:500;margin-top:4px;&quot;&gt;ORDER SHIPPING&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:40px;&quot;&gt;&lt;h1 style=&quot;color:#FF6B35;font-size:26px;margin:0 0 8px 0;font-weight:600;&quot;&gt;Your order is on its way!&lt;/h1&gt;&lt;p style=&quot;color:#6b7280;font-size:14px;margin:0 0 24px 0;&quot;&gt;Payment confirmed and shipping initiated.&lt;/p&gt;&lt;p style=&quot;font-size:16px;color:#374151;line-height:1.6;margin:0 0 16px 0;&quot;&gt;Dear {!$Record.BillingAccount.Name} team,&lt;/p&gt;&lt;p style=&quot;font-size:16px;color:#374151;line-height:1.6;margin:0 0 24px 0;&quot;&gt;Thank you for your purchase. Your physical order has been confirmed and is being prepared for shipment via our logistics partner.&lt;/p&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#fff7ed;border:1px solid #FF6B35;border-radius:8px;margin:24px 0;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:24px;&quot;&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Invoice Number&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;&quot;&gt;{!$Record.DocumentNumber}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Account&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;&quot;&gt;{!$Record.BillingAccount.Name}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Amount Paid&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#FF6B35;font-size:18px;font-weight:700;text-align:right;&quot;&gt;${!$Record.TotalAmountWithTax}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:12px 0 6px 0;color:#6b7280;font-size:14px;border-top:1px solid #fed7aa;&quot;&gt;Carrier&lt;/td&gt;&lt;td style=&quot;padding:12px 0 6px 0;color:#FF6B35;font-size:14px;font-weight:700;text-align:right;border-top:1px solid #fed7aa;&quot;&gt;DHL Standard&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Status&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#FF6B35;font-size:14px;font-weight:700;text-align:right;&quot;&gt;&amp;#128230; SHIPPING SOON&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p style=&quot;font-size:15px;color:#374151;line-height:1.6;margin:24px 0 16px 0;&quot;&gt;&lt;strong&gt;What happens next?&lt;/strong&gt;&lt;/p&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;margin:0 0 24px 0;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:8px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&amp;#9989; Your order has been picked and is being packed&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:8px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&amp;#9989; A tracking number will be emailed to you within 24 hours&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:8px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&amp;#9989; Estimated delivery: 2-5 business days (DHL Standard EU)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:8px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&amp;#9989; Support: support@technostore.com&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p style=&quot;color:#9ca3af;font-size:12px;line-height:1.5;margin:32px 0 0 0;border-top:1px solid #e5e7eb;padding-top:20px;&quot;&gt;Track your shipment in your customer portal once tracking is generated. For questions about this order, please contact our support team.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;background-color:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;&quot;&gt;&lt;p style=&quot;color:#6b7280;font-size:12px;line-height:1.6;margin:0;text-align:center;&quot;&gt;&amp;copy; 2026 TechnoStore &amp;mdash; Retail Excellence&lt;br/&gt;Shipping powered by Sendcloud &amp; DHL&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailAddresses</name>
+            <value>
+                <elementReference>ShippingRecipientEmail</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailSubject</name>
+            <value>
+                <stringValue>Your TechnoStore Order is Shipping (Invoice {!$Record.DocumentNumber})</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>sendRichBody</name>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputParameters>
+        <nameSegment>emailSimple</nameSegment>
+        <versionSegment>1</versionSegment>
+    </actionCalls>
+    <description>Sends an order shipping notification email when an Invoice with Fulfillment_Type=Physical transitions to Stripe_Payment_Status=Paid. Falls back to demo-recipient@example.com if BillToContact.Email is null.</description>
+    <formulas>
+        <name>ShippingRecipientEmail</name>
+        <dataType>String</dataType>
+        <expression>IF(ISBLANK({!$Record.BillToContact.Email}), &quot;demo-recipient@example.com&quot;, {!$Record.BillToContact.Email})</expression>
+    </formulas>
+    <interviewLabel>Send Shipping Notification {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Send Shipping Notification</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Send_Shipping_Notification</targetReference>
+        </connector>
+        <filterFormula>AND(ISCHANGED({!$Record.Stripe_Payment_Status__c}), ISPICKVAL({!$Record.Stripe_Payment_Status__c}, &quot;Paid&quot;), {!$Record.Has_Physical__c}, NOT({!$Record.Has_Digital__c}))</filterFormula>
+        <object>Invoice</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

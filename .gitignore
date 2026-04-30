@@ -42,6 +42,39 @@ $RECYCLE.BIN/
 # Local environment variables
 .env
 
+# ==============================================
+# Secrets & API credentials — NEVER commit these
+# ==============================================
+# MuleSoft properties (contain Stripe API key, Slack webhook, Sendcloud credentials)
+**/mule-app.properties
+**/mule-*.properties
+**/application.properties
+**/application-*.properties
+
+# Generic secrets patterns
+**/secrets.json
+**/secrets.yaml
+**/credentials.json
+**/.credentials
+**/*.pem
+**/*.key
+**/api-keys.txt
+
+# MuleSoft project directories (if checked in alongside SF)
+technostore-integration/
+**/AnypointStudio/
+
+# Stripe webhook signing secrets (whsec_*)
+**/whsec_*
+
+# ngrok config
+ngrok.yml
+.ngrok2/
+
+# Salesforce PRM auto-generated split files (Windows long path)
+**/prm_winter24*
+**/prm_channel_*
+
 # Python Salesforce Functions
 **/__pycache__/
 **/.venv/

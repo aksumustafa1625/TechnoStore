@@ -7,8 +7,10 @@ import INTENT_FIELD from '@salesforce/schema/Invoice.Stripe_Payment_Intent_Id__c
 import PAID_FIELD from '@salesforce/schema/Invoice.Paid_Date__c';
 import EMAIL_FIELD from '@salesforce/schema/Invoice.BillToContact.Email';
 import MODIFIED_FIELD from '@salesforce/schema/Invoice.LastModifiedDate';
+import HAS_PHYSICAL_FIELD from '@salesforce/schema/Invoice.Has_Physical__c';
+import HAS_DIGITAL_FIELD from '@salesforce/schema/Invoice.Has_Digital__c';
 
-const FIELDS = [STATUS_FIELD, URL_FIELD, INTENT_FIELD, PAID_FIELD, EMAIL_FIELD, MODIFIED_FIELD];
+const FIELDS = [STATUS_FIELD, URL_FIELD, INTENT_FIELD, PAID_FIELD, EMAIL_FIELD, MODIFIED_FIELD, HAS_PHYSICAL_FIELD, HAS_DIGITAL_FIELD];
 const POLL_INTERVAL_MS = 4000;
 
 export default class PaymentJourney extends LightningElement {
@@ -57,6 +59,14 @@ export default class PaymentJourney extends LightningElement {
         return getFieldValue(this.invoice.data, EMAIL_FIELD) || 'customer';
     }
 
+    get hasPhysical() {
+        return this.hasData && getFieldValue(this.invoice.data, HAS_PHYSICAL_FIELD) === true;
+    }
+
+    get hasDigital() {
+        return this.hasData && getFieldValue(this.invoice.data, HAS_DIGITAL_FIELD) === true;
+    }
+
     get statusBadgeClass() {
         const s = this.status;
         if (s === 'Paid') return 'status-badge status-paid';
@@ -72,6 +82,20 @@ export default class PaymentJourney extends LightningElement {
         const isSent = status === 'Sent' || status === 'Paid';
         const isPaid = status === 'Paid';
         const hasUrl = this.hasUrl;
+        const hasPhysical = this.hasPhysical;
+        const hasDigital = this.hasDigital;
+
+        const saSummary = isPaid
+            ? (hasPhysical && hasDigital
+                ? 'Hardware Bundle + SaaS License records created'
+                : (hasPhysical ? 'Hardware Bundle record · Active' : 'SaaS License record · Active'))
+            : 'Waiting for payment';
+
+        const slackSummary = isPaid
+            ? (hasPhysical && hasDigital
+                ? 'Combined :gift: message posted (Hardware + SaaS sections)'
+                : (hasPhysical ? ':package: Shipping notification posted' : ':key: License activation posted'))
+            : 'Waiting for payment';
 
         const data = [
             {
@@ -131,6 +155,42 @@ export default class PaymentJourney extends LightningElement {
                 current: false
             }
         ];
+
+        if (hasPhysical) {
+            data.push({
+                key: '9',
+                title: 'Sendcloud: GET /shipping_methods',
+                detail: isPaid ? 'Live carrier resolved · DHL_DE Paket 0-2kg' : 'Waiting for payment',
+                done: isPaid,
+                current: false
+            });
+        }
+
+        data.push({
+            key: '10',
+            title: 'Slack notification dispatched',
+            detail: slackSummary,
+            done: isPaid,
+            current: false
+        });
+
+        data.push({
+            key: '11',
+            title: 'Service Activation created',
+            detail: saSummary,
+            done: isPaid,
+            current: false
+        });
+
+        data.push({
+            key: '12',
+            title: hasPhysical && hasDigital
+                ? 'Fulfillment email (combined) sent'
+                : (hasPhysical ? 'Shipping email sent' : 'License activation email sent'),
+            detail: isPaid ? 'Delivered to ' + this.customerEmail : 'Waiting for payment',
+            done: isPaid,
+            current: false
+        });
 
         return data.map(s => ({
             key: s.key,

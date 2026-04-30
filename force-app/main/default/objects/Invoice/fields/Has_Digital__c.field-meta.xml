@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Has_Digital__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>If true, this invoice contains digital/SaaS items requiring license activation. Can be combined with Has_Physical__c for mixed orders.</description>
+    <label>Has Digital Items</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

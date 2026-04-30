@@ -1,0 +1,73 @@
+<template>
+    <div class="pulse-card">
+        <div class="pulse-header">
+            <div class="header-left">
+                <div class="header-title">Revenue Pulse</div>
+                <div class="header-sub">
+                    <span class="live-dot"></span>
+                    <span>Live · updated {lastUpdatedDisplay}</span>
+                </div>
+            </div>
+            <div class="header-icon">⚡</div>
+        </div>
+
+        <div class="metrics-row">
+            <div class="metric metric-primary">
+                <div class="metric-label">Total Revenue</div>
+                <div class="metric-value">{totalFormatted}</div>
+                <div class="metric-sub">{displayedCount} activations · all time</div>
+            </div>
+            <div class="metric metric-secondary">
+                <div class="metric-label">Today</div>
+                <div class="metric-value-small">{todayFormatted}</div>
+                <div class="metric-sub">since 00:00</div>
+            </div>
+        </div>
+
+        <div class="feed-header">
+            <span class="feed-title">Recent Activations</span>
+            <span class="feed-count">{recentActivations.length}</span>
+        </div>
+
+        <template lwc:if={hasActivations}>
+            <ul class="feed-list">
+                <template for:each={recentActivations} for:item="act">
+                    <li key={act.activationId} class={act.rowClass}>
+                        <div class="row-icon">
+                            <span class={act.badgeClass}>{act.badgeIcon}</span>
+                        </div>
+                        <div class="row-content">
+                            <div class="row-top">
+                                <span class="row-name">{act.activationName}</span>
+                                <span class="row-amount">{act.amountFormatted}</span>
+                            </div>
+                            <div class="row-bottom">
+                                <span class="row-type">{act.serviceType}</span>
+                                <span class="row-time">{act.relativeTime}</span>
+                            </div>
+                            <div class="row-pills">
+                                <template lwc:if={act.slackNotified}>
+                                    <span class="pill pill-slack" title="Slack notification sent by MuleSoft">💬 Slack ✓</span>
+                                </template>
+                                <template lwc:if={act.hasSendcloud}>
+                                    <span class={act.sendcloudPillClass} title="Live carrier data from Sendcloud API">{act.sendcloudLabel}</span>
+                                </template>
+                            </div>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </template>
+
+        <template lwc:else>
+            <template lwc:if={isLoading}>
+                <div class="empty-state">Loading…</div>
+            </template>
+            <template lwc:else>
+                <div class="empty-state">No activations yet — process a payment to see live updates here.</div>
+            </template>
+        </template>
+
+        <div class="pulse-footer">Powered by MuleSoft · Stripe · Sendcloud</div>
+    </div>
+</template>

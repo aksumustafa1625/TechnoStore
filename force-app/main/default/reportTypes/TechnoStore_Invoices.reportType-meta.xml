@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ReportType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <baseObject>Invoice</baseObject>
+    <category>other</category>
+    <deployed>true</deployed>
+    <description>TechnoStore custom report type for native RLM Invoice with Stripe payment fields.</description>
+    <label>TechnoStore Invoices</label>
+    <sections>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>Status</field>
+            <table>Invoice</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>TotalAmountWithTax</field>
+            <table>Invoice</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>Stripe_Payment_Status__c</field>
+            <table>Invoice</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>Paid_Date__c</field>
+            <table>Invoice</table>
+        </columns>
+        <columns>
+            <checkedByDefault>false</checkedByDefault>
+            <field>CreatedDate</field>
+            <table>Invoice</table>
+        </columns>
+        <masterLabel>Invoice</masterLabel>
+    </sections>
+</ReportType>
