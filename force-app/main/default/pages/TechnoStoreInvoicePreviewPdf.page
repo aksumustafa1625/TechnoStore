@@ -1,7 +1,7 @@
 <apex:page renderAs="pdf" applyHtmlTag="true" applyBodyTag="false" showHeader="false" sidebar="false"
            standardStylesheets="false" controller="InvoicePdfController" cache="false">
 <head>
-    <title>Invoice {!invoice.DocumentNumber}</title>
+    <title>Invoice Preview {!invoice.DocumentNumber}</title>
     <style type="text/css">
         @page { size: A4; margin: 0; }
         * { box-sizing: border-box; }
@@ -12,57 +12,113 @@
         }
         .page { width: 100%; }
 
-        /* HEADER */
+        /* TOP RIBBON */
+        .top-ribbon {
+            height: 8pt;
+            background-color: #FF6B35;
+        }
+
+        /* HEADER (white bg, contrast with ribbon) */
         .header {
-            background-color: #1B4F72;
-            color: #FFFFFF;
-            padding: 28pt 36pt 24pt 36pt;
-            border-bottom: 4pt solid #5469D4;
+            background-color: #FFFFFF;
+            color: #1F2937;
+            padding: 28pt 36pt 20pt 36pt;
+            border-bottom: 1pt solid #E5E7EB;
         }
         .header-table { width: 100%; }
         .header-table td { vertical-align: middle; }
         .brand-logo {
-            background-color: #5469D4;
+            background-color: #1B4F72;
             color: #FFFFFF;
             font-size: 24pt;
             font-weight: 900;
             text-align: center;
             border-radius: 8pt;
-            padding: 0;
             width: 50pt; height: 50pt;
         }
         .brand-text { padding-left: 14pt; }
         .brand-name {
-            font-size: 24pt; font-weight: 700;
+            font-size: 22pt; font-weight: 700;
             line-height: 1.05; letter-spacing: -0.5pt;
-            color: #FFFFFF;
+            color: #1B4F72;
         }
         .brand-tagline {
             font-size: 7.5pt;
-            color: #B6C0D1;
+            color: #FF6B35;
             letter-spacing: 2.5pt;
             font-weight: 600;
             margin-top: 4pt;
         }
         .header-right { text-align: right; }
         .invoice-label {
-            font-size: 10pt;
-            color: #B6C0D1;
+            font-size: 9pt;
+            color: #FF6B35;
             letter-spacing: 4pt;
-            font-weight: 600;
+            font-weight: 700;
         }
         .invoice-number {
             font-size: 22pt;
             font-weight: 700;
-            margin-top: 6pt;
+            margin-top: 4pt;
             letter-spacing: -0.5pt;
+            color: #1B4F72;
+        }
+        .invoice-sub {
+            font-size: 9pt;
+            color: #6B7280;
+            margin-top: 2pt;
+            letter-spacing: 1pt;
+        }
+
+        /* AWAITING PAYMENT BANNER */
+        .awaiting-banner {
+            background-color: #FFF7ED;
+            border-top: 1pt solid #FED7AA;
+            border-bottom: 1pt solid #FED7AA;
+            padding: 14pt 36pt;
+        }
+        .awaiting-banner-table { width: 100%; }
+        .awaiting-icon-cell {
+            background-color: #FF6B35;
             color: #FFFFFF;
+            width: 36pt; height: 36pt;
+            text-align: center;
+            font-size: 18pt;
+            font-weight: 900;
+            border-radius: 18pt;
+        }
+        .awaiting-text-cell { padding-left: 14pt; vertical-align: middle; }
+        .awaiting-title {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #9A3412;
+        }
+        .awaiting-sub {
+            font-size: 9.5pt;
+            color: #C2410C;
+            margin-top: 2pt;
+        }
+        .awaiting-amount-cell {
+            text-align: right;
+            vertical-align: middle;
+        }
+        .awaiting-amount-label {
+            font-size: 8pt;
+            color: #9A3412;
+            letter-spacing: 1.5pt;
+            font-weight: 600;
+        }
+        .awaiting-amount {
+            font-size: 22pt;
+            font-weight: 700;
+            color: #FF6B35;
+            letter-spacing: -0.5pt;
         }
 
         /* BODY */
         .body-section { padding: 24pt 36pt 0 36pt; }
 
-        .info-grid { width: 100%; margin-bottom: 24pt; }
+        .info-grid { width: 100%; margin-bottom: 22pt; }
         .info-grid > tbody > tr > td { vertical-align: top; padding: 0; }
         .info-grid .left-col { width: 50%; padding-right: 16pt; }
         .info-grid .right-col {
@@ -72,7 +128,7 @@
 
         .section-label {
             font-size: 8pt;
-            color: #5469D4;
+            color: #FF6B35;
             letter-spacing: 2pt;
             font-weight: 700;
             margin-bottom: 8pt;
@@ -87,7 +143,7 @@
         }
         .address-line { color: #374151; margin-bottom: 1pt; font-size: 9.5pt; }
         .email-line {
-            color: #5469D4;
+            color: #1B4F72;
             margin-top: 6pt;
             font-size: 9pt;
         }
@@ -102,40 +158,38 @@
             font-weight: 600; color: #1F2937; text-align: right;
         }
 
-        .badge {
+        .badge-pending {
             display: inline-block;
-            padding: 3pt 10pt;
+            padding: 4pt 12pt;
             border-radius: 14pt;
             font-size: 8pt;
             font-weight: 700;
             letter-spacing: 0.8pt;
+            background-color: #FF6B35;
+            color: #FFFFFF;
         }
-        .badge-paid { background-color: #D1FAE5; color: #065F46; }
-        .badge-pending { background-color: #FED7AA; color: #9A3412; }
-        .badge-draft { background-color: #E5E7EB; color: #374151; }
-        .badge-failed { background-color: #FECACA; color: #991B1B; }
 
-        /* LINE ITEMS */
+        /* LINE ITEMS — minimalist */
         .items-section { padding: 0 36pt; margin-bottom: 18pt; }
         .items-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .items-table thead { background-color: #F3F4F6; }
+        .items-table thead { background-color: #FFFFFF; }
         .items-table th {
             padding: 10pt 10pt;
             font-size: 7.5pt;
             text-align: left;
-            color: #6B7280;
+            color: #9A3412;
             font-weight: 700;
             letter-spacing: 1pt;
             text-transform: uppercase;
-            border-bottom: 2pt solid #1B4F72;
+            border-bottom: 2pt solid #FF6B35;
         }
         .items-table th.num { text-align: right; }
         .items-table td {
             padding: 12pt 10pt;
-            border-bottom: 1pt solid #E5E7EB;
+            border-bottom: 1pt solid #F3F4F6;
             font-size: 9.5pt;
             color: #1F2937;
             vertical-align: top;
@@ -163,32 +217,61 @@
             text-align: right; color: #1F2937; font-weight: 600;
         }
         .totals-table tr.total-row td {
-            border-top: 2pt solid #1B4F72;
+            border-top: 2pt solid #FF6B35;
             padding-top: 10pt;
             font-size: 14pt;
             font-weight: 700;
-            color: #1B4F72;
+            color: #FF6B35;
         }
 
-        /* PAYMENT INFO */
-        .payment-section {
+        /* PAY NOW CTA BOX */
+        .pay-cta-section {
             margin: 0 36pt 24pt 36pt;
-            padding: 16pt 20pt;
-            background-color: #F9FAFB;
-            border-left: 4pt solid #5469D4;
+            padding: 24pt 28pt;
+            background-color: #1B4F72;
+            border-radius: 6pt;
         }
-        .payment-section .section-label { margin-bottom: 10pt; }
-        .payment-table { width: 100%; }
-        .payment-table td { padding: 3pt 0; font-size: 9.5pt; }
-        .payment-table td.label { color: #6B7280; width: 30%; }
-
-        /* THANK YOU NOTE */
-        .thanks {
-            margin: 0 36pt 18pt 36pt;
-            text-align: center;
+        .pay-cta-table { width: 100%; }
+        .pay-cta-table td { vertical-align: middle; }
+        .cta-title {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 4pt;
+        }
+        .cta-sub {
             font-size: 9.5pt;
-            color: #5469D4;
-            font-style: italic;
+            color: #B6C0D1;
+            line-height: 1.4;
+        }
+        .cta-button-cell { text-align: right; }
+        .cta-button {
+            display: inline-block;
+            background-color: #FF6B35;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 11pt;
+            padding: 12pt 24pt;
+            border-radius: 6pt;
+            text-decoration: none;
+            letter-spacing: 0.5pt;
+        }
+        .cta-link-row {
+            margin-top: 12pt;
+            padding-top: 12pt;
+            border-top: 1pt solid #2D5A82;
+        }
+        .cta-link-label {
+            font-size: 8pt;
+            color: #B6C0D1;
+            letter-spacing: 1pt;
+            font-weight: 600;
+        }
+        .cta-link-value {
+            font-size: 8pt;
+            color: #FFFFFF;
+            word-break: break-all;
+            margin-top: 4pt;
         }
 
         /* FOOTER */
@@ -213,7 +296,10 @@
 <body>
     <div class="page">
 
-        <!-- HEADER -->
+        <!-- TOP ORANGE RIBBON -->
+        <div class="top-ribbon"></div>
+
+        <!-- WHITE HEADER -->
         <div class="header">
             <table class="header-table" cellspacing="0" cellpadding="0">
                 <tr>
@@ -222,13 +308,35 @@
                             <td class="brand-logo">&#9889;</td>
                             <td class="brand-text">
                                 <div class="brand-name">TechnoStore</div>
-                                <div class="brand-tagline">{!documentTagline}</div>
+                                <div class="brand-tagline">PAYMENT REQUEST</div>
                             </td>
                         </tr></table>
                     </td>
                     <td class="header-right">
-                        <div class="invoice-label">{!documentLabel}</div>
+                        <div class="invoice-label">INVOICE</div>
                         <div class="invoice-number">{!invoice.DocumentNumber}</div>
+                        <div class="invoice-sub">AWAITING PAYMENT</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- AWAITING PAYMENT BANNER -->
+        <div class="awaiting-banner">
+            <table class="awaiting-banner-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>
+                        <table cellspacing="0" cellpadding="0"><tr>
+                            <td class="awaiting-icon-cell">!</td>
+                            <td class="awaiting-text-cell">
+                                <div class="awaiting-title">Payment Required</div>
+                                <div class="awaiting-sub">Please pay this invoice by {!dueDateStr} to avoid service interruption.</div>
+                            </td>
+                        </tr></table>
+                    </td>
+                    <td class="awaiting-amount-cell">
+                        <div class="awaiting-amount-label">AMOUNT DUE</div>
+                        <div class="awaiting-amount">{!totalFormatted}</div>
                     </td>
                 </tr>
             </table>
@@ -255,9 +363,7 @@
                             <tr><td class="label">Reference</td><td class="value">{!invoice.DocumentNumber}</td></tr>
                             <tr><td class="label">Order Type</td><td class="value">{!fulfillmentLabel}</td></tr>
                             <tr><td class="label">Status</td>
-                                <td class="value">
-                                    <span class="badge badge-{!paymentStatusKey}">{!paymentStatusLabel}</span>
-                                </td>
+                                <td class="value"><span class="badge-pending">AWAITING PAYMENT</span></td>
                             </tr>
                         </table>
                     </td>
@@ -309,7 +415,7 @@
                                 <td class="amount-cell">{!taxFormatted}</td>
                             </tr>
                             <tr class="total-row">
-                                <td class="label-cell">TOTAL</td>
+                                <td class="label-cell">AMOUNT DUE</td>
                                 <td class="amount-cell">{!totalFormatted}</td>
                             </tr>
                         </table>
@@ -318,28 +424,23 @@
             </table>
         </div>
 
-        <!-- PAYMENT INFO -->
-        <div class="payment-section">
-            <div class="section-label">PAYMENT INFORMATION</div>
-            <table class="payment-table" cellspacing="0" cellpadding="0">
+        <!-- PAY NOW CTA -->
+        <div class="pay-cta-section">
+            <table class="pay-cta-table" cellspacing="0" cellpadding="0">
                 <tr>
-                    <td class="label">Payment Method</td>
-                    <td>Stripe — Credit Card &middot; Apple Pay &middot; Link</td>
-                </tr>
-                <tr>
-                    <td class="label">Payment Status</td>
-                    <td><span class="badge badge-{!paymentStatusKey}">{!paymentStatusLabel}</span></td>
-                </tr>
-                <tr>
-                    <td class="label">Paid On</td>
-                    <td>{!paidDateStr}</td>
+                    <td>
+                        <div class="cta-title">Pay this invoice securely online</div>
+                        <div class="cta-sub">Tap the button to complete payment via Stripe — bank-level encryption, instant confirmation.</div>
+                    </td>
+                    <td class="cta-button-cell">
+                        <a class="cta-button" href="{!invoice.Stripe_Payment_URL__c}">PAY NOW &rarr;</a>
+                    </td>
                 </tr>
             </table>
-        </div>
-
-        <!-- THANK YOU -->
-        <div class="thanks">
-            Thank you for choosing TechnoStore — your trusted EU partner for revenue automation.
+            <div class="cta-link-row">
+                <div class="cta-link-label">DIRECT PAYMENT LINK</div>
+                <div class="cta-link-value">{!invoice.Stripe_Payment_URL__c}</div>
+            </div>
         </div>
 
         <!-- FOOTER -->

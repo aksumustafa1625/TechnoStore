@@ -6,35 +6,28 @@
         <label>Send Activation Email</label>
         <locationX>176</locationX>
         <locationY>278</locationY>
-        <actionName>emailSimple</actionName>
-        <actionType>emailSimple</actionType>
+        <actionName>EmailWithBrandedPdf</actionName>
+        <actionType>apex</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
-            <name>emailBody</name>
+            <name>invoiceId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailHtmlBody</name>
             <value>
                 <stringValue>&lt;html&gt;&lt;body style=&quot;margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;&quot;&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#f4f6f9;padding:40px 20px;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;table width=&quot;600&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;background-color:#1B4F72;padding:32px 40px;text-align:center;&quot;&gt;&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; align=&quot;center&quot; style=&quot;margin:0 auto;&quot;&gt;&lt;tr&gt;&lt;td width=&quot;50&quot; height=&quot;50&quot; style=&quot;background-color:#10B981;border-radius:10px;text-align:center;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:900;line-height:50px;&quot;&gt;&amp;#128273;&lt;/td&gt;&lt;td style=&quot;padding-left:14px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-align:left;vertical-align:middle;&quot;&gt;&lt;div style=&quot;font-size:24px;font-weight:700;line-height:26px;letter-spacing:-0.3px;color:#ffffff;&quot;&gt;TechnoStore&lt;/div&gt;&lt;div style=&quot;font-size:9px;color:#a8b2c1;letter-spacing:2.5px;font-weight:500;margin-top:4px;&quot;&gt;LICENSE ACTIVATED&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:40px;&quot;&gt;&lt;h1 style=&quot;color:#10B981;font-size:26px;margin:0 0 8px 0;font-weight:600;&quot;&gt;Your license is active!&lt;/h1&gt;&lt;p style=&quot;color:#6b7280;font-size:14px;margin:0 0 24px 0;&quot;&gt;Service provisioned. Access ready.&lt;/p&gt;&lt;p style=&quot;font-size:16px;color:#374151;line-height:1.6;margin:0 0 16px 0;&quot;&gt;Dear {!$Record.BillingAccount.Name} team,&lt;/p&gt;&lt;p style=&quot;font-size:16px;color:#374151;line-height:1.6;margin:0 0 24px 0;&quot;&gt;Thank you for choosing TechnoStore. Your SaaS license has been provisioned and is ready to use. All your account access details are below.&lt;/p&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;background-color:#f0fdf4;border:1px solid #10B981;border-radius:8px;margin:24px 0;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:24px;&quot;&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Invoice Number&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;&quot;&gt;{!$Record.DocumentNumber}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Account&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;&quot;&gt;{!$Record.BillingAccount.Name}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Service Type&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;&quot;&gt;SaaS License&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:6px 0;color:#6b7280;font-size:14px;&quot;&gt;Amount Paid&lt;/td&gt;&lt;td style=&quot;padding:6px 0;color:#10B981;font-size:18px;font-weight:700;text-align:right;&quot;&gt;${!$Record.TotalAmountWithTax}&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:12px 0 6px 0;color:#6b7280;font-size:14px;border-top:1px solid #d1fae5;&quot;&gt;License Status&lt;/td&gt;&lt;td style=&quot;padding:12px 0 6px 0;color:#10B981;font-size:14px;font-weight:700;text-align:right;border-top:1px solid #d1fae5;&quot;&gt;&amp;#128273; ACTIVE&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;margin:32px 0 16px 0;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;a href=&quot;https://example.com/portal&quot; style=&quot;display:inline-block;padding:14px 40px;background-color:#10B981;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;&quot;&gt;Access Your Dashboard&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p style=&quot;font-size:15px;color:#374151;line-height:1.6;margin:32px 0 16px 0;&quot;&gt;&lt;strong&gt;Get started in 4 steps:&lt;/strong&gt;&lt;/p&gt;&lt;table width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; style=&quot;margin:0 0 24px 0;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:10px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&lt;strong style=&quot;color:#10B981;&quot;&gt;1.&lt;/strong&gt; &amp;nbsp;Sign in to your customer dashboard with your business email&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:10px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&lt;strong style=&quot;color:#10B981;&quot;&gt;2.&lt;/strong&gt; &amp;nbsp;Generate your API keys from Settings &amp;rarr; Developer&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:10px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&lt;strong style=&quot;color:#10B981;&quot;&gt;3.&lt;/strong&gt; &amp;nbsp;Read the integration docs at docs.technostore.com&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:10px 0;font-size:14px;color:#374151;line-height:1.5;&quot;&gt;&lt;strong style=&quot;color:#10B981;&quot;&gt;4.&lt;/strong&gt; &amp;nbsp;Your dedicated success manager will reach out within 24 hours&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p style=&quot;color:#9ca3af;font-size:12px;line-height:1.5;margin:32px 0 0 0;border-top:1px solid #e5e7eb;padding-top:20px;&quot;&gt;Need help? Email &lt;a href=&quot;mailto:support@technostore.com&quot; style=&quot;color:#10B981;text-decoration:none;&quot;&gt;support@technostore.com&lt;/a&gt; or chat with us in your dashboard.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;background-color:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;&quot;&gt;&lt;p style=&quot;color:#6b7280;font-size:12px;line-height:1.6;margin:0;text-align:center;&quot;&gt;&amp;copy; 2026 TechnoStore &amp;mdash; Retail Excellence&lt;br/&gt;Powered by Salesforce Revenue Cloud, Stripe &amp; MuleSoft&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</stringValue>
             </value>
         </inputParameters>
         <inputParameters>
-            <name>emailAddresses</name>
-            <value>
-                <elementReference>WelcomeRecipientEmail</elementReference>
-            </value>
-        </inputParameters>
-        <inputParameters>
             <name>emailSubject</name>
             <value>
-                <stringValue>Payment Confirmed — Your TechnoStore Service is Active (Invoice {!$Record.DocumentNumber})</stringValue>
+                <stringValue>Payment Confirmed — Your TechnoStore Service is Active (Receipt {!$Record.DocumentNumber})</stringValue>
             </value>
         </inputParameters>
-        <inputParameters>
-            <name>sendRichBody</name>
-            <value>
-                <booleanValue>true</booleanValue>
-            </value>
-        </inputParameters>
-        <nameSegment>emailSimple</nameSegment>
-        <versionSegment>1</versionSegment>
+        <nameSegment>EmailWithBrandedPdf</nameSegment>
     </actionCalls>
     <description>Auto-sends a payment confirmation / service activation email when an Invoice transitions to Stripe_Payment_Status__c=Paid. Falls back to demo-recipient@example.com if BillToContact.Email is null.</description>
     <formulas>

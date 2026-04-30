@@ -2,11 +2,11 @@
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>63.0</apiVersion>
     <actionCalls>
-        <name>Attach_Pdf_And_Send_Payment_Link</name>
-        <label>Attach Preview PDF and Send Payment Link</label>
+        <name>Attach_Pdf_And_Send_Receipt</name>
+        <label>Attach PDF and Send Receipt</label>
         <locationX>176</locationX>
         <locationY>278</locationY>
-        <actionName>AttachAndEmailInvoicePreview</actionName>
+        <actionName>AttachAndEmailInvoicePdf</actionName>
         <actionType>apex</actionType>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
@@ -15,11 +15,11 @@
                 <elementReference>$Record.Id</elementReference>
             </value>
         </inputParameters>
-        <nameSegment>AttachAndEmailInvoicePreview</nameSegment>
+        <nameSegment>AttachAndEmailInvoicePdf</nameSegment>
     </actionCalls>
-    <description>When MuleSoft writes Stripe_Payment_URL__c back to the Invoice, generate the orange-themed pre-payment PDF, attach to the Invoice in Files, and email it to the BillToContact along with the Stripe payment link.</description>
-    <interviewLabel>Send Stripe Payment Email {!$Flow.CurrentDateTime}</interviewLabel>
-    <label>Send Stripe Payment Email</label>
+    <description>When Invoice transitions to Paid, generate the branded PDF, save it to Salesforce Files (Related list on Invoice), and email it as a receipt to the BillToContact.</description>
+    <interviewLabel>Send Invoice Receipt With Pdf {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Send Invoice Receipt With PDF</label>
     <processMetadataValues>
         <name>BuilderType</name>
         <value>
@@ -43,12 +43,12 @@
         <locationX>50</locationX>
         <locationY>0</locationY>
         <connector>
-            <targetReference>Attach_Pdf_And_Send_Payment_Link</targetReference>
+            <targetReference>Attach_Pdf_And_Send_Receipt</targetReference>
         </connector>
-        <filterFormula>AND(ISCHANGED({!$Record.Stripe_Payment_Intent_Id__c}), NOT(ISBLANK({!$Record.Stripe_Payment_Intent_Id__c})))</filterFormula>
+        <filterFormula>AND(ISCHANGED({!$Record.Stripe_Payment_Status__c}), ISPICKVAL({!$Record.Stripe_Payment_Status__c}, &quot;Paid&quot;))</filterFormula>
         <object>Invoice</object>
         <recordTriggerType>Update</recordTriggerType>
         <triggerType>RecordAfterSave</triggerType>
     </start>
-    <status>Active</status>
+    <status>Draft</status>
 </Flow>

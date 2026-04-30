@@ -17,7 +17,7 @@ public with sharing class InvoicePdfController {
         List<Invoice> results = [
             SELECT Id, DocumentNumber, InvoiceDate, DueDate,
                    TotalAmount, TotalAmountWithTax, TotalTaxAmount,
-                   Status, Stripe_Payment_Status__c, Paid_Date__c,
+                   Status, Stripe_Payment_Status__c, Stripe_Payment_URL__c, Paid_Date__c,
                    Has_Physical__c, Has_Digital__c,
                    BillingAccountId, BillToContactId,
                    BillingAccount.Name, BillingAccount.BillingStreet,
@@ -74,7 +74,13 @@ public with sharing class InvoicePdfController {
     public String getTaxFormatted() { return formatCurrency(getTaxAmount()); }
     public String getSubtotalFormatted() { return formatCurrency(getSubtotalAmount()); }
 
+    public Boolean getPaidOverride() {
+        String paidParam = ApexPages.currentPage().getParameters().get('paid');
+        return paidParam != null && paidParam.equalsIgnoreCase('true');
+    }
+
     public String getPaymentStatusLabel() {
+        if (getPaidOverride()) return 'PAID';
         if (invoice == null) return 'DRAFT';
         String s = invoice.Stripe_Payment_Status__c;
         if (s == 'Paid') return 'PAID';
@@ -84,12 +90,21 @@ public with sharing class InvoicePdfController {
     }
 
     public String getPaymentStatusKey() {
+        if (getPaidOverride()) return 'paid';
         if (invoice == null) return 'draft';
         String s = invoice.Stripe_Payment_Status__c;
         if (s == 'Paid') return 'paid';
         if (s == 'Sent') return 'pending';
         if (s == 'Failed') return 'failed';
         return 'draft';
+    }
+
+    public String getDocumentLabel() {
+        return (getPaymentStatusKey() == 'paid') ? 'RECEIPT' : 'INVOICE';
+    }
+
+    public String getDocumentTagline() {
+        return (getPaymentStatusKey() == 'paid') ? 'PAYMENT RECEIPT' : 'REVENUE CLOUD EXCELLENCE';
     }
 
     public String getFulfillmentLabel() {
@@ -103,6 +118,7 @@ public with sharing class InvoicePdfController {
     }
 
     public Boolean getIsPaid() {
+        if (getPaidOverride()) return true;
         return invoice != null && invoice.Stripe_Payment_Status__c == 'Paid';
     }
 
