@@ -3,6 +3,18 @@
     {
       "path": "force-app",
       "default": true
+    },
+    {
+      "path": "force-app-controllers"
+    },
+    {
+      "path": "force-app-services"
+    },
+    {
+      "path": "force-app-handlers"
+    },
+    {
+      "path": "force-app-actions"
     }
   ],
   "name": "TechnoStore",
