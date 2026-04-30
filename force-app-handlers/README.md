@@ -10,9 +10,49 @@ Handlers are the **boundary layer** between external systems and the Salesforce 
 
 ## Classes in this directory
 
-| Class | Type | Endpoint / Trigger |
+### REST / Webhook handlers
+
+| Class | Type | Endpoint |
 |---|---|---|
 | `DocuSignConnectWebhook` | `@RestResource` | `/services/apexrest/docusign/webhook` (DocuSign Connect callback) |
+
+### Trigger framework — Kevin O'Hara
+
+| Class | Role |
+|---|---|
+| `TriggerHandler` | Base virtual class — Kevin O'Hara framework, MIT licensed (adapted from [github.com/kevinohara80/sfdc-trigger-framework](https://github.com/kevinohara80/sfdc-trigger-framework)). Provides `before/after insert/update/delete/undelete` hooks, recursion control via `setMaxLoopCount(n)`, bypass mechanism via `TriggerHandler.bypass('HandlerName')` |
+| `DocuSignStatusUpdateTriggerHandler` | Maps DocuSign envelope status → `Contract.Status` (Platform Event handler) |
+| `OrderItemTriggerHandler` | Auto-populates `OrderItem.Description` from `Product2.Name` (before insert/update) |
+| `QuoteLineItemTriggerHandler` | Auto-populates `QuoteLineItem.Description` from `Product2.Name` (before insert/update) |
+
+### Thin trigger pattern
+
+All triggers in `force-app/main/default/triggers/` follow the **one-line thin trigger** convention:
+
+```apex
+trigger OrderItemAutoDescription on OrderItem (before insert, before update) {
+    new OrderItemTriggerHandler().run();
+}
+```
+
+Logic lives in the handler class (in this directory). The trigger itself is a routing shim only.
+
+### Adding a new trigger
+
+1. Create `force-app/main/default/triggers/MyObjectTrigger.trigger` with one line: `new MyObjectTriggerHandler().run();`
+2. Create `MyObjectTriggerHandler.cls` here that `extends TriggerHandler`
+3. Override the relevant context method(s): `beforeInsert()`, `afterUpdate()`, etc.
+4. Access trigger records via `(List<MyObject>) Trigger.new` or via a typed wrapper getter
+
+### Bypass mechanism
+
+To temporarily disable a handler (useful in data migration scripts, batch jobs, or tests):
+
+```apex
+TriggerHandler.bypass('OrderItemTriggerHandler');
+// ... do bulk DML without firing the handler ...
+TriggerHandler.clearBypass('OrderItemTriggerHandler');
+```
 
 ## Conventions
 
