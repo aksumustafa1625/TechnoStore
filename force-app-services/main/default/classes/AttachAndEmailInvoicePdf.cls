@@ -37,21 +37,7 @@ public with sharing class AttachAndEmailInvoicePdf {
         String docNumber = (inv.DocumentNumber == null) ? 'Invoice' : inv.DocumentNumber;
         String fileName = 'TechnoStore_Receipt_' + docNumber + '.pdf';
 
-        ContentVersion cv = new ContentVersion();
-        cv.Title = fileName;
-        cv.PathOnClient = fileName;
-        cv.VersionData = pdfBlob;
-        cv.IsMajorVersion = true;
-        insert cv;
-
-        ContentVersion saved = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
-
-        ContentDocumentLink cdl = new ContentDocumentLink();
-        cdl.ContentDocumentId = saved.ContentDocumentId;
-        cdl.LinkedEntityId = invoiceId;
-        cdl.ShareType = 'V';
-        cdl.Visibility = 'AllUsers';
-        insert cdl;
+        // PDF Files'a kaydetmiyoruz (Dev Edition storage limit). Sadece email eki olarak gider.
 
         String recipient = (inv.BillToContact != null && inv.BillToContact.Email != null)
             ? inv.BillToContact.Email : 'demo-recipient@example.com';
@@ -97,7 +83,7 @@ public with sharing class AttachAndEmailInvoicePdf {
             '<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">' +
             '<tr><td style="background-color:#1B4F72;padding:32px 40px;text-align:center;">' +
             '<table cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;"><tr>' +
-            '<td width="50" height="50" style="background-color:#5469D4;border-radius:10px;text-align:center;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:900;line-height:50px;">&#9889;</td>' +
+            '<td width="50" height="50" style="background-color:#5469D4;border-radius:10px;text-align:center;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:900;line-height:50px;">TS</td>' +
             '<td style="padding-left:14px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-align:left;vertical-align:middle;">' +
             '<div style="font-size:24px;font-weight:700;line-height:26px;letter-spacing:-0.3px;color:#ffffff;">TechnoStore</div>' +
             '<div style="font-size:9px;color:#a8b2c1;letter-spacing:2.5px;font-weight:500;margin-top:4px;">PAYMENT RECEIPT</div>' +

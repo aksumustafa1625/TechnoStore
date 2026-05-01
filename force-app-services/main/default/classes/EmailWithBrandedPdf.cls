@@ -44,21 +44,8 @@ public with sharing class EmailWithBrandedPdf {
         String docNumber = (inv.DocumentNumber == null) ? 'Invoice' : inv.DocumentNumber;
         String fileName = 'TechnoStore_Receipt_' + docNumber + '.pdf';
 
-        ContentVersion cv = new ContentVersion();
-        cv.Title = fileName;
-        cv.PathOnClient = fileName;
-        cv.VersionData = pdfBlob;
-        cv.IsMajorVersion = true;
-        insert cv;
-
-        ContentVersion saved = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id LIMIT 1];
-
-        ContentDocumentLink cdl = new ContentDocumentLink();
-        cdl.ContentDocumentId = saved.ContentDocumentId;
-        cdl.LinkedEntityId = req.invoiceId;
-        cdl.ShareType = 'V';
-        cdl.Visibility = 'AllUsers';
-        insert cdl;
+        // PDF Files'a kaydetmiyoruz (Dev Edition storage limit). Sadece email eki olarak gider.
+        // Production'da: ContentVersion + ContentDocumentLink insert blokunu aktive et.
 
         String recipient = (inv.BillToContact != null && inv.BillToContact.Email != null)
             ? inv.BillToContact.Email : 'demo-recipient@example.com';
