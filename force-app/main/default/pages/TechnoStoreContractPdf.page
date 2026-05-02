@@ -1,0 +1,270 @@
+<apex:page renderAs="pdf" applyHtmlTag="true" applyBodyTag="false" showHeader="false" sidebar="false"
+           standardStylesheets="false" controller="ContractPdfController" cache="false">
+<head>
+    <title>Master Service Agreement {!contractNumberStr}</title>
+    <style type="text/css">
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; font-family: 'Helvetica', 'Arial', sans-serif; color: #1F2937; font-size: 10pt; line-height: 1.6; }
+        .page { width: 100%; }
+
+        /* COVER */
+        .cover { background-color: #1B4F72; color: #FFFFFF; padding: 50pt 40pt; text-align: center; border-bottom: 4pt solid #5469D4; }
+        .brand-row { width: auto; margin: 0 auto; }
+        .brand-row td { vertical-align: middle; }
+        .brand-logo { background-color: #5469D4; color: #FFFFFF; font-size: 24pt; font-weight: 900; text-align: center; border-radius: 8pt; width: 56pt; height: 56pt; }
+        .brand-text { padding-left: 16pt; text-align: left; }
+        .brand-name { font-size: 28pt; font-weight: 700; line-height: 1.05; letter-spacing: -0.5pt; color: #FFFFFF; }
+        .brand-tagline { font-size: 8pt; color: #B6C0D1; letter-spacing: 3pt; font-weight: 600; margin-top: 4pt; }
+        .doc-title { font-size: 32pt; margin: 60pt 0 16pt 0; font-weight: 700; letter-spacing: -0.5pt; color: #FFFFFF; }
+        .doc-subtitle { font-size: 11pt; color: #B6C0D1; letter-spacing: 2.5pt; }
+        .doc-meta { font-size: 10pt; color: #B6C0D1; margin-top: 50pt; }
+
+        /* SECTIONS */
+        .section { padding: 26pt 40pt; }
+        h2 { color: #1B4F72; font-size: 16pt; border-bottom: 2pt solid #1B4F72; padding-bottom: 6pt; margin: 0 0 12pt 0; }
+        h3 { color: #1B4F72; font-size: 12pt; margin: 16pt 0 6pt 0; }
+        p { margin: 0 0 10pt 0; }
+
+        /* PARTIES */
+        .parties { width: 100%; border-collapse: collapse; margin: 14pt 0; }
+        .parties td { width: 50%; padding: 18pt; background-color: #F9FAFB; border: 1pt solid #E5E7EB; vertical-align: top; }
+        .party-label { font-size: 8pt; color: #5469D4; letter-spacing: 1.5pt; font-weight: 700; }
+        .party-name { font-size: 14pt; font-weight: 700; color: #1B4F72; margin-top: 6pt; }
+        .party-info { font-size: 9.5pt; color: #6B7280; margin-top: 8pt; line-height: 1.6; }
+
+        /* SLA TABLE */
+        .sla { width: 100%; border-collapse: collapse; margin: 14pt 0; }
+        .sla td { padding: 12pt 16pt; border: 1pt solid #E5E7EB; font-size: 9.5pt; }
+        .sla tr:first-child td { background-color: #F0FDF4; border-color: #10B981; }
+        .sla tr:first-child td strong { color: #065F46; }
+        .sla td.label { width: 40%; }
+
+        /* SIGNATURES */
+        .signatures { width: 100%; margin-top: 30pt; }
+        .signatures td { width: 50%; padding: 18pt; vertical-align: top; }
+        .sig-line { border-bottom: 1pt solid #1F2937; margin-top: 60pt; padding-bottom: 4pt; height: 1pt; }
+        .sig-caption { font-size: 9pt; color: #6B7280; margin-top: 4pt; }
+        .sig-fields { margin-top: 16pt; font-size: 10pt; line-height: 1.8; }
+
+        /* FOOTER */
+        .footer { padding: 14pt 40pt 22pt 40pt; text-align: center; border-top: 1pt solid #E5E7EB; color: #9CA3AF; font-size: 7.5pt; letter-spacing: 1.5pt; }
+
+        .badge-paid { background-color: #D1FAE5; color: #065F46; padding: 3pt 10pt; border-radius: 12pt; font-size: 9pt; font-weight: 700; letter-spacing: 0.5pt; }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- COVER -->
+    <div class="cover">
+        <table class="brand-row" cellspacing="0" cellpadding="0">
+            <tr>
+                <td class="brand-logo">TS</td>
+                <td class="brand-text">
+                    <div class="brand-name">TechnoStore GmbH</div>
+                    <div class="brand-tagline">REVENUE CLOUD EXCELLENCE</div>
+                </td>
+            </tr>
+        </table>
+        <div class="doc-title">MASTER SERVICE AGREEMENT</div>
+        <div class="doc-subtitle">BETWEEN TECHNOSTORE GMBH AND {!customerName}</div>
+        <div class="doc-meta">
+            Contract Number: <strong>{!contractNumberStr}</strong> &middot; Effective Date: <strong>{!effectiveDateStr}</strong>
+        </div>
+    </div>
+
+    <!-- 1. PARTIES -->
+    <div class="section">
+        <h2>1. PARTIES</h2>
+        <p>This Master Service Agreement ("<strong>Agreement</strong>") is entered into on <strong>{!effectiveDateStr}</strong> ("<strong>Effective Date</strong>") between:</p>
+        <table class="parties" cellspacing="0" cellpadding="0">
+            <tr>
+                <td>
+                    <div class="party-label">PROVIDER</div>
+                    <div class="party-name">TechnoStore GmbH</div>
+                    <div class="party-info">
+                        Friedrichstraße 100<br/>
+                        10117 Berlin, Germany<br/>
+                        VAT: DE123456789<br/>
+                        Commercial Register: HRB 245678 B<br/>
+                        Email: legal@technostore.com<br/>
+                        Phone: +49 30 5557 4200
+                    </div>
+                </td>
+                <td>
+                    <div class="party-label">CUSTOMER</div>
+                    <div class="party-name">{!customerName}</div>
+                    <div class="party-info">
+                        {!customerStreet}<br/>
+                        {!customerCity}<br/>
+                        {!customerCountry}<br/>
+                        Contact: {!contactName}<br/>
+                        Email: {!contactEmail}
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <p>(each a "<strong>Party</strong>" and collectively the "<strong>Parties</strong>")</p>
+    </div>
+
+    <!-- 2. DEFINITIONS -->
+    <div class="section">
+        <h2>2. DEFINITIONS</h2>
+        <p><strong>"Services"</strong> means the hardware, software (SaaS), and support services delivered under this Agreement, as itemized in the attached Statement of Work or referenced Order Form.</p>
+        <p><strong>"Subscription Term"</strong> means the period beginning on the Effective Date ({!effectiveDateStr}) and ending on {!endDateStr}, unless terminated earlier per Section 8.</p>
+        <p><strong>"Confidential Information"</strong> means any non-public business, technical, or commercial information disclosed by one Party to the other under this Agreement.</p>
+        <p><strong>"Documentation"</strong> means TechnoStore's then-current online user guides, knowledge base articles, and technical specifications available at docs.technostore.com.</p>
+    </div>
+
+    <!-- 3. SERVICES & PRICING -->
+    <div class="section">
+        <h2>3. SERVICES &amp; PRICING</h2>
+        <p>Provider shall deliver the following Services to Customer during the Subscription Term:</p>
+
+        <apex:outputPanel rendered="{!hasOrderItems}" layout="none">
+            <table class="items" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; margin:14pt 0; font-size:10pt;">
+                <thead style="background-color:#F3F4F6;">
+                    <tr>
+                        <th style="padding:10pt 12pt; text-align:left; color:#6B7280; letter-spacing:1pt; font-size:8pt; border-bottom:2pt solid #1B4F72; font-weight:700;">DESCRIPTION</th>
+                        <th style="padding:10pt 12pt; text-align:right; color:#6B7280; letter-spacing:1pt; font-size:8pt; border-bottom:2pt solid #1B4F72; font-weight:700;">QTY</th>
+                        <th style="padding:10pt 12pt; text-align:right; color:#6B7280; letter-spacing:1pt; font-size:8pt; border-bottom:2pt solid #1B4F72; font-weight:700;">UNIT PRICE</th>
+                        <th style="padding:10pt 12pt; text-align:right; color:#6B7280; letter-spacing:1pt; font-size:8pt; border-bottom:2pt solid #1B4F72; font-weight:700;">SUBTOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <apex:repeat value="{!orderItems}" var="oi">
+                        <tr>
+                            <td style="padding:14pt 12pt; border-bottom:1pt solid #E5E7EB; color:#1B4F72; font-weight:600;">{!oi.productName}</td>
+                            <td style="padding:14pt 12pt; border-bottom:1pt solid #E5E7EB; text-align:right;">{!oi.quantityStr}</td>
+                            <td style="padding:14pt 12pt; border-bottom:1pt solid #E5E7EB; text-align:right;">{!oi.unitPriceStr}</td>
+                            <td style="padding:14pt 12pt; border-bottom:1pt solid #E5E7EB; text-align:right; font-weight:700;">{!oi.totalPriceStr}</td>
+                        </tr>
+                    </apex:repeat>
+                </tbody>
+            </table>
+            <table style="width:100%; margin-top:10pt;" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td></td>
+                    <td style="width:280pt;">
+                        <table style="width:100%;" cellspacing="0" cellpadding="0">
+                            <tr style="border-top:2pt solid #1B4F72;">
+                                <td style="padding:12pt 0; color:#1B4F72; text-align:right; padding-right:30pt; font-size:14pt; font-weight:700;">TOTAL CONTRACT VALUE</td>
+                                <td style="padding:12pt 0; text-align:right; color:#1B4F72; font-size:16pt; font-weight:700;">{!totalAmountStr}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </apex:outputPanel>
+
+        <apex:outputPanel rendered="{!NOT(hasOrderItems)}" layout="none">
+            <p><em>Pricing and line items are detailed in the referenced Order Form attached hereto and incorporated by reference.</em></p>
+        </apex:outputPanel>
+
+        <h3>3.1 Payment Terms</h3>
+        <p>Customer shall pay all invoices within <strong>thirty (30) days</strong> of issuance. Late payments shall accrue interest at the rate of 1.5% per month or the maximum allowed by law, whichever is lower. All fees are exclusive of applicable taxes.</p>
+
+        <h3>3.2 Subscription Renewal</h3>
+        <p>This Agreement shall automatically renew for successive twelve (12) month periods unless either Party provides written notice of non-renewal at least sixty (60) days prior to the end of the then-current term.</p>
+    </div>
+
+    <!-- 4. SLA -->
+    <div class="section">
+        <h2>4. SERVICE LEVEL AGREEMENT</h2>
+        <p>Provider warrants the following service levels for the SaaS components:</p>
+        <table class="sla" cellspacing="0" cellpadding="0">
+            <tr>
+                <td class="label"><strong>Uptime Guarantee</strong></td>
+                <td>99.9% monthly availability, excluding scheduled maintenance windows</td>
+            </tr>
+            <tr>
+                <td class="label"><strong>Response Time (Critical)</strong></td>
+                <td>Within 1 hour, 24/7</td>
+            </tr>
+            <tr>
+                <td class="label"><strong>Response Time (High)</strong></td>
+                <td>Within 4 business hours</td>
+            </tr>
+            <tr>
+                <td class="label"><strong>Response Time (Standard)</strong></td>
+                <td>Within 1 business day</td>
+            </tr>
+            <tr>
+                <td class="label"><strong>Service Credits</strong></td>
+                <td>10% of monthly fees if uptime falls below 99.9%; 25% if below 99.5%</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 5. DATA PROTECTION -->
+    <div class="section">
+        <h2>5. DATA PROTECTION (GDPR)</h2>
+        <p>The Parties shall comply with the EU General Data Protection Regulation (GDPR) and any applicable national data protection laws. A separate Data Processing Agreement (DPA) is incorporated by reference into this Agreement.</p>
+        <p>Provider is hosted on EU-based infrastructure (Frankfurt, Germany) and shall not transfer Customer Personal Data outside the EEA without prior written consent.</p>
+
+        <h2>6. CONFIDENTIALITY</h2>
+        <p>Each Party shall hold the other's Confidential Information in strict confidence and shall not disclose it to any third party without prior written consent, except as required by law. This obligation survives termination of this Agreement for a period of three (3) years.</p>
+
+        <h2>7. LIMITATION OF LIABILITY</h2>
+        <p>Provider's total cumulative liability under this Agreement shall not exceed the fees paid by Customer in the twelve (12) months preceding the event giving rise to the claim. Neither Party shall be liable for indirect, incidental, special, or consequential damages.</p>
+    </div>
+
+    <!-- 8-9. TERMINATION & GOVERNING LAW -->
+    <div class="section">
+        <h2>8. TERMINATION</h2>
+        <p>Either Party may terminate this Agreement for material breach by the other Party that remains uncured for thirty (30) days after written notice. Upon termination, Customer shall pay all fees accrued through the termination date, and Provider shall return or destroy all Customer Confidential Information.</p>
+
+        <h2>9. GOVERNING LAW</h2>
+        <p>This Agreement shall be governed by and construed in accordance with the laws of the Federal Republic of Germany. The exclusive place of jurisdiction shall be Berlin, Germany.</p>
+    </div>
+
+    <!-- 10. SIGNATURES -->
+    <div class="section">
+        <h2>10. SIGNATURES</h2>
+        <p>By signing below, the Parties agree to be bound by all terms and conditions of this Master Service Agreement.</p>
+        <table class="signatures" cellspacing="0" cellpadding="0" style="margin-top:24pt;">
+            <tr>
+                <td style="width:50%; padding:24pt; vertical-align:top; background-color:#F9FAFB; border:1pt solid #E5E7EB;">
+                    <div style="font-size:9pt; color:#5469D4; letter-spacing:2pt; font-weight:700; margin-bottom:6pt;">FOR PROVIDER</div>
+                    <div style="font-size:18pt; font-weight:700; color:#1B4F72; line-height:1.2;">TechnoStore GmbH</div>
+                    <div style="font-size:9pt; color:#6B7280; margin-top:4pt;">Berlin, Germany</div>
+                    <div style="border-bottom:1.5pt solid #1F2937; margin-top:50pt; padding-bottom:4pt; height:1pt;">&nbsp;</div>
+                    <div style="font-size:9pt; color:#6B7280; margin-top:6pt; font-style:italic;">Authorized Signature</div>
+                    <div style="margin-top:18pt; font-size:10pt; line-height:1.9;">
+                        <strong>Name:</strong> _________________________<br/>
+                        <strong>Title:</strong> _________________________<br/>
+                        <strong>Date:</strong> _________________________
+                    </div>
+                </td>
+                <td style="width:14pt;">&nbsp;</td>
+                <td style="width:50%; padding:24pt; vertical-align:top; background-color:#F9FAFB; border:1pt solid #E5E7EB;">
+                    <div style="font-size:9pt; color:#5469D4; letter-spacing:2pt; font-weight:700; margin-bottom:6pt;">FOR CUSTOMER</div>
+                    <div style="font-size:18pt; font-weight:700; color:#1B4F72; line-height:1.2;">{!customerName}</div>
+                    <div style="font-size:9pt; color:#6B7280; margin-top:4pt;">{!customerCity}</div>
+                    <div style="border-bottom:1.5pt solid #1F2937; margin-top:50pt; padding-bottom:4pt; height:1pt;">&nbsp;</div>
+                    <div style="font-size:9pt; color:#6B7280; margin-top:6pt; font-style:italic;">Authorized Signature</div>
+                    <div style="margin-top:18pt; font-size:10pt; line-height:1.9;">
+                        <strong>Name:</strong> {!contactName}<br/>
+                        <strong>Title:</strong> {!contactTitle}<br/>
+                        <strong>Date:</strong> _________________________
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div style="margin-top:24pt; padding:14pt; background-color:#1B4F72; color:#FFFFFF; text-align:center; border-radius:4pt;">
+            <div style="font-size:11pt; font-weight:700; letter-spacing:1pt;">CONTRACT BETWEEN <span style="color:#5469D4;">TECHNOSTORE GMBH</span> AND <span style="color:#5469D4;">{!customerName}</span></div>
+            <div style="font-size:9pt; color:#B6C0D1; margin-top:6pt; letter-spacing:1.5pt;">
+                Contract: <strong>{!contractNumberStr}</strong> &middot; Effective: <strong>{!effectiveDateStr}</strong> &middot; Term Ends: <strong>{!endDateStr}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        TECHNOSTORE GMBH &middot; FRIEDRICHSTRASSE 100 &middot; 10117 BERLIN &middot; GERMANY &middot; SUPPORT@TECHNOSTORE.COM
+    </div>
+
+</div>
+</body>
+</apex:page>

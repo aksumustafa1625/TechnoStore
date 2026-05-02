@@ -73,16 +73,22 @@ public with sharing class DocuSignSendForSignatureService {
     }
 
     private static ContentVersion findContractPdf(Id contractId) {
-        List<ContractDocumentVersion> versions = [
+        // PRIMARY: native CLM ContractDocumentVersion (when CLM Document Template flow is used)
+        Set<Id> linkedEntityIds = new Set<Id>();
+        for (ContractDocumentVersion v : [
             SELECT Id FROM ContractDocumentVersion
             WHERE ContractId = :contractId AND Status = 'Active'
             ORDER BY CreatedDate DESC LIMIT 1
-        ];
-        if (versions.isEmpty()) return null;
+        ]) {
+            linkedEntityIds.add(v.Id);
+        }
+
+        // FALLBACK: PDFs attached directly to the Contract (when our custom GenerateContractPdfService is used)
+        linkedEntityIds.add(contractId);
 
         List<ContentDocumentLink> links = [
             SELECT ContentDocumentId FROM ContentDocumentLink
-            WHERE LinkedEntityId = :versions[0].Id
+            WHERE LinkedEntityId IN :linkedEntityIds
         ];
         if (links.isEmpty()) return null;
 
@@ -90,11 +96,12 @@ public with sharing class DocuSignSendForSignatureService {
         for (ContentDocumentLink l : links) docIds.add(l.ContentDocumentId);
 
         List<ContentVersion> pdfs = [
-            SELECT Id, Title, FileExtension, VersionData
+            SELECT Id, Title, FileExtension, VersionData, CreatedDate
             FROM ContentVersion
             WHERE ContentDocumentId IN :docIds
               AND IsLatest = true
               AND FileExtension = 'pdf'
+            ORDER BY CreatedDate DESC
             LIMIT 1
         ];
         return pdfs.isEmpty() ? null : pdfs[0];

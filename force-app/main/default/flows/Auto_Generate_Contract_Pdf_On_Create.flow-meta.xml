@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <actionCalls>
+        <name>Generate_Pdf</name>
+        <label>Generate Branded Contract PDF</label>
+        <locationX>176</locationX>
+        <locationY>278</locationY>
+        <actionName>GenerateContractPdfService</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>contractId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>GenerateContractPdfService</nameSegment>
+    </actionCalls>
+    <description>Record-triggered: when a new Contract is created (via native Create Contract button or any other source), auto-generates a TechnoStore-branded MSA PDF and attaches it to the Contract via ContentDocumentLink. The PDF is then available for the existing Send Via DocuSign quick action.</description>
+    <interviewLabel>Auto Generate Contract PDF {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Auto Generate Contract PDF On Create</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Generate_Pdf</targetReference>
+        </connector>
+        <object>Contract</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
