@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Estimated_VAT_Amount__c</fullName>
+    <description>Estimated VAT (19% German rate) per line item, calculated as TotalPrice * 0.19. Display-only formula. Real tax computed by tax engine on related Invoice.</description>
+    <externalId>false</externalId>
+    <formula>UnitPrice * Quantity * 0.19</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Estimated VAT at 19% (German rate). Final tax computed at invoice generation.</inlineHelpText>
+    <label>Estimated VAT</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <type>Currency</type>
+</CustomField>

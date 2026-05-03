@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BillingSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <billingContextDefinition>BillingContext__stdctx</billingContextDefinition>
+    <billingContextSourceMapping>OrderEntitiesMapping</billingContextSourceMapping>
+    <defaultAPClosureDPEDefnName>LegalEntityAccountingPeriodClosure</defaultAPClosureDPEDefnName>
+    <defaultBillingTreatment>1BTaj0000002W5RGAU</defaultBillingTreatment>
+    <defaultEmailTemplate>00Xaj00000UlF40EAF</defaultEmailTemplate>
+    <defaultInvPreviewTemplate>2dtaj000000M2kkAAC</defaultInvPreviewTemplate>
+    <defaultInvoiceDocTemplate>2dtaj000000M2kjAAC</defaultInvoiceDocTemplate>
+    <defaultLegalEntity>0fwaj0000005LNBAA2</defaultLegalEntity>
+    <defaultTaxTreatment>1ttaj000000BaxpAAC</defaultTaxTreatment>
+    <enableBillingDisputeManagement>false</enableBillingDisputeManagement>
+    <enableBillingSetup>true</enableBillingSetup>
+    <enableCrMemoApplicationToPostedInvoices>false</enableCrMemoApplicationToPostedInvoices>
+    <enableFailedPaymentsRetry>false</enableFailedPaymentsRetry>
+    <enableForeignExchangeTrxnJrnlCreation>false</enableForeignExchangeTrxnJrnlCreation>
+    <enableInvoiceEmailDelivery>true</enableInvoiceEmailDelivery>
+    <enableInvoicePdfGeneration>true</enableInvoicePdfGeneration>
+    <enableNegInvoiceLnConversionToCrMemoLn>true</enableNegInvoiceLnConversionToCrMemoLn>
+    <enablePaymentSchedulesAndItemsCreation>false</enablePaymentSchedulesAndItemsCreation>
+    <enableTransactionJournalCreation>false</enableTransactionJournalCreation>
+    <enableTransactionsApplicationToInvoices>false</enableTransactionsApplicationToInvoices>
+    <enableTrxnAmountsStorageInCorpCurrency>false</enableTrxnAmountsStorageInCorpCurrency>
+</BillingSettings>

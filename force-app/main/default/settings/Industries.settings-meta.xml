@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IndustriesSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <collectionAsaAgentPref>false</collectionAsaAgentPref>
+    <enableAccountScoreEnabled>false</enableAccountScoreEnabled>
+    <enableCollectionFLowOps>false</enableCollectionFLowOps>
+    <enableCollectionRiskScoringCFE>false</enableCollectionRiskScoringCFE>
+    <enableCollectionTimeline>false</enableCollectionTimeline>
+    <enableContractMgmtPref>true</enableContractMgmtPref>
+    <enableDFDataCapture>false</enableDFDataCapture>
+    <enableDataTrueUpPreference>false</enableDataTrueUpPreference>
+    <enableDiscoveryFrameworkMetadata>true</enableDiscoveryFrameworkMetadata>
+    <enableDiscoveryFrwrkSampleTemplate>true</enableDiscoveryFrwrkSampleTemplate>
+    <enableDontSharePartyprofWPortalOrgPref>false</enableDontSharePartyprofWPortalOrgPref>
+    <enableEnhancedQuestionCreation>true</enableEnhancedQuestionCreation>
+    <enableEnhancedSaveResponsesPref>false</enableEnhancedSaveResponsesPref>
+    <enableEpcDeleteAccess>false</enableEpcDeleteAccess>
+    <enableIndustriesAssessment>true</enableIndustriesAssessment>
+    <enableIndustriesAssessmentGuestOrgPref>false</enableIndustriesAssessmentGuestOrgPref>
+    <enableIndustriesAssessmentPrefill>false</enableIndustriesAssessmentPrefill>
+    <enableIndustriesIntegrationOrchestratorPref>false</enableIndustriesIntegrationOrchestratorPref>
+    <enableMicrosoftWordAddInEnabled>true</enableMicrosoftWordAddInEnabled>
+    <enableNewTimelineSetupFlow>false</enableNewTimelineSetupFlow>
+    <enablePCMConfigRules>false</enablePCMConfigRules>
+    <enablePartyProfileParentSharingOrgPref>false</enablePartyProfileParentSharingOrgPref>
+    <enablePartyprofParentMultiSharingOrgPref>false</enablePartyprofParentMultiSharingOrgPref>
+    <enableRecordAlertCustomSharingPref>false</enableRecordAlertCustomSharingPref>
+    <enableSaveAssessmentAsDraft>false</enableSaveAssessmentAsDraft>
+    <enableTimelineCachePref>true</enableTimelineCachePref>
+    <enableTimelinePref>false</enableTimelinePref>
+    <participantRecordDeactivateUser>PreventDeactivateUserWithParticipantRecords</participantRecordDeactivateUser>
+    <partyProfMultiShrPrtnrsOrgPref>false</partyProfMultiShrPrtnrsOrgPref>
+    <rlaEditIfAccHasEdit>false</rlaEditIfAccHasEdit>
+    <showCollectionContactAndAccount>false</showCollectionContactAndAccount>
+</IndustriesSettings>
