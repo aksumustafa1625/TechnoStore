@@ -95,6 +95,20 @@ public with sharing class DocuSignSendForSignatureService {
         Set<Id> docIds = new Set<Id>();
         for (ContentDocumentLink l : links) docIds.add(l.ContentDocumentId);
 
+        // Prefer the custom branded MSA PDF (TechnoStore_MSA_*) over any other contract PDF
+        // (e.g. native CLM-generated documents). The custom PDF is the polished demo artifact.
+        List<ContentVersion> brandedPdfs = [
+            SELECT Id, Title, FileExtension, VersionData, CreatedDate
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :docIds
+              AND IsLatest = true
+              AND FileExtension = 'pdf'
+              AND Title LIKE 'TechnoStore_MSA%'
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+        if (!brandedPdfs.isEmpty()) return brandedPdfs[0];
+
         List<ContentVersion> pdfs = [
             SELECT Id, Title, FileExtension, VersionData, CreatedDate
             FROM ContentVersion

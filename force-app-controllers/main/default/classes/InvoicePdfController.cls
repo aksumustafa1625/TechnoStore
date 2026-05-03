@@ -1,5 +1,7 @@
 public with sharing class InvoicePdfController {
 
+    private static final Decimal VAT_RATE = 0.19;
+
     public Invoice invoice { get; set; }
     public List<InvoiceLineWrapper> lineWrappers { get; set; }
 
@@ -29,8 +31,10 @@ public with sharing class InvoicePdfController {
         if (results.isEmpty()) return;
         invoice = results[0];
 
+        Map<Id, OrderItem> orderItemByProduct = buildOrderItemMap(invoice.BillingAccountId);
+
         List<InvoiceLine> lines = [
-            SELECT Id, Product2.Name,
+            SELECT Id, Product2Id, Product2.Name,
                    Quantity, UnitPrice, ChargeAmount, TaxAmount, LineAmount,
                    InvoiceLineStartDate, InvoiceLineEndDate
             FROM InvoiceLine WHERE InvoiceId = :invoiceId
@@ -39,8 +43,27 @@ public with sharing class InvoicePdfController {
 
         lineWrappers = new List<InvoiceLineWrapper>();
         for (InvoiceLine line : lines) {
-            lineWrappers.add(new InvoiceLineWrapper(line));
+            OrderItem matchedOi = (line.Product2Id != null) ? orderItemByProduct.get(line.Product2Id) : null;
+            lineWrappers.add(new InvoiceLineWrapper(line, matchedOi));
         }
+    }
+
+    private static Map<Id, OrderItem> buildOrderItemMap(Id accountId) {
+        Map<Id, OrderItem> result = new Map<Id, OrderItem>();
+        if (accountId == null) return result;
+        List<Order> orders = [
+            SELECT Id FROM Order
+            WHERE AccountId = :accountId AND Status = 'Activated'
+            ORDER BY CreatedDate DESC LIMIT 1
+        ];
+        if (orders.isEmpty()) return result;
+        for (OrderItem oi : [
+            SELECT Id, Product2Id, ListPrice, UnitPrice, Quantity, TotalPrice
+            FROM OrderItem WHERE OrderId = :orders[0].Id
+        ]) {
+            if (oi.Product2Id != null) result.put(oi.Product2Id, oi);
+        }
+        return result;
     }
 
     public String getIssueDate() {
@@ -62,17 +85,22 @@ public with sharing class InvoicePdfController {
         return 0;
     }
 
-    public Decimal getTaxAmount() {
-        return (invoice == null || invoice.TotalTaxAmount == null) ? 0 : invoice.TotalTaxAmount;
+    public Decimal getSubtotalAmount() {
+        Decimal total = getTotalAmount();
+        return (total == 0) ? 0 : (total / (1 + VAT_RATE)).setScale(2);
     }
 
-    public Decimal getSubtotalAmount() {
-        return getTotalAmount() - getTaxAmount();
+    public Decimal getTaxAmount() {
+        return (getTotalAmount() - getSubtotalAmount()).setScale(2);
     }
 
     public String getTotalFormatted() { return formatCurrency(getTotalAmount()); }
     public String getTaxFormatted() { return formatCurrency(getTaxAmount()); }
     public String getSubtotalFormatted() { return formatCurrency(getSubtotalAmount()); }
+
+    public String getVatLabel() {
+        return 'VAT (' + (VAT_RATE * 100).setScale(0).format() + '%)';
+    }
 
     public Boolean getPaidOverride() {
         String paidParam = ApexPages.currentPage().getParameters().get('paid');
@@ -132,11 +160,14 @@ public with sharing class InvoicePdfController {
         public String productName { get; set; }
         public String periodStr { get; set; }
         public String quantityStr { get; set; }
+        public String listPriceFormatted { get; set; }
+        public String discountPercentStr { get; set; }
+        public String netPriceFormatted { get; set; }
         public String unitPriceFormatted { get; set; }
         public String taxFormatted { get; set; }
         public String lineTotalFormatted { get; set; }
 
-        public InvoiceLineWrapper(InvoiceLine l) {
+        public InvoiceLineWrapper(InvoiceLine l, OrderItem matchedOi) {
             line = l;
             productName = (l.Product2 != null && l.Product2.Name != null) ? l.Product2.Name : 'Service';
 
@@ -148,13 +179,25 @@ public with sharing class InvoicePdfController {
 
             quantityStr = (l.Quantity == null) ? '—' : l.Quantity.setScale(0).format();
 
-            Decimal up = (l.UnitPrice == null) ? 0 : l.UnitPrice;
-            Decimal tax = (l.TaxAmount == null) ? 0 : l.TaxAmount;
-            Decimal lineAmt = (l.LineAmount != null) ? l.LineAmount : ((l.ChargeAmount == null ? 0 : l.ChargeAmount) + tax);
+            Decimal currentUnit = (l.UnitPrice == null) ? 0 : l.UnitPrice;
+            Decimal listPrice = (matchedOi != null && matchedOi.ListPrice != null) ? matchedOi.ListPrice : currentUnit;
 
-            unitPriceFormatted = formatCurrency(up);
-            taxFormatted = formatCurrency(tax);
-            lineTotalFormatted = formatCurrency(lineAmt);
+            Decimal discountPct = 0;
+            if (listPrice > 0 && listPrice > currentUnit) {
+                discountPct = ((listPrice - currentUnit) / listPrice * 100).setScale(1);
+            }
+
+            Decimal qty = (l.Quantity == null) ? 1 : l.Quantity;
+            Decimal lineGross = currentUnit * qty;
+            Decimal lineNet = (lineGross / (1 + VAT_RATE)).setScale(2);
+            Decimal lineTax = (lineGross - lineNet).setScale(2);
+
+            listPriceFormatted = formatCurrency(listPrice);
+            discountPercentStr = (discountPct == 0) ? '—' : discountPct.format() + '%';
+            netPriceFormatted = formatCurrency(currentUnit);
+            unitPriceFormatted = formatCurrency(currentUnit);
+            taxFormatted = formatCurrency(lineTax);
+            lineTotalFormatted = formatCurrency(lineGross);
         }
     }
 }

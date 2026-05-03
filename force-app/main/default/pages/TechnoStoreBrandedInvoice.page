@@ -271,9 +271,10 @@
                 <thead>
                     <tr>
                         <th>Description</th>
-                        <th>Period</th>
                         <th class="num">Qty</th>
-                        <th class="num">Unit Price</th>
+                        <th class="num">List Price</th>
+                        <th class="num">Discount</th>
+                        <th class="num">Net Price</th>
                         <th class="num">Tax</th>
                         <th class="num">Amount</th>
                     </tr>
@@ -282,9 +283,10 @@
                     <apex:repeat value="{!lineWrappers}" var="lw">
                         <tr>
                             <td class="product">{!lw.productName}</td>
-                            <td class="period">{!lw.periodStr}</td>
                             <td class="num">{!lw.quantityStr}</td>
-                            <td class="num">{!lw.unitPriceFormatted}</td>
+                            <td class="num">{!lw.listPriceFormatted}</td>
+                            <td class="num">{!lw.discountPercentStr}</td>
+                            <td class="num">{!lw.netPriceFormatted}</td>
                             <td class="num">{!lw.taxFormatted}</td>
                             <td class="num line-total">{!lw.lineTotalFormatted}</td>
                         </tr>
@@ -305,7 +307,7 @@
                                 <td class="amount-cell">{!subtotalFormatted}</td>
                             </tr>
                             <tr>
-                                <td class="label-cell">Tax</td>
+                                <td class="label-cell">{!vatLabel}</td>
                                 <td class="amount-cell">{!taxFormatted}</td>
                             </tr>
                             <tr class="total-row">

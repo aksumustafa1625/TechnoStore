@@ -232,9 +232,9 @@
                     <div style="border-bottom:1.5pt solid #1F2937; margin-top:50pt; padding-bottom:4pt; height:1pt;">&nbsp;</div>
                     <div style="font-size:9pt; color:#6B7280; margin-top:6pt; font-style:italic;">Authorized Signature</div>
                     <div style="margin-top:18pt; font-size:10pt; line-height:1.9;">
-                        <strong>Name:</strong> _________________________<br/>
-                        <strong>Title:</strong> _________________________<br/>
-                        <strong>Date:</strong> _________________________
+                        <strong>Name:</strong> Mustafa Aksu<br/>
+                        <strong>Title:</strong> Chief Revenue Officer<br/>
+                        <strong>Date:</strong> {!effectiveDateStr}
                     </div>
                 </td>
                 <td style="width:14pt;">&nbsp;</td>

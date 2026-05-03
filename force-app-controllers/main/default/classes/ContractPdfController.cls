@@ -64,12 +64,20 @@ public with sharing class ContractPdfController {
             ];
             if (!contacts.isEmpty()) billToContact = contacts[0];
 
-            // Pull line items via Order linked to this Contract
+            // PRIMARY: Pull line items via Order directly linked to this Contract
             List<Order> orders = [
                 SELECT Id FROM Order
                 WHERE ContractId = :contractRecord.Id AND Status = 'Activated'
                 ORDER BY EffectiveDate DESC LIMIT 1
             ];
+            // FALLBACK: If no Order links to this Contract, find the most recent Activated Order on the same Account
+            if (orders.isEmpty()) {
+                orders = [
+                    SELECT Id FROM Order
+                    WHERE AccountId = :contractRecord.AccountId AND Status = 'Activated'
+                    ORDER BY CreatedDate DESC LIMIT 1
+                ];
+            }
             if (!orders.isEmpty()) {
                 List<OrderItem> items = [
                     SELECT Id, Quantity, UnitPrice, TotalPrice, Product2.Name
