@@ -55,6 +55,50 @@
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
+                    <name>defaultState</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>displayTotalPriceBreakdown</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>runtime_revenue_foundation:transactionSummary</componentName>
+                <identifier>runtime_revenue_foundation_transactionSummary</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>enableQuickAdd</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>enableSidepanel</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentName>runtime_rca:salesTxnLineTable</componentName>
+                <identifier>runtime_rca_salesTxnLineTable</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>transactionLinesTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>force:detailPanel</componentName>
+                <identifier>force_detailPanel</identifier>
+            </componentInstance>
+        </itemInstances>
+        <mode>Replace</mode>
+        <name>detailTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
                     <value>NONE</value>
                 </componentInstanceProperties>
@@ -129,6 +173,10 @@
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Tabs</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
                     <name>tabs</name>
                     <value>maintabs</value>
                 </componentInstanceProperties>
@@ -139,17 +187,6 @@
         <mode>Replace</mode>
         <name>main</name>
         <type>Region</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentName>force:detailPanel</componentName>
-                <identifier>force_detailPanel</identifier>
-            </componentInstance>
-        </itemInstances>
-        <mode>Replace</mode>
-        <name>detailTabContent</name>
-        <type>Facet</type>
     </flexiPageRegions>
     <masterLabel>Quote Record Page</masterLabel>
     <parentFlexiPage>runtime_sales_quotes__Quote_rec_L_cpq</parentFlexiPage>

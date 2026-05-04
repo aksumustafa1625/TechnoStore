@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompactLayout xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Quote_With_Tax</fullName>
+    <fields>Name</fields>
+    <fields>OpportunityId</fields>
+    <fields>Status</fields>
+    <fields>ExpirationDate</fields>
+    <fields>TotalPrice</fields>
+    <fields>Tax</fields>
+    <fields>GrandTotal</fields>
+    <label>Quote With Tax</label>
+</CompactLayout>
