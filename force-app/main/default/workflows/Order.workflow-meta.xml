@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fieldUpdates>
+        <fullName>Inventory_Set_Pending</fullName>
+        <description>Initial submission action — fires when the user clicks Submit for Approval (or InventoryCheckService submits programmatically) on the Inventory Approval process.</description>
+        <field>Inventory_Status__c</field>
+        <literalValue>Pending Check</literalValue>
+        <name>Inventory: Set Pending Check</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Inventory_Set_In_Stock</fullName>
+        <description>Final approval action — fires when the warehouse user clicks Approve on the order's pending approval banner.</description>
+        <field>Inventory_Status__c</field>
+        <literalValue>In Stock</literalValue>
+        <name>Inventory: Set In Stock</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Inventory_Set_Out_Of_Stock</fullName>
+        <description>Final rejection action — fires when the warehouse user clicks Reject on the order's pending approval banner.</description>
+        <field>Inventory_Status__c</field>
+        <literalValue>Out of Stock</literalValue>
+        <name>Inventory: Set Out of Stock</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Order_Activate</fullName>
+        <description>Activates the Order (Status = Activated) as part of final approval, so warehouse confirmation immediately makes the Order live and downstream Asset / Invoice flows can proceed.</description>
+        <field>Status</field>
+        <literalValue>Activated</literalValue>
+        <name>Order: Activate on Approval</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+</Workflow>

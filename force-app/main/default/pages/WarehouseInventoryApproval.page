@@ -1,0 +1,144 @@
+<apex:page controller="WarehouseInventoryApprovalController"
+           docType="html-5.0"
+           showHeader="false"
+           sidebar="false"
+           standardStylesheets="false"
+           applyHtmlTag="true"
+           applyBodyTag="false">
+    <apex:slds />
+    <html>
+    <head>
+        <title>Warehouse Inventory Review</title>
+        <style>
+            body { background:#f3f3f3; font-family:'Salesforce Sans', Arial, sans-serif; margin:0; }
+            .wrap { max-width:920px; margin:32px auto; padding:0 16px; }
+            .card { background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:24px; margin-bottom:18px; }
+            .header { background:linear-gradient(135deg,#0176d3,#032e61); color:#fff; padding:24px; border-radius:8px 8px 0 0; margin:-24px -24px 18px -24px; }
+            .header h1 { margin:0; font-size:24px; }
+            .header .sub { margin-top:6px; font-size:13px; opacity:0.85; }
+            .row { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; }
+            .col { flex:1; min-width:180px; }
+            .label { font-size:11px; text-transform:uppercase; color:#706e6b; letter-spacing:0.5px; margin-bottom:4px; }
+            .value { font-size:16px; color:#080707; font-weight:500; }
+            .pill { display:inline-block; padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+            .pill-pending { background:#feefd1; color:#94530a; }
+            .pill-approved { background:#d4f0dc; color:#194e34; }
+            .pill-rejected { background:#fcdfdf; color:#7a1313; }
+            table { width:100%; border-collapse:collapse; }
+            th,td { text-align:left; padding:8px 12px; border-bottom:1px solid #eee; font-size:14px; }
+            th { background:#fafaf9; color:#444; font-weight:600; font-size:12px; text-transform:uppercase; }
+            .actions { display:flex; gap:12px; margin-top:24px; }
+            .btn { padding:14px 28px; border:0; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; flex:1; }
+            .btn-stock { background:#2e844a; color:#fff; }
+            .btn-stock:hover { background:#256636; }
+            .btn-out { background:#ba0517; color:#fff; }
+            .btn-out:hover { background:#8e0411; }
+            .alert { padding:14px 18px; border-radius:6px; margin-bottom:16px; font-size:14px; }
+            .alert-success { background:#ecf6ec; border-left:4px solid #2e844a; color:#194e34; }
+            .alert-warning { background:#fff7e6; border-left:4px solid #fe9339; color:#7a4900; }
+            .alert-error { background:#fde7e9; border-left:4px solid #ba0517; color:#7a1313; }
+            .alert-info { background:#eef4ff; border-left:4px solid #0176d3; color:#0b3a6f; }
+            .footer { margin-top:24px; padding-top:18px; border-top:1px solid #eee; font-size:13px; }
+            .footer a { color:#0176d3; text-decoration:none; }
+        </style>
+    </head>
+    <body>
+    <div class="wrap">
+        <apex:form>
+            <div class="card">
+                <div class="header">
+                    <h1>📦 Warehouse Inventory Review</h1>
+                    <div class="sub">Confirm whether the items requested on this order are available in the warehouse.</div>
+                </div>
+
+                <apex:outputPanel rendered="{!banner != null}" layout="block">
+                    <div class="alert alert-{!bannerLevel}">{!banner}</div>
+                </apex:outputPanel>
+
+                <apex:outputPanel rendered="{!targetOrder != null}" layout="block">
+                    <div class="row">
+                        <div class="col">
+                            <div class="label">Order</div>
+                            <div class="value"><apex:outputText value="{!targetOrder.OrderNumber}" /></div>
+                        </div>
+                        <div class="col">
+                            <div class="label">Account</div>
+                            <div class="value"><apex:outputText value="{!targetOrder.Account.Name}" /></div>
+                        </div>
+                        <div class="col">
+                            <div class="label">Total Amount</div>
+                            <div class="value"><apex:outputText value="USD {0, number, ###,###,##0.00}"><apex:param value="{!targetOrder.TotalAmount}" /></apex:outputText></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="label">Order Status</div>
+                            <div class="value"><apex:outputText value="{!targetOrder.Status}" /></div>
+                        </div>
+                        <div class="col">
+                            <div class="label">Inventory Status</div>
+                            <div class="value">
+                                <apex:outputPanel rendered="{!approvalState == 'Pending'}"><span class="pill pill-pending">Pending Warehouse Decision</span></apex:outputPanel>
+                                <apex:outputPanel rendered="{!approvalState == 'Approved'}"><span class="pill pill-approved">✓ Approved – In Stock</span></apex:outputPanel>
+                                <apex:outputPanel rendered="{!approvalState == 'Rejected'}"><span class="pill pill-rejected">✗ Rejected – Out of Stock</span></apex:outputPanel>
+                            </div>
+                        </div>
+                        <apex:outputPanel rendered="{!targetOrder.Inventory_Confirmed_By__c != null}" layout="block" styleClass="col">
+                            <div class="label">Last Decision By</div>
+                            <div class="value"><apex:outputText value="{!targetOrder.Inventory_Confirmed_By__c}" /></div>
+                        </apex:outputPanel>
+                    </div>
+                </apex:outputPanel>
+            </div>
+
+            <apex:outputPanel rendered="{!orderItems != null && orderItems.size > 0}" layout="block">
+            <div class="card">
+                <div class="label" style="margin-bottom:12px;">Items requested</div>
+                <table>
+                    <tr><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Line Total</th></tr>
+                    <apex:repeat value="{!orderItems}" var="oi">
+                        <tr>
+                            <td>{!oi.Product2.Name}</td>
+                            <td><apex:outputText value="{0, number, ###,###,##0}"><apex:param value="{!oi.Quantity}" /></apex:outputText></td>
+                            <td><apex:outputText value="USD {0, number, ###,###,##0.00}"><apex:param value="{!oi.UnitPrice}" /></apex:outputText></td>
+                            <td><apex:outputText value="USD {0, number, ###,###,##0.00}"><apex:param value="{!oi.TotalPrice}" /></apex:outputText></td>
+                        </tr>
+                    </apex:repeat>
+                </table>
+            </div>
+            </apex:outputPanel>
+
+            <apex:outputPanel rendered="{!canDecide}" layout="block">
+            <div class="card">
+                <div class="alert alert-info">Click one of the buttons below to record your decision. The order will be unlocked and downstream activation will fire automatically on approval.</div>
+                <div class="actions">
+                    <apex:commandButton action="{!markInStock}" value="✅ Mark In Stock" styleClass="btn btn-stock" />
+                    <apex:commandButton action="{!markOutOfStock}" value="❌ Mark Out of Stock" styleClass="btn btn-out" />
+                </div>
+            </div>
+            </apex:outputPanel>
+
+            <apex:outputPanel rendered="{!approvalState == 'Approved'}" layout="block">
+            <div class="card">
+                <div class="alert alert-success"><strong>Decision recorded.</strong> Order activated automatically — Asset and Invoice flows can now proceed.</div>
+            </div>
+            </apex:outputPanel>
+
+            <apex:outputPanel rendered="{!approvalState == 'Rejected'}" layout="block">
+            <div class="card">
+                <div class="alert alert-warning"><strong>Decision recorded.</strong> Inventory marked out of stock. The order remains in Draft status.</div>
+            </div>
+            </apex:outputPanel>
+
+            <apex:outputPanel rendered="{!targetOrder != null}" layout="block">
+            <div class="card">
+                <div class="footer">
+                    Need to inspect the full order? <apex:outputLink value="/lightning/r/Order/{!targetOrder.Id}/view" target="_top">Open in Salesforce</apex:outputLink>
+                </div>
+            </div>
+            </apex:outputPanel>
+        </apex:form>
+    </div>
+    </body>
+    </html>
+</apex:page>

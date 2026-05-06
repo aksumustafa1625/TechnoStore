@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Published by InventoryCheckService when the user clicks Request Inventory Check on an Order. The MuleSoft inventory-check-flow listens on this channel and forwards a Slack notification to the warehouse channel.</description>
+    <eventType>HighVolume</eventType>
+    <label>Inventory Check Requested</label>
+    <pluralLabel>Inventory Check Requests</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>

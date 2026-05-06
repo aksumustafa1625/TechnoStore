@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Inventory_Check_Requested_At__c</fullName>
+    <description>Timestamp when the user clicked Request Inventory Check on this order.</description>
+    <label>Inventory Check Requested At</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

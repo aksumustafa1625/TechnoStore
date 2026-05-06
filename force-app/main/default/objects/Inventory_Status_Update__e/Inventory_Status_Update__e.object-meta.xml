@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Fired by InventoryCheckCallback REST endpoint when MuleSoft posts a Slack-driven warehouse decision. The trigger consumes the event and updates the Order. Indirection avoids granting Site guest user direct write access to Order.</description>
+    <eventType>HighVolume</eventType>
+    <label>Inventory Status Update</label>
+    <pluralLabel>Inventory Status Updates</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>

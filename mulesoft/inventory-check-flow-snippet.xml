@@ -1,0 +1,74 @@
+<!--
+    inventory-check-flow
+
+    Drop this flow into the existing technostore-integration Mule app's integration-flows.xml,
+    right after stripe-webhook-flow. It reuses the existing Salesforce_Config1 listener and the
+    existing Slack_HTTP_Config — only one new property is needed:
+
+        slack.warehouse.webhook.path=/services/T....../B....../...........
+
+    (Get this path by adding an Incoming Webhook to the #warehouse Slack channel — the same way
+    you set up #payments-team — and copy the path portion after `https://hooks.slack.com`.)
+
+    No ngrok, no Slack app, no callback. Same pattern as Stripe / Sendcloud notifications.
+-->
+<flow name="inventory-check-flow" doc:id="2c9a3b5e-1234-5678-abcd-ef0123456789">
+    <salesforce:replay-channel-listener
+        streamingChannel="/event/Inventory_Check_Requested__e"
+        replayOption="ONLY_NEW"
+        doc:name="On Inventory Check Requested"
+        config-ref="Salesforce_Config1"
+        replayId="-1"/>
+    <logger level="INFO" doc:name="Log Event"
+        message="Inventory Check Requested event received: #[payload]"/>
+    <set-variable variableName="orderId"        value="#[payload.data.payload.Order_Id__c]"        doc:name="Save Order Id"/>
+    <set-variable variableName="orderNumber"    value="#[payload.data.payload.Order_Number__c]"    doc:name="Save Order Number"/>
+    <set-variable variableName="accountName"    value="#[payload.data.payload.Account_Name__c]"    doc:name="Save Account Name"/>
+    <set-variable variableName="totalAmount"    value="#[payload.data.payload.Total_Amount__c]"    doc:name="Save Total Amount"/>
+    <set-variable variableName="itemCount"      value="#[payload.data.payload.Item_Count__c]"      doc:name="Save Item Count"/>
+    <set-variable variableName="itemsSummary"   value="#[payload.data.payload.Items_Summary__c]"   doc:name="Save Items Summary"/>
+    <set-variable variableName="orderUrl"       value="#[payload.data.payload.Order_Url__c]"       doc:name="Save Order Url"/>
+
+    <ee:transform doc:name="Build Slack Body Warehouse">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    text: ":package: Inventory check needed for order " ++ (vars.orderNumber default "(unknown)"),
+    blocks: [
+        {
+            "type": "header",
+            "text": { "type": "plain_text", "text": ":package: Inventory Check Required" }
+        },
+        {
+            "type": "section",
+            "fields": [
+                { "type": "mrkdwn", "text": "*Order:*\n" ++ (vars.orderNumber default "(unknown)") },
+                { "type": "mrkdwn", "text": "*Account:*\n" ++ (vars.accountName default "(no account)") },
+                { "type": "mrkdwn", "text": "*Total Amount:*\nUSD " ++ (vars.totalAmount as String default "0") },
+                { "type": "mrkdwn", "text": "*Lines:*\n" ++ (vars.itemCount as String default "0") }
+            ]
+        },
+        {
+            "type": "section",
+            "text": { "type": "mrkdwn", "text": "*Products:*\n" ++ (vars.itemsSummary default "(none)") }
+        },
+        {
+            "type": "section",
+            "text": { "type": "mrkdwn", "text": "<" ++ (vars.orderUrl default "#") ++ "|:link: Open Order in Salesforce>" }
+        },
+        {
+            "type": "context",
+            "elements": [
+                { "type": "mrkdwn", "text": ":warehouse: Reply in Salesforce: *Mark In Stock* or *Mark Out of Stock*  |  Powered by MuleSoft" }
+            ]
+        }
+    ]
+}]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+    <http:request method="POST" path="${slack.warehouse.webhook.path}" config-ref="Slack_HTTP_Config" doc:name="Slack Warehouse Notification"/>
+    <logger level="INFO" doc:name="Log Slack Warehouse"
+        message="Inventory check Slack notification sent for order #[vars.orderNumber]"/>
+</flow>
