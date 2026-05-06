@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Bundle_Product__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Bundle Product</label>
+    <referenceTo>Product2</referenceTo>
+    <relationshipLabel>Bundle Components (As Bundle)</relationshipLabel>
+    <relationshipName>Bundle_Components_As_Bundle</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

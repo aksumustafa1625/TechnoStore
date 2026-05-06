@@ -6,17 +6,19 @@
  *   2. Recalculate Quote.Tax = SUM(line VAT 19%) on every QLI insert/update/delete/undelete,
  *      so that Quote Summary panel + Grand Total reflect estimated VAT without needing
  *      the (Invoice-only) Tax Engine adapter to fire.
- *   3. Auto-decompose Bundle parents into child QLIs on after-insert. Workaround for the
- *      RLM platform limitation where the default Configure UI doesn't render child component
- *      cards, so children with IsDefaultComponent=true never auto-add via Save & Exit.
+ *   3. On Bundle QLI insert, create Quote_Bundle_Component__c display records (NOT child QLIs)
+ *      so the bundleIncludedComponents LWC can render the included items on the Quote page.
+ *      We do not insert child QuoteLineItems because the platform-managed
+ *      ParentQuoteLineItemId field is non-writeable from Apex, which would leave the children
+ *      as orphans and trigger Configure UI's "Required fields missing: [Price Book Entry]" toast.
+ *   4. Apply attribute-based price adjustments on Bundle QLIs in beforeUpdate by mutating
+ *      Trigger.new in-place (no DML), based on the AttributeBasedAdjustment data layer.
  *
  * Extends Kevin O'Hara TriggerHandler framework.
  */
 public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
 
     private static final Decimal VAT_RATE = 0.19;
-    private static Boolean isBundleDecompositionRunning = false;
-    private static Boolean isAttributeAdjustmentRunning = false;
 
     @TestVisible
     private List<QuoteLineItem> records {
@@ -34,21 +36,15 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
 
     protected override void beforeUpdate() {
         autoPopulateDescription();
+        applyAttributeAdjustmentsInPlace(records);
     }
 
     protected override void afterInsert() {
-        autoDecomposeBundles(records);
+        createBundleComponentDisplays(records);
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
     protected override void afterUpdate() {
-        // Apply attribute-based adjustments asynchronously to avoid conflicts with
-        // Salesforce's in-progress Save & Exit transaction (PricebookEntry validation).
-        Set<Id> bundleQliIds = new Set<Id>();
-        for (QuoteLineItem q : records) bundleQliIds.add(q.Id);
-        if (!bundleQliIds.isEmpty() && !isAttributeAdjustmentRunning && !System.isFuture() && !System.isBatch()) {
-            applyAttributeAdjustmentsAsync(bundleQliIds);
-        }
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
@@ -87,24 +83,28 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     /**
-     * Auto-decompose Bundle parent QLIs into child QLIs.
-     * On after-insert, for any QLI whose Product2 is a Bundle, find ProductRelatedComponent
-     * records (IsDefaultComponent=true) and create matching child QLIs on the same Quote.
-     * Recursion guard prevents infinite loops when child QLIs trigger this same handler.
+     * Create Quote_Bundle_Component__c display records for each newly-inserted Bundle QLI.
+     * These are NOT child QuoteLineItems — they exist purely so the bundleIncludedComponents LWC
+     * can render the bundle's included items on the Quote page. We do not insert child
+     * QuoteLineItems because the platform-managed ParentQuoteLineItemId field is non-writeable
+     * from Apex, which leaves the children as orphans and causes Configure UI's Save & Exit
+     * validation to throw a misleading "Required fields missing: [Price Book Entry]" toast.
+     * The component records are scoped to the parent QLI; they cascade-delete when the parent
+     * QLI or Quote is deleted (via Cascade lookup constraint).
      */
-    private static void autoDecomposeBundles(List<QuoteLineItem> newQlis) {
-        if (isBundleDecompositionRunning) return;
+    private static void createBundleComponentDisplays(List<QuoteLineItem> newQlis) {
         if (newQlis == null || newQlis.isEmpty()) return;
 
-        // Collect QLI IDs to inspect
         Set<Id> qliIds = new Set<Id>();
-        for (QuoteLineItem q : newQlis) qliIds.add(q.Id);
+        for (QuoteLineItem q : newQlis) {
+            if (q.Id != null) qliIds.add(q.Id);
+        }
+        if (qliIds.isEmpty()) return;
 
-        // Re-query the inserted QLIs with parent product type + classification info
+        // Filter to bundle QLIs only (re-query for Product2.Type)
         Map<Id, QuoteLineItem> bundleParentQlis = new Map<Id, QuoteLineItem>();
         for (QuoteLineItem q : [
-            SELECT Id, QuoteId, Product2Id, Product2.Type, Product2.BasedOnId,
-                   Quantity, PricebookEntryId, PricebookEntry.Pricebook2Id
+            SELECT Id, QuoteId, Product2Id
             FROM QuoteLineItem
             WHERE Id IN :qliIds AND Product2.Type = 'Bundle'
         ]) {
@@ -112,159 +112,125 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         if (bundleParentQlis.isEmpty()) return;
 
-        // Collect parent product IDs + their BasedOn classifications
-        Set<Id> parentProductIds = new Set<Id>();
-        Map<Id, Id> parentClassificationByProduct = new Map<Id, Id>();
-        for (QuoteLineItem q : bundleParentQlis.values()) {
-            parentProductIds.add(q.Product2Id);
-            if (q.Product2.BasedOnId != null) parentClassificationByProduct.put(q.Product2Id, q.Product2.BasedOnId);
+        // Skip QLIs that already have component display records (Configure UI re-insert guard)
+        Set<Id> qlisWithDisplays = new Set<Id>();
+        for (Quote_Bundle_Component__c existing : [
+            SELECT Parent_Quote_Line_Item__c
+            FROM Quote_Bundle_Component__c
+            WHERE Parent_Quote_Line_Item__c IN :bundleParentQlis.keySet()
+        ]) {
+            qlisWithDisplays.add(existing.Parent_Quote_Line_Item__c);
         }
+        for (Id qid : qlisWithDisplays) bundleParentQlis.remove(qid);
+        if (bundleParentQlis.isEmpty()) return;
 
-        // Get child components — also pull child product's BasedOnId to compare
+        // Collect parent product IDs to look up their default components
+        Set<Id> parentProductIds = new Set<Id>();
+        for (QuoteLineItem q : bundleParentQlis.values()) parentProductIds.add(q.Product2Id);
+
+        // Load default components with child product names (ChildProduct.Name needed for display)
         List<ProductRelatedComponent> components = [
-            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId,
+            SELECT Id, ParentProductId, ChildProductId, ChildProduct.Name, ChildProduct.BasedOnId,
                    Quantity, IsDefaultComponent
             FROM ProductRelatedComponent
             WHERE ParentProductId IN :parentProductIds AND IsDefaultComponent = true
         ];
         if (components.isEmpty()) return;
 
-        // Group children by parent product. Skip children whose BasedOnId matches the parent
-        // bundle's BasedOnId — those are redundant (bundle already represents that classification
-        // with attributes already set via Configure UI; adding a duplicate child just triggers
-        // attribute-missing warnings).
-        Map<Id, List<ProductRelatedComponent>> childrenByParent = new Map<Id, List<ProductRelatedComponent>>();
-        Set<Id> childProductIds = new Set<Id>();
-        for (ProductRelatedComponent c : components) {
-            Id parentClassif = parentClassificationByProduct.get(c.ParentProductId);
-            Id childClassif = c.ChildProduct != null ? c.ChildProduct.BasedOnId : null;
-            if (parentClassif != null && childClassif == parentClassif) {
-                System.debug('Skipping child with same classification as bundle parent: ' + c.ChildProductId);
-                continue;
-            }
-            if (!childrenByParent.containsKey(c.ParentProductId)) childrenByParent.put(c.ParentProductId, new List<ProductRelatedComponent>());
-            childrenByParent.get(c.ParentProductId).add(c);
-            childProductIds.add(c.ChildProductId);
-        }
-
-        // Look up PricebookEntry per child product per Pricebook (with selling model info)
-        Set<Id> pricebookIds = new Set<Id>();
-        for (QuoteLineItem q : bundleParentQlis.values()) {
-            if (q.PricebookEntry != null && q.PricebookEntry.Pricebook2Id != null) pricebookIds.add(q.PricebookEntry.Pricebook2Id);
-        }
-        Map<String, PricebookEntry> pbeKeyToEntry = new Map<String, PricebookEntry>();
-        for (PricebookEntry pbe : [
-            SELECT Id, Product2Id, Pricebook2Id, UnitPrice,
-                   ProductSellingModelId, ProductSellingModel.SellingModelType,
-                   ProductSellingModel.PricingTerm, ProductSellingModel.PricingTermUnit
-            FROM PricebookEntry
-            WHERE Product2Id IN :childProductIds AND Pricebook2Id IN :pricebookIds AND IsActive = true
+        // Look up parent bundle BasedOn classifications so we can skip components whose
+        // classification matches the bundle's own (those represent attributes set via Configure UI,
+        // not separate displayable items).
+        Map<Id, Id> bundleClassificationByProduct = new Map<Id, Id>();
+        for (Product2 p : [
+            SELECT Id, BasedOnId FROM Product2 WHERE Id IN :parentProductIds AND BasedOnId != null
         ]) {
-            pbeKeyToEntry.put(pbe.Pricebook2Id + '|' + pbe.Product2Id, pbe);
+            bundleClassificationByProduct.put(p.Id, p.BasedOnId);
         }
 
-        // Build child QLIs
-        List<QuoteLineItem> childQlis = new List<QuoteLineItem>();
+        Map<Id, List<ProductRelatedComponent>> componentsByParent = new Map<Id, List<ProductRelatedComponent>>();
+        for (ProductRelatedComponent c : components) {
+            Id parentClassif = bundleClassificationByProduct.get(c.ParentProductId);
+            Id childClassif = c.ChildProduct != null ? c.ChildProduct.BasedOnId : null;
+            if (parentClassif != null && childClassif == parentClassif) continue;
+            if (!componentsByParent.containsKey(c.ParentProductId)) componentsByParent.put(c.ParentProductId, new List<ProductRelatedComponent>());
+            componentsByParent.get(c.ParentProductId).add(c);
+        }
+
+        List<Quote_Bundle_Component__c> displays = new List<Quote_Bundle_Component__c>();
         for (QuoteLineItem parent : bundleParentQlis.values()) {
-            List<ProductRelatedComponent> kids = childrenByParent.get(parent.Product2Id);
+            List<ProductRelatedComponent> kids = componentsByParent.get(parent.Product2Id);
             if (kids == null) continue;
-            Id parentPricebookId = (parent.PricebookEntry != null) ? parent.PricebookEntry.Pricebook2Id : null;
             for (ProductRelatedComponent c : kids) {
-                String key = parentPricebookId + '|' + c.ChildProductId;
-                PricebookEntry pbe = pbeKeyToEntry.get(key);
-                if (pbe == null) continue;
-                QuoteLineItem child = new QuoteLineItem();
-                child.QuoteId = parent.QuoteId;
-                child.Product2Id = c.ChildProductId;
-                child.PricebookEntryId = pbe.Id;
-                child.Quantity = (c.Quantity != null) ? c.Quantity : 1;
-                child.UnitPrice = 0; // Bundle price covers children — children show but contribute 0 to total
-
-                // Skip subscription / term-defined children — they need BillingTreatment which
-                // can't be set via simple QLI insert. Only auto-decompose One-Time products.
-                String sellingType = (pbe.ProductSellingModel != null) ? pbe.ProductSellingModel.SellingModelType : null;
-                if (sellingType == 'Evergreen' || sellingType == 'TermDefined') {
-                    System.debug('Skipping subscription child product: ' + c.ChildProductId + ' (' + sellingType + ')');
-                    continue;
-                }
-
-                childQlis.add(child);
+                Quote_Bundle_Component__c display = new Quote_Bundle_Component__c();
+                display.Quote__c = parent.QuoteId;
+                display.Parent_Quote_Line_Item__c = parent.Id;
+                display.Bundle_Product__c = parent.Product2Id;
+                display.Component_Product__c = c.ChildProductId;
+                display.Component_Name__c = (c.ChildProduct != null) ? c.ChildProduct.Name : null;
+                display.Quantity__c = (c.Quantity != null) ? c.Quantity : 1;
+                display.Included_In_Bundle__c = true;
+                display.Display_Price__c = 0;
+                display.Is_Default_Component__c = true;
+                displays.add(display);
             }
         }
 
-        if (!childQlis.isEmpty()) {
-            isBundleDecompositionRunning = true;
-            try {
-                insert childQlis;
-            } finally {
-                isBundleDecompositionRunning = false;
-            }
-        }
-    }
-
-    /**
-     * Async wrapper to apply adjustments AFTER Salesforce's Save & Exit transaction completes.
-     * Configure UI's save flow holds locks/validations on QLI; doing the DML synchronously
-     * within the trigger caused "Required fields are missing: [Price Book Entry]" errors.
-     * @future runs the update in a separate transaction once Save & Exit is committed.
-     */
-    @future
-    public static void applyAttributeAdjustmentsAsync(Set<Id> qliIds) {
-        if (qliIds == null || qliIds.isEmpty()) return;
-        // Build a fake List<QuoteLineItem> wrapper to reuse the sync logic
-        List<QuoteLineItem> wrapper = new List<QuoteLineItem>();
-        for (Id qid : qliIds) wrapper.add(new QuoteLineItem(Id = qid));
-        applyAttributeAdjustmentsToBundles(wrapper);
+        if (!displays.isEmpty()) insert displays;
     }
 
     /**
      * Apply attribute-based price adjustments to Bundle QLIs based on QuoteLineItemAttribute
-     * selections. Production-equivalent to the native Pricing Procedure with Attribute-Based
-     * Price element — consumes the SAME AttributeBasedAdjustment + AttributeAdjustmentCondition
-     * records the native engine would consume.
+     * selections. Runs synchronously in beforeUpdate() and mutates Trigger.new in-place — no DML.
      *
-     * Triggered on QLI after-update because:
-     *   - QuoteLineItemAttribute does not allow direct triggers
-     *   - When user clicks Save & Exit in Configure UI, QLIA records are inserted AND parent
-     *     QLI gets touched/updated, so this hook catches the moment selections settle.
+     * Production-equivalent to the native Pricing Procedure with Attribute-Based Price element —
+     * consumes the SAME AttributeBasedAdjustment + AttributeAdjustmentCondition records the
+     * native engine would consume.
      *
-     * Recursion-guarded — when we update the QLI's UnitPrice, this same handler re-fires;
-     * the static flag prevents infinite recursion.
+     * Why beforeUpdate (not @future):
+     *   The previous @future approach avoided a "Required fields missing: [Price Book Entry]"
+     *   toast caused by sync DML conflicting with Save & Exit's internal repricing. Setting
+     *   UnitPrice directly on Trigger.new sidesteps DML entirely, so the conflict can't occur.
+     *
+     * Why beforeUpdate (not beforeInsert):
+     *   QuoteLineItemAttribute records are populated by Configure UI AFTER the parent QLI is
+     *   inserted. They first become queryable when Save & Exit causes the parent QLI update.
      */
-    private static void applyAttributeAdjustmentsToBundles(List<QuoteLineItem> qlis) {
-        if (isAttributeAdjustmentRunning) return;
+    private static void applyAttributeAdjustmentsInPlace(List<QuoteLineItem> qlis) {
         if (qlis == null || qlis.isEmpty()) return;
 
-        // Step 1: Filter to Bundle QLIs only
         Set<Id> qliIds = new Set<Id>();
-        for (QuoteLineItem q : qlis) qliIds.add(q.Id);
+        for (QuoteLineItem q : qlis) {
+            if (q.Id != null) qliIds.add(q.Id);
+        }
+        if (qliIds.isEmpty()) return;
 
-        Map<Id, QuoteLineItem> bundleQlis = new Map<Id, QuoteLineItem>();
+        // Step 1: Filter to Bundle QLIs (re-query because Trigger.new doesn't have Product2.Type)
+        Map<Id, QuoteLineItem> bundleInfoById = new Map<Id, QuoteLineItem>();
         for (QuoteLineItem qli : [
-            SELECT Id, Product2Id, UnitPrice, PricebookEntryId,
-                   PricebookEntry.UnitPrice
+            SELECT Id, Product2Id, PricebookEntry.UnitPrice
             FROM QuoteLineItem
             WHERE Id IN :qliIds AND Product2.Type = 'Bundle'
         ]) {
-            bundleQlis.put(qli.Id, qli);
+            bundleInfoById.put(qli.Id, qli);
         }
-        if (bundleQlis.isEmpty()) return;
+        if (bundleInfoById.isEmpty()) return;
 
         // Step 2: Read attribute selections per QLI
         Map<Id, Map<Id, String>> qliAttrValues = new Map<Id, Map<Id, String>>();
         for (QuoteLineItemAttribute qlia : [
             SELECT QuoteLineItemId, AttributeDefinitionId, AttributeValue
             FROM QuoteLineItemAttribute
-            WHERE QuoteLineItemId IN :bundleQlis.keySet()
+            WHERE QuoteLineItemId IN :bundleInfoById.keySet()
         ]) {
             if (!qliAttrValues.containsKey(qlia.QuoteLineItemId)) qliAttrValues.put(qlia.QuoteLineItemId, new Map<Id, String>());
             qliAttrValues.get(qlia.QuoteLineItemId).put(qlia.AttributeDefinitionId, qlia.AttributeValue);
         }
-        if (qliAttrValues.isEmpty()) return; // No attributes selected yet → no adjustment
+        System.debug('applyAttributeAdjustmentsInPlace: found QLIA for ' + qliAttrValues.size() + ' bundle QLIs out of ' + bundleInfoById.size());
+        if (qliAttrValues.isEmpty()) return;
 
         // Step 3: Load active adjustments for all bundle products in scope
         Set<Id> bundleProductIds = new Set<Id>();
-        for (QuoteLineItem qli : bundleQlis.values()) bundleProductIds.add(qli.Product2Id);
+        for (QuoteLineItem qli : bundleInfoById.values()) bundleProductIds.add(qli.Product2Id);
 
         Map<Id, List<AttributeBasedAdjustment>> adjustmentsByProduct = new Map<Id, List<AttributeBasedAdjustment>>();
         Set<Id> ruleIds = new Set<Id>();
@@ -291,14 +257,14 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             conditionsByRule.get(c.AttributeBasedAdjRuleId).add(c);
         }
 
-        // Step 5: For each bundle QLI, sum applicable adjustments + rebase UnitPrice
-        List<QuoteLineItem> qlisToUpdate = new List<QuoteLineItem>();
-        for (Id qliId : bundleQlis.keySet()) {
-            QuoteLineItem qli = bundleQlis.get(qliId);
-            Map<Id, String> selectedAttrs = qliAttrValues.get(qliId);
+        // Step 5: For each bundle QLI in Trigger.new, compute newUnitPrice and SET IN-PLACE
+        for (QuoteLineItem q : qlis) {
+            QuoteLineItem dbInfo = bundleInfoById.get(q.Id);
+            if (dbInfo == null) continue;
+            Map<Id, String> selectedAttrs = qliAttrValues.get(q.Id);
             if (selectedAttrs == null || selectedAttrs.isEmpty()) continue;
 
-            List<AttributeBasedAdjustment> productAdjustments = adjustmentsByProduct.get(qli.Product2Id);
+            List<AttributeBasedAdjustment> productAdjustments = adjustmentsByProduct.get(dbInfo.Product2Id);
             if (productAdjustments == null) continue;
 
             Decimal totalAdjustment = 0;
@@ -314,27 +280,18 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
                 }
                 if (allMatch) {
                     if (adj.AdjustmentType == 'Amount') totalAdjustment += adj.AdjustmentValue;
-                    else if (adj.AdjustmentType == 'Percent' && qli.PricebookEntry != null) {
-                        totalAdjustment += (qli.PricebookEntry.UnitPrice * adj.AdjustmentValue / 100);
+                    else if (adj.AdjustmentType == 'Percent' && dbInfo.PricebookEntry != null && dbInfo.PricebookEntry.UnitPrice != null) {
+                        totalAdjustment += (dbInfo.PricebookEntry.UnitPrice * adj.AdjustmentValue / 100);
                     }
                 }
             }
 
-            Decimal basePrice = (qli.PricebookEntry != null && qli.PricebookEntry.UnitPrice != null) ? qli.PricebookEntry.UnitPrice : qli.UnitPrice;
-            Decimal newUnitPrice = (basePrice + totalAdjustment).setScale(2);
-
-            if (qli.UnitPrice != newUnitPrice) {
-                qlisToUpdate.add(new QuoteLineItem(Id = qliId, UnitPrice = newUnitPrice));
-            }
-        }
-
-        if (!qlisToUpdate.isEmpty()) {
-            isAttributeAdjustmentRunning = true;
-            try {
-                update qlisToUpdate;
-            } finally {
-                isAttributeAdjustmentRunning = false;
-            }
+            // Always rebase from PricebookEntry.UnitPrice (the immutable list price), not from
+            // q.UnitPrice — that way repeat fires of beforeUpdate produce idempotent results.
+            if (dbInfo.PricebookEntry == null || dbInfo.PricebookEntry.UnitPrice == null) continue;
+            Decimal newUnitPrice = (dbInfo.PricebookEntry.UnitPrice + totalAdjustment).setScale(2);
+            System.debug('applyAttributeAdjustmentsInPlace: QLI ' + q.Id + ' base=' + dbInfo.PricebookEntry.UnitPrice + ' adj=' + totalAdjustment + ' new=' + newUnitPrice);
+            q.UnitPrice = newUnitPrice;
         }
     }
 
