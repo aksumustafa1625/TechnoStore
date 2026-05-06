@@ -3,14 +3,20 @@
  *
  * Responsibilities:
  *   1. Auto-populate Description from Product2.Name (for CLM contract conversion).
- *   2. Recalculate Quote.Tax = SUM(line VAT 19%) on every QLI insert/update/delete/undelete,
- *      so that Quote Summary panel + Grand Total reflect estimated VAT without needing
- *      the (Invoice-only) Tax Engine adapter to fire.
- *   3. Auto-decompose Bundle parents into child QLIs on after-insert. Workaround for the
- *      RLM platform limitation where the default Configure UI doesn't render child component
- *      cards, so children with IsDefaultComponent=true never auto-add via Save & Exit.
- *   4. Apply attribute-based price adjustments on Bundle QLIs in beforeUpdate by mutating
- *      Trigger.new in-place (no DML), based on the AttributeBasedAdjustment data layer.
+ *   2. Recalculate Quote.Tax = SUM(line VAT 19%) on every QLI insert/update/delete/undelete.
+ *   3. Apply attribute-based price adjustments on Bundle QLIs in beforeUpdate, sourced from
+ *      Techno_Attribute_Price_Rule__mdt custom metadata (see applyAttributeAdjustmentsInPlace
+ *      docstring for why custom metadata instead of native AttributeBasedAdjustment).
+ *   4. Auto-decompose Bundle parents into child QLIs ASYNCHRONOUSLY after the parent QLI is
+ *      updated (i.e. after Configure UI's Save & Exit transaction commits). Decomposing
+ *      synchronously inside the trigger would expose the orphan children (their
+ *      ParentQuoteLineItemId is platform-managed and not writeable from Apex) to Configure
+ *      UI's commit-time validation, producing the misleading "Required fields missing:
+ *      [Price Book Entry]" + "Your quote was not updated" red toasts. Running async via
+ *      @future moves the insert outside the LWC's validation window — toasts disappear.
+ *   5. Async cleanup of duplicate Bundle QLIs that Configure UI commits as transient drafts
+ *      during Save & Exit. The OLDEST bundle of each (Quote, Product2) pair is the user's
+ *      intentional add and is preserved; newer duplicates are deleted.
  *
  * Extends Kevin O'Hara TriggerHandler framework.
  */
@@ -39,11 +45,30 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     protected override void afterInsert() {
-        autoDecomposeBundles(records);
+        // Bundle decomposition is NOT done here — see afterUpdate. Inserting children at bundle-add
+        // time would cause orphan children (ParentQuoteLineItemId is platform-managed and not
+        // writeable from Apex) to be visible to Configure UI's commit-time validation when the
+        // user later does Save & Exit, producing the misleading "Required fields missing:
+        // [Price Book Entry]" + "Your quote was not updated" toasts.
+        Set<Id> insertedIds = new Set<Id>();
+        for (QuoteLineItem q : records) if (q.Id != null) insertedIds.add(q.Id);
+        if (!insertedIds.isEmpty() && !System.isFuture() && !System.isBatch() && !System.isQueueable()) {
+            cleanupDuplicateBundlesAsync(insertedIds);
+        }
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
     protected override void afterUpdate() {
+        // Queue async decomposition for any updated Bundle QLIs. Running async (after Configure
+        // UI's Save & Exit transaction commits) means the orphan children we insert never appear
+        // inside the LWC's commit-time validation window — no toast. Idempotent dedupe inside
+        // autoDecomposeBundles ensures repeat updates (Reprice All, attribute re-edits) don't
+        // duplicate children.
+        Set<Id> updatedIds = new Set<Id>();
+        for (QuoteLineItem q : records) if (q.Id != null) updatedIds.add(q.Id);
+        if (!updatedIds.isEmpty() && !System.isFuture() && !System.isBatch() && !System.isQueueable()) {
+            decomposeBundlesAsync(updatedIds);
+        }
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
@@ -82,20 +107,11 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     /**
-     * Auto-decompose Bundle parent QLIs into child QLIs on after-insert.
-     * For each bundle QLI, find its ProductRelatedComponent records (IsDefaultComponent=true)
-     * and create matching child QLIs on the same Quote at $0 (bundle parent covers the price).
+     * Auto-decompose Bundle parent QLIs into child QLIs at $0.
      *
-     * Known limitation: the platform-managed QuoteLineItem.ParentQuoteLineItemId is non-writeable
-     * from Apex, so children we insert remain "orphans" from the Configure UI's perspective.
-     * This causes a "Required fields missing: [Price Book Entry]" red toast on Save & Exit and
-     * requires the user to click "Reprice All" 1-2 times after Save & Exit for the new attribute
-     * pricing to surface in the grid. Both are accepted cosmetic issues — the data layer is
-     * correct (UnitPrice persists at the adjusted value, Quote.Tax is recalculated).
-     *
-     * Dedupe guards below prevent the toast from cascading worse: Configure UI internally
-     * inserts transient draft bundles during Save & Exit, and without these guards each draft
-     * would get its own 3 phantom children, ballooning the quote to 12+ QLIs.
+     * Skips decomposition if a bundle of the same Product2 already exists on the same Quote —
+     * that earlier bundle is the user's intentional add. The new insert is virtually always a
+     * Configure UI Save & Exit transient draft, which cleanupDuplicateBundlesAsync deletes.
      */
     private static void autoDecomposeBundles(List<QuoteLineItem> newQlis) {
         if (isBundleDecompositionRunning) return;
@@ -115,9 +131,7 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         if (bundleParentQlis.isEmpty()) return;
 
-        // Skip decomposition if a bundle of the same Product2 already exists on the same Quote —
-        // that earlier bundle is the user's intentional add. The new insert is virtually always a
-        // Configure UI Save & Exit transient draft.
+        // Skip duplicates of already-existing bundles on the same Quote (transient draft guard)
         Set<Id> quoteIdsForCheck = new Set<Id>();
         Set<Id> productIdsForCheck = new Set<Id>();
         Set<Id> currentQliIds = bundleParentQlis.keySet();
@@ -127,18 +141,14 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         Set<String> existingBundleKeys = new Set<String>();
         for (QuoteLineItem existing : [
-            SELECT QuoteId, Product2Id
-            FROM QuoteLineItem
-            WHERE QuoteId IN :quoteIdsForCheck
-              AND Product2Id IN :productIdsForCheck
-              AND Id NOT IN :currentQliIds
+            SELECT QuoteId, Product2Id FROM QuoteLineItem
+            WHERE QuoteId IN :quoteIdsForCheck AND Product2Id IN :productIdsForCheck AND Id NOT IN :currentQliIds
         ]) {
             existingBundleKeys.add(existing.QuoteId + '|' + existing.Product2Id);
         }
         Map<Id, QuoteLineItem> filteredBundleParents = new Map<Id, QuoteLineItem>();
         for (QuoteLineItem q : bundleParentQlis.values()) {
-            String key = q.QuoteId + '|' + q.Product2Id;
-            if (existingBundleKeys.contains(key)) continue;
+            if (existingBundleKeys.contains(q.QuoteId + '|' + q.Product2Id)) continue;
             filteredBundleParents.put(q.Id, q);
         }
         if (filteredBundleParents.isEmpty()) return;
@@ -152,8 +162,7 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
 
         List<ProductRelatedComponent> components = [
-            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId,
-                   Quantity, IsDefaultComponent
+            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId, Quantity, IsDefaultComponent
             FROM ProductRelatedComponent
             WHERE ParentProductId IN :parentProductIds AND IsDefaultComponent = true
         ];
@@ -170,13 +179,12 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             childProductIds.add(c.ChildProductId);
         }
 
-        // Per-(Quote,ChildProduct) dedupe guard: prevents Configure UI re-insert from duplicating children.
+        // Per-(Quote, ChildProduct) dedupe — covers Configure UI re-fire scenarios
         Set<Id> quoteIdsInScope = new Set<Id>();
         for (QuoteLineItem q : bundleParentQlis.values()) quoteIdsInScope.add(q.QuoteId);
         Set<String> existingChildKeys = new Set<String>();
         for (QuoteLineItem existing : [
-            SELECT QuoteId, Product2Id
-            FROM QuoteLineItem
+            SELECT QuoteId, Product2Id FROM QuoteLineItem
             WHERE QuoteId IN :quoteIdsInScope AND Product2Id IN :childProductIds
         ]) {
             existingChildKeys.add(existing.QuoteId + '|' + existing.Product2Id);
@@ -188,23 +196,24 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         Map<String, PricebookEntry> pbeKeyToEntry = new Map<String, PricebookEntry>();
         for (PricebookEntry pbe : [
-            SELECT Id, Product2Id, Pricebook2Id, UnitPrice,
-                   ProductSellingModelId, ProductSellingModel.SellingModelType
+            SELECT Id, Product2Id, Pricebook2Id, ProductSellingModel.SellingModelType
             FROM PricebookEntry
             WHERE Product2Id IN :childProductIds AND Pricebook2Id IN :pricebookIds AND IsActive = true
         ]) {
             pbeKeyToEntry.put(pbe.Pricebook2Id + '|' + pbe.Product2Id, pbe);
         }
 
+        Set<String> queued = new Set<String>();
         List<QuoteLineItem> childQlis = new List<QuoteLineItem>();
         for (QuoteLineItem parent : bundleParentQlis.values()) {
             List<ProductRelatedComponent> kids = childrenByParent.get(parent.Product2Id);
             if (kids == null) continue;
             Id parentPricebookId = (parent.PricebookEntry != null) ? parent.PricebookEntry.Pricebook2Id : null;
             for (ProductRelatedComponent c : kids) {
-                if (existingChildKeys.contains(parent.QuoteId + '|' + c.ChildProductId)) continue;
-                String key = parentPricebookId + '|' + c.ChildProductId;
-                PricebookEntry pbe = pbeKeyToEntry.get(key);
+                String childKey = parent.QuoteId + '|' + c.ChildProductId;
+                if (existingChildKeys.contains(childKey) || queued.contains(childKey)) continue;
+                String pbeKey = parentPricebookId + '|' + c.ChildProductId;
+                PricebookEntry pbe = pbeKeyToEntry.get(pbeKey);
                 if (pbe == null) continue;
                 String sellingType = (pbe.ProductSellingModel != null) ? pbe.ProductSellingModel.SellingModelType : null;
                 if (sellingType == 'Evergreen' || sellingType == 'TermDefined') continue;
@@ -216,6 +225,7 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
                 child.Quantity = (c.Quantity != null) ? c.Quantity : 1;
                 child.UnitPrice = 0;
                 childQlis.add(child);
+                queued.add(childKey);
             }
         }
 
@@ -230,21 +240,92 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     /**
-     * Apply attribute-based price adjustments to Bundle QLIs based on QuoteLineItemAttribute
-     * selections. Runs synchronously in beforeUpdate() and mutates Trigger.new in-place — no DML.
+     * Async wrapper that runs autoDecomposeBundles AFTER the inserting/updating transaction
+     * commits. By the time this @future fires, Configure UI's Save & Exit session has closed,
+     * so the orphan children we insert are never seen by its commit-time validation — eliminating
+     * the misleading "Required fields missing: [Price Book Entry]" toast.
+     */
+    @future
+    public static void decomposeBundlesAsync(Set<Id> qliIds) {
+        if (qliIds == null || qliIds.isEmpty()) return;
+        List<QuoteLineItem> qlis = [
+            SELECT Id, QuoteId, Product2Id, Product2.Type, Product2.BasedOnId,
+                   Quantity, PricebookEntryId, PricebookEntry.Pricebook2Id
+            FROM QuoteLineItem
+            WHERE Id IN :qliIds
+        ];
+        if (qlis.isEmpty()) return;
+        autoDecomposeBundles(qlis);
+    }
+
+    /**
+     * Async cleanup of duplicate Bundle QLIs. Runs after the inserting transaction commits, so
+     * Configure UI's Save & Exit session has closed and won't be confused by deletes.
      *
-     * Production-equivalent to the native Pricing Procedure with Attribute-Based Price element —
-     * consumes the SAME AttributeBasedAdjustment + AttributeAdjustmentCondition records the
-     * native engine would consume.
+     * For each (Quote, Product2) pair that has 2+ Bundle QLIs, keeps the oldest (the user's
+     * intentional add) and deletes the rest (Configure UI transient drafts).
+     */
+    @future
+    public static void cleanupDuplicateBundlesAsync(Set<Id> recentlyInsertedQliIds) {
+        if (recentlyInsertedQliIds == null || recentlyInsertedQliIds.isEmpty()) return;
+
+        List<QuoteLineItem> recentBundles = [
+            SELECT Id, QuoteId, Product2Id
+            FROM QuoteLineItem
+            WHERE Id IN :recentlyInsertedQliIds AND Product2.Type = 'Bundle'
+        ];
+        if (recentBundles.isEmpty()) return;
+
+        Set<Id> quoteIds = new Set<Id>();
+        Set<Id> productIds = new Set<Id>();
+        for (QuoteLineItem b : recentBundles) {
+            quoteIds.add(b.QuoteId);
+            productIds.add(b.Product2Id);
+        }
+
+        Map<String, List<QuoteLineItem>> bundlesByKey = new Map<String, List<QuoteLineItem>>();
+        for (QuoteLineItem b : [
+            SELECT Id, QuoteId, Product2Id, CreatedDate
+            FROM QuoteLineItem
+            WHERE QuoteId IN :quoteIds AND Product2Id IN :productIds AND Product2.Type = 'Bundle'
+            ORDER BY CreatedDate ASC
+        ]) {
+            String key = b.QuoteId + '|' + b.Product2Id;
+            if (!bundlesByKey.containsKey(key)) bundlesByKey.put(key, new List<QuoteLineItem>());
+            bundlesByKey.get(key).add(b);
+        }
+
+        List<QuoteLineItem> toDelete = new List<QuoteLineItem>();
+        for (List<QuoteLineItem> bundles : bundlesByKey.values()) {
+            if (bundles.size() < 2) continue;
+            for (Integer i = 1; i < bundles.size(); i++) toDelete.add(bundles[i]);
+        }
+        if (!toDelete.isEmpty()) {
+            // Children of deleted bundles are independent QLIs (not platform-linked, since
+            // ParentQuoteLineItemId is null on Apex-inserted children) — they stay on the quote.
+            // The duplicate-bundle problem is purely the parent line; children are fine where they are.
+            delete toDelete;
+        }
+    }
+
+
+    /**
+     * Apply attribute-based price adjustments to Bundle QLIs in beforeUpdate by mutating
+     * Trigger.new in-place (no DML).
      *
-     * Why beforeUpdate (not @future):
-     *   The previous @future approach avoided a "Required fields missing: [Price Book Entry]"
-     *   toast caused by sync DML conflicting with Save & Exit's internal repricing. Setting
-     *   UnitPrice directly on Trigger.new sidesteps DML entirely, so the conflict can't occur.
+     * Data source: Techno_Attribute_Price_Rule__mdt custom metadata records. Each record is a
+     * (ProductId, AttributeDefinitionId, AttributeValue) → AdjustmentValue mapping. We sum
+     * adjustments for each attribute the user selected on the bundle and rebase UnitPrice from
+     * PricebookEntry.UnitPrice + total. Idempotent — repeat fires produce the same result.
      *
-     * Why beforeUpdate (not beforeInsert):
-     *   QuoteLineItemAttribute records are populated by Configure UI AFTER the parent QLI is
-     *   inserted. They first become queryable when Save & Exit causes the parent QLI update.
+     * Why custom metadata instead of native AttributeBasedAdjustment / AttributeAdjustmentCondition:
+     *   The native Salesforce Pricing objects can only be written through the Pricing Procedure
+     *   Builder UI's internal endpoint. Direct Apex/REST DML is blocked by a platform validation
+     *   ("FIELD_INTEGRITY_EXCEPTION: Ensure that your attribute is price impacting") that no
+     *   combination of IsPriceImpacting flags or sync actions can satisfy outside the Builder UI.
+     *   Migrating the rule data into custom metadata sidesteps the validation entirely while
+     *   preserving the same runtime behavior. If/when the Builder UI stabilizes in this org,
+     *   the rule records can be re-mirrored back into the native objects (1:1 schema).
      */
     private static void applyAttributeAdjustmentsInPlace(List<QuoteLineItem> qlis) {
         if (qlis == null || qlis.isEmpty()) return;
@@ -255,7 +336,7 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         if (qliIds.isEmpty()) return;
 
-        // Step 1: Filter to Bundle QLIs (re-query because Trigger.new doesn't have Product2.Type)
+        // Step 1: Filter to Bundle QLIs (re-query — Trigger.new doesn't have Product2.Type)
         Map<Id, QuoteLineItem> bundleInfoById = new Map<Id, QuoteLineItem>();
         for (QuoteLineItem qli : [
             SELECT Id, Product2Id, PricebookEntry.UnitPrice
@@ -276,70 +357,46 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             if (!qliAttrValues.containsKey(qlia.QuoteLineItemId)) qliAttrValues.put(qlia.QuoteLineItemId, new Map<Id, String>());
             qliAttrValues.get(qlia.QuoteLineItemId).put(qlia.AttributeDefinitionId, qlia.AttributeValue);
         }
-        System.debug('applyAttributeAdjustmentsInPlace: found QLIA for ' + qliAttrValues.size() + ' bundle QLIs out of ' + bundleInfoById.size());
         if (qliAttrValues.isEmpty()) return;
 
-        // Step 3: Load active adjustments for all bundle products in scope
-        Set<Id> bundleProductIds = new Set<Id>();
-        for (QuoteLineItem qli : bundleInfoById.values()) bundleProductIds.add(qli.Product2Id);
-
-        Map<Id, List<AttributeBasedAdjustment>> adjustmentsByProduct = new Map<Id, List<AttributeBasedAdjustment>>();
-        Set<Id> ruleIds = new Set<Id>();
-        for (AttributeBasedAdjustment a : [
-            SELECT Id, ProductId, AdjustmentValue, AdjustmentType, AttributeBasedAdjRuleId
-            FROM AttributeBasedAdjustment
-            WHERE ProductId IN :bundleProductIds
-              AND PriceAdjustmentSchedule.IsActive = true
+        // Step 3: Load active rules from custom metadata, indexed by (ProductId|AttrDefId|AttrValue)
+        Map<String, Techno_Attribute_Price_Rule__mdt> rulesByKey = new Map<String, Techno_Attribute_Price_Rule__mdt>();
+        for (Techno_Attribute_Price_Rule__mdt rule : [
+            SELECT ProductId__c, AttributeDefinitionId__c, AttributeValue__c,
+                   AdjustmentType__c, AdjustmentValue__c, IsActive__c
+            FROM Techno_Attribute_Price_Rule__mdt
+            WHERE IsActive__c = true
         ]) {
-            if (!adjustmentsByProduct.containsKey(a.ProductId)) adjustmentsByProduct.put(a.ProductId, new List<AttributeBasedAdjustment>());
-            adjustmentsByProduct.get(a.ProductId).add(a);
-            ruleIds.add(a.AttributeBasedAdjRuleId);
+            String key = rule.ProductId__c + '|' + rule.AttributeDefinitionId__c + '|' + rule.AttributeValue__c;
+            rulesByKey.put(key, rule);
         }
-        if (adjustmentsByProduct.isEmpty()) return;
+        System.debug('applyAttributeAdjustmentsInPlace: loaded ' + rulesByKey.size() + ' active pricing rules');
+        if (rulesByKey.isEmpty()) return;
 
-        // Step 4: Load conditions per rule (which attribute value → which rule)
-        Map<Id, List<AttributeAdjustmentCondition>> conditionsByRule = new Map<Id, List<AttributeAdjustmentCondition>>();
-        for (AttributeAdjustmentCondition c : [
-            SELECT Id, AttributeBasedAdjRuleId, AttributeDefinitionId, Operator, StringValue
-            FROM AttributeAdjustmentCondition
-            WHERE AttributeBasedAdjRuleId IN :ruleIds
-        ]) {
-            if (!conditionsByRule.containsKey(c.AttributeBasedAdjRuleId)) conditionsByRule.put(c.AttributeBasedAdjRuleId, new List<AttributeAdjustmentCondition>());
-            conditionsByRule.get(c.AttributeBasedAdjRuleId).add(c);
-        }
-
-        // Step 5: For each bundle QLI in Trigger.new, compute newUnitPrice and SET IN-PLACE
+        // Step 4: For each bundle QLI in Trigger.new, sum adjustments and SET IN-PLACE
         for (QuoteLineItem q : qlis) {
             QuoteLineItem dbInfo = bundleInfoById.get(q.Id);
             if (dbInfo == null) continue;
             Map<Id, String> selectedAttrs = qliAttrValues.get(q.Id);
             if (selectedAttrs == null || selectedAttrs.isEmpty()) continue;
-
-            List<AttributeBasedAdjustment> productAdjustments = adjustmentsByProduct.get(dbInfo.Product2Id);
-            if (productAdjustments == null) continue;
+            if (dbInfo.PricebookEntry == null || dbInfo.PricebookEntry.UnitPrice == null) continue;
 
             Decimal totalAdjustment = 0;
-            for (AttributeBasedAdjustment adj : productAdjustments) {
-                List<AttributeAdjustmentCondition> conds = conditionsByRule.get(adj.AttributeBasedAdjRuleId);
-                if (conds == null || conds.isEmpty()) continue;
+            for (Id attrDefId : selectedAttrs.keySet()) {
+                String selectedValue = selectedAttrs.get(attrDefId);
+                if (String.isBlank(selectedValue)) continue;
+                String key = dbInfo.Product2Id + '|' + attrDefId + '|' + selectedValue;
+                Techno_Attribute_Price_Rule__mdt rule = rulesByKey.get(key);
+                if (rule == null) continue;
 
-                Boolean allMatch = true;
-                for (AttributeAdjustmentCondition cond : conds) {
-                    String selectedValue = selectedAttrs.get(cond.AttributeDefinitionId);
-                    if (selectedValue == null) { allMatch = false; break; }
-                    if (cond.Operator == 'equals' && selectedValue != cond.StringValue) { allMatch = false; break; }
-                }
-                if (allMatch) {
-                    if (adj.AdjustmentType == 'Amount') totalAdjustment += adj.AdjustmentValue;
-                    else if (adj.AdjustmentType == 'Percent' && dbInfo.PricebookEntry != null && dbInfo.PricebookEntry.UnitPrice != null) {
-                        totalAdjustment += (dbInfo.PricebookEntry.UnitPrice * adj.AdjustmentValue / 100);
-                    }
+                if (rule.AdjustmentType__c == 'Amount') {
+                    totalAdjustment += rule.AdjustmentValue__c;
+                } else if (rule.AdjustmentType__c == 'Percent') {
+                    totalAdjustment += (dbInfo.PricebookEntry.UnitPrice * rule.AdjustmentValue__c / 100);
                 }
             }
 
-            // Always rebase from PricebookEntry.UnitPrice (the immutable list price), not from
-            // q.UnitPrice — that way repeat fires of beforeUpdate produce idempotent results.
-            if (dbInfo.PricebookEntry == null || dbInfo.PricebookEntry.UnitPrice == null) continue;
+            // Idempotent — always rebase from PricebookEntry.UnitPrice, not from q.UnitPrice
             Decimal newUnitPrice = (dbInfo.PricebookEntry.UnitPrice + totalAdjustment).setScale(2);
             System.debug('applyAttributeAdjustmentsInPlace: QLI ' + q.Id + ' base=' + dbInfo.PricebookEntry.UnitPrice + ' adj=' + totalAdjustment + ' new=' + newUnitPrice);
             q.UnitPrice = newUnitPrice;
