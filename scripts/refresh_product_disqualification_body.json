@@ -1,0 +1,8 @@
+{
+  "inputs": [
+    {
+      "DecisionTableApiName": "Product_Disqualification",
+      "isDecisionTableIncremental": false
+    }
+  ]
+}

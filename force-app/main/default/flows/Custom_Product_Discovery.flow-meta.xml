@@ -226,10 +226,10 @@
         </connector>
         <filterLogic>and</filterLogic>
         <filters>
-            <field>NumberOfCategories</field>
-            <operator>GreaterThan</operator>
+            <field>Id</field>
+            <operator>EqualTo</operator>
             <value>
-                <numberValue>0.0</numberValue>
+                <stringValue>0ZSaj000000KBlhGAG</stringValue>
             </value>
         </filters>
         <getFirstRecordOnly>false</getFirstRecordOnly>
