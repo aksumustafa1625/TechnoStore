@@ -17,9 +17,9 @@
         </inputParameters>
         <nameSegment>GenerateContractPdfService</nameSegment>
     </actionCalls>
-    <description>Record-triggered: when a new Contract is created (via native Create Contract button or any other source), auto-generates a TechnoStore-branded MSA PDF and attaches it to the Contract via ContentDocumentLink. The PDF is then available for the existing Send Via DocuSign quick action.</description>
+    <description>Record-triggered: regenerates the TechnoStore-branded MSA PDF whenever a Contract is created or its key fields (AccountId, StartDate, EndDate, ContractTerm) change. The service deletes the prior MSA PDF before inserting the new one, so the Contract always has a single up-to-date branded PDF. Status / DocuSign / approval transitions do NOT trigger regen because those fields aren't in the ISCHANGED list.</description>
     <interviewLabel>Auto Generate Contract PDF {!$Flow.CurrentDateTime}</interviewLabel>
-    <label>Auto Generate Contract PDF On Create</label>
+    <label>Auto Generate Contract PDF On Save</label>
     <processMetadataValues>
         <name>BuilderType</name>
         <value>
@@ -45,8 +45,20 @@
         <connector>
             <targetReference>Generate_Pdf</targetReference>
         </connector>
+        <doesRequireRecordChangedToMeetCriteria>false</doesRequireRecordChangedToMeetCriteria>
+        <filterFormula>AND(
+    NOT(ISBLANK({!$Record.AccountId})),
+    NOT(ISBLANK({!$Record.StartDate})),
+    NOT(ISBLANK({!$Record.EndDate})),
+    OR(
+        ISCHANGED({!$Record.AccountId}),
+        ISCHANGED({!$Record.StartDate}),
+        ISCHANGED({!$Record.EndDate}),
+        ISCHANGED({!$Record.ContractTerm})
+    )
+)</filterFormula>
         <object>Contract</object>
-        <recordTriggerType>Create</recordTriggerType>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
         <triggerType>RecordAfterSave</triggerType>
     </start>
     <status>Active</status>

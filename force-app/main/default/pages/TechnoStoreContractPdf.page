@@ -146,11 +146,25 @@
             <table style="width:100%; margin-top:10pt;" cellspacing="0" cellpadding="0">
                 <tr>
                     <td></td>
-                    <td style="width:280pt;">
+                    <td style="width:300pt;">
                         <table style="width:100%;" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td style="padding:6pt 0; color:#6B7280; text-align:right; padding-right:30pt; font-size:10pt;">Subtotal</td>
+                                <td style="padding:6pt 0; text-align:right; color:#1F2937; font-size:10pt;">{!netSubtotalStr}</td>
+                            </tr>
+                            <apex:outputPanel rendered="{!hasDiscount}" layout="none">
+                                <tr>
+                                    <td style="padding:6pt 0; color:#10B981; text-align:right; padding-right:30pt; font-size:10pt; font-weight:600;">Bundle Savings (applied)</td>
+                                    <td style="padding:6pt 0; text-align:right; color:#10B981; font-size:10pt; font-weight:600;">&minus; {!discountAmountStr}</td>
+                                </tr>
+                            </apex:outputPanel>
+                            <tr style="border-top:1pt solid #E5E7EB;">
+                                <td style="padding:6pt 0; color:#6B7280; text-align:right; padding-right:30pt; font-size:10pt;">VAT (19%)</td>
+                                <td style="padding:6pt 0; text-align:right; color:#1F2937; font-size:10pt;">{!vatAmountStr}</td>
+                            </tr>
                             <tr style="border-top:2pt solid #1B4F72;">
                                 <td style="padding:12pt 0; color:#1B4F72; text-align:right; padding-right:30pt; font-size:14pt; font-weight:700;">TOTAL CONTRACT VALUE</td>
-                                <td style="padding:12pt 0; text-align:right; color:#1B4F72; font-size:16pt; font-weight:700;">{!totalAmountStr}</td>
+                                <td style="padding:12pt 0; text-align:right; color:#1B4F72; font-size:16pt; font-weight:700;">{!grandTotalStr}</td>
                             </tr>
                         </table>
                     </td>

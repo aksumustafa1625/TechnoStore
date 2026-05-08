@@ -12,11 +12,20 @@ public with sharing class ContractPdfController {
     public Account billingAccount { get; set; }
     public Contact billToContact { get; set; }
     public List<OrderItemWrapper> orderItems { get; set; }
-    public Decimal totalAmount { get; set; }
+    public Decimal grossSubtotal { get; set; }
+    public Decimal netSubtotal { get; set; }
+    public Decimal discountAmount { get; set; }
+    public Decimal vatAmount { get; set; }
+    public Decimal grandTotal { get; set; }
+    private static final Decimal VAT_RATE = 0.19;
 
     public ContractPdfController() {
         orderItems = new List<OrderItemWrapper>();
-        totalAmount = 0;
+        grossSubtotal = 0;
+        netSubtotal = 0;
+        discountAmount = 0;
+        vatAmount = 0;
+        grandTotal = 0;
         Id contractId = ApexPages.currentPage().getParameters().get('id');
         if (contractId != null) {
             loadData(contractId);
@@ -32,8 +41,8 @@ public with sharing class ContractPdfController {
         public OrderItemWrapper(OrderItem oi) {
             productName = (oi.Product2 != null && oi.Product2.Name != null) ? oi.Product2.Name : 'Service';
             quantityStr = oi.Quantity == null ? '1' : String.valueOf(oi.Quantity.intValue());
-            unitPriceStr = oi.UnitPrice == null ? '$0.00' : '$' + oi.UnitPrice.setScale(2).format();
-            totalPriceStr = oi.TotalPrice == null ? '$0.00' : '$' + oi.TotalPrice.setScale(2).format();
+            unitPriceStr = fmtMoney(oi.UnitPrice);
+            totalPriceStr = fmtMoney(oi.TotalPrice);
         }
     }
 
@@ -80,21 +89,49 @@ public with sharing class ContractPdfController {
             }
             if (!orders.isEmpty()) {
                 List<OrderItem> items = [
-                    SELECT Id, Quantity, UnitPrice, TotalPrice, Product2.Name
+                    SELECT Id, Quantity, UnitPrice, ListPrice, TotalPrice, Product2.Name
                     FROM OrderItem WHERE OrderId = :orders[0].Id
                     ORDER BY CreatedDate ASC
                 ];
+                Decimal savings = 0;
                 for (OrderItem oi : items) {
                     orderItems.add(new OrderItemWrapper(oi));
-                    if (oi.TotalPrice != null) totalAmount += oi.TotalPrice;
+                    Decimal lineTotal = oi.TotalPrice == null ? 0 : oi.TotalPrice;
+                    Decimal lineQty = oi.Quantity == null ? 0 : oi.Quantity;
+                    Decimal lineList = oi.ListPrice == null ? 0 : oi.ListPrice;
+                    Decimal lineUnit = oi.UnitPrice == null ? 0 : oi.UnitPrice;
+                    netSubtotal += lineTotal;
+                    grossSubtotal += lineList * lineQty;
+                    if (lineList > lineUnit) {
+                        savings += (lineList - lineUnit) * lineQty;
+                    }
                 }
+                discountAmount = savings;
+                vatAmount = (netSubtotal * VAT_RATE).setScale(2);
+                grandTotal = (netSubtotal + vatAmount).setScale(2);
             }
         }
     }
 
-    public String getTotalAmountStr() {
-        return '$' + totalAmount.setScale(2).format();
+    private static String fmtMoney(Decimal v) {
+        if (v == null) return '€0.00';
+        Decimal rounded = v.setScale(2);
+        String s = rounded.format();
+        Integer dotIdx = s.indexOf('.');
+        if (dotIdx < 0) {
+            s = s + '.00';
+        } else if (s.length() - dotIdx - 1 == 1) {
+            s = s + '0';
+        }
+        return '€' + s;
     }
+
+    public String getGrossSubtotalStr() { return fmtMoney(grossSubtotal); }
+    public String getNetSubtotalStr() { return fmtMoney(netSubtotal); }
+    public String getDiscountAmountStr() { return fmtMoney(discountAmount); }
+    public String getVatAmountStr() { return fmtMoney(vatAmount); }
+    public String getGrandTotalStr() { return fmtMoney(grandTotal); }
+    public Boolean getHasDiscount() { return discountAmount != null && discountAmount > 0; }
 
     public Boolean getHasOrderItems() {
         return orderItems != null && !orderItems.isEmpty();

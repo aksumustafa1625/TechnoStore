@@ -37,6 +37,20 @@ public with sharing class GenerateContractPdfService {
         try {
             Contract c = [SELECT Id, ContractNumber FROM Contract WHERE Id = :req.contractId LIMIT 1];
 
+            // Delete prior MSA PDFs attached to this Contract so each regen replaces the stale one
+            // (instead of accumulating; the flow re-fires on AccountId/StartDate/EndDate/ContractTerm change).
+            List<ContentDocumentLink> priorLinks = [
+                SELECT ContentDocumentId
+                FROM ContentDocumentLink
+                WHERE LinkedEntityId = :req.contractId
+                  AND ContentDocument.Title LIKE 'TechnoStore_MSA_%'
+            ];
+            if (!priorLinks.isEmpty()) {
+                Set<Id> docIds = new Set<Id>();
+                for (ContentDocumentLink cdl : priorLinks) docIds.add(cdl.ContentDocumentId);
+                delete [SELECT Id FROM ContentDocument WHERE Id IN :docIds];
+            }
+
             PageReference pdfPage = Page.TechnoStoreContractPdf;
             pdfPage.getParameters().put('id', req.contractId);
             Blob pdfBlob;
