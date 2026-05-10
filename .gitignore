@@ -8,6 +8,14 @@
 .localdevserver/
 deploy-options.json
 
+# Mule project secrets (credentials must never be committed)
+salesforce-jira-integration/src/main/resources/dev.yaml
+salesforce-jira-integration/target/
+salesforce-jira-integration/.mule/
+
+# JIRA credentials setup script (contains real API token)
+scripts/setup_jira_config.apex
+
 # LWC VSCode autocomplete
 **/lwc/jsconfig.json
 
@@ -66,6 +74,10 @@ technostore-integration/
 
 # Stripe webhook signing secrets (whsec_*)
 **/whsec_*
+
+# JIRA API credentials (mulesoft/jira-properties.yaml has real token, never commit)
+**/jira-properties.yaml
+!**/jira-properties.yaml.template
 
 # ngrok config
 ngrok.yml

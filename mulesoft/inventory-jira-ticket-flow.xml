@@ -1,0 +1,86 @@
+<!--
+    inventory-jira-ticket-flow
+
+    Drop this flow into the existing technostore-integration Mule app's
+    integration-flows.xml, right after inventory-check-flow. Subscribes to the
+    SAME Salesforce Platform Event (Inventory_Check_Requested__e) in parallel
+    with the existing Slack notification — fan-out pattern: one event,
+    multiple downstream systems.
+
+    Result on click "Request Inventory Check":
+      - Slack message goes to #warehouse channel (existing flow)
+      - JIRA Task auto-created in TS project (this flow)
+
+    Required properties (add to dev.yaml — do NOT commit secrets):
+        jira.url=https://demo-alias.atlassian.net
+        jira.email=demo-alias2@gmail.com
+        jira.api.token=...
+        jira.project.key=TS
+
+    Required global config (add to integration-globals.xml):
+        <http:request-config name="JIRA_HTTP_Config" basePath="${jira.url}">
+            <http:request-connection host="demo-alias.atlassian.net" port="443" protocol="HTTPS">
+                <http:authentication>
+                    <http:basic-authentication
+                        username="${jira.email}"
+                        password="${jira.api.token}"/>
+                </http:authentication>
+            </http:request-connection>
+        </http:request-config>
+-->
+<flow name="inventory-jira-ticket-flow" doc:id="3d8b4c5a-2345-6789-bcde-f12345678901">
+    <salesforce:replay-channel-listener
+        streamingChannel="/event/Inventory_Check_Requested__e"
+        replayOption="ONLY_NEW"
+        doc:name="On Inventory Check Requested (JIRA branch)"
+        config-ref="Salesforce_Config1"
+        replayId="-1"/>
+
+    <logger level="INFO" doc:name="Log Event Received"
+        message="JIRA branch — Inventory Check Requested: #[payload]"/>
+
+    <set-variable variableName="orderNumber" value="#[payload.data.payload.Order_Number__c]" doc:name="Save Order Number"/>
+    <set-variable variableName="accountName" value="#[payload.data.payload.Account_Name__c]" doc:name="Save Account Name"/>
+    <set-variable variableName="totalAmount" value="#[payload.data.payload.Total_Amount__c]" doc:name="Save Total Amount"/>
+    <set-variable variableName="itemCount"   value="#[payload.data.payload.Item_Count__c]"   doc:name="Save Item Count"/>
+    <set-variable variableName="itemsSummary" value="#[payload.data.payload.Items_Summary__c]" doc:name="Save Items Summary"/>
+    <set-variable variableName="orderUrl"    value="#[payload.data.payload.Order_Url__c]"    doc:name="Save Order Url"/>
+
+    <ee:transform doc:name="Build JIRA Issue Payload">
+        <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    fields: {
+        project: { key: p('jira.project.key') },
+        issuetype: { name: "Task" },
+        summary: ":package: Inventory check needed: " ++ (vars.orderNumber default "(no order)") ++ " - " ++ (vars.accountName default "(no account)"),
+        description: "Inventory check requested by Salesforce.\n\n"
+            ++ "Order: " ++ (vars.orderNumber default "(unknown)") ++ "\n"
+            ++ "Account: " ++ (vars.accountName default "(no account)") ++ "\n"
+            ++ "Total: USD " ++ ((vars.totalAmount as String) default "0") ++ "\n"
+            ++ "Lines: " ++ ((vars.itemCount as String) default "0") ++ "\n\n"
+            ++ "Products:\n" ++ (vars.itemsSummary default "(none)") ++ "\n\n"
+            ++ "Salesforce link: " ++ (vars.orderUrl default "(no url)") ++ "\n\n"
+            ++ "Action required: warehouse team to confirm stock availability.\n"
+            ++ "Auto-created by MuleSoft from Inventory_Check_Requested__e event.",
+        priority: { name: "High" },
+        labels: ["inventory", "warehouse", "salesforce-auto"]
+    }
+}]]></ee:set-payload>
+        </ee:message>
+    </ee:transform>
+
+    <http:request method="POST" path="/rest/api/2/issue" config-ref="JIRA_HTTP_Config" doc:name="Create JIRA Issue">
+        <http:headers><![CDATA[#[output application/java
+---
+{
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}]]]></http:headers>
+    </http:request>
+
+    <logger level="INFO" doc:name="Log JIRA Result"
+        message="JIRA ticket created: #[payload.key default 'unknown'] for order #[vars.orderNumber]"/>
+</flow>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>Hierarchy</customSettingsType>
+    <description>Stores JIRA Cloud API credentials. One default record at org level. Fields hold host, email, API token, and project key for outbound REST callouts.</description>
+    <enableFeeds>false</enableFeeds>
+    <label>Jira Config</label>
+    <visibility>Protected</visibility>
+</CustomObject>

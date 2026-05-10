@@ -25,12 +25,13 @@ public with sharing class InventoryApprovalDecisionService {
         public String statusMessage;
     }
 
-    @InvocableMethod(label='Inventory Approval Decision' description='Approves (In Stock) or rejects (Out of Stock) the active inventory approval workitem on the given Order.')
+    @InvocableMethod(label='Inventory Approval Decision' description='Approves (In Stock) or rejects (Out of Stock) the active inventory approval workitem on the given Order. On Reject, also opens a JIRA ticket via JiraTicketService.')
     public static List<Result> decide(List<Request> requests) {
         List<Result> results = new List<Result>();
         if (requests == null || requests.isEmpty()) return results;
 
         Set<Id> orderIds = new Set<Id>();
+        List<Id> rejectedOrderIds = new List<Id>();
         for (Request r : requests) if (r.orderId != null) orderIds.add(r.orderId);
 
         // Find the pending approval workitem for each order
@@ -68,6 +69,7 @@ public with sharing class InventoryApprovalDecisionService {
                     res.statusMessage = (action == 'Approve')
                         ? 'Inventory marked In Stock. Approval recorded.'
                         : 'Inventory marked Out of Stock. Approval recorded.';
+                    if (action == 'Reject') rejectedOrderIds.add(r.orderId);
                 } else {
                     String msgs = '';
                     for (Database.Error err : ar.getErrors()) {
@@ -80,6 +82,28 @@ public with sharing class InventoryApprovalDecisionService {
                 res.statusMessage = 'Approval action error: ' + e.getMessage();
             }
             results.add(res);
+        }
+
+        // For each Order rejected (Out of Stock), open a JIRA ticket via JiraTicketService.
+        // Runs inside the same transaction so the warehouse user sees the JIRA ticket id
+        // appear on the Order immediately after the Reject action commits.
+        if (!rejectedOrderIds.isEmpty()) {
+            List<JiraTicketService.Request> jiraReqs = new List<JiraTicketService.Request>();
+            for (Id oid : rejectedOrderIds) {
+                JiraTicketService.Request jr = new JiraTicketService.Request();
+                jr.orderId = oid;
+                jr.reason = 'Inventory marked out of stock by warehouse approval.';
+                jiraReqs.add(jr);
+            }
+            try {
+                List<JiraTicketService.Result> jiraResults = JiraTicketService.createTicket(jiraReqs);
+                for (JiraTicketService.Result jres : jiraResults) {
+                    System.debug('JIRA ticket: status=' + jres.status + ' ticket=' + jres.ticketId + ' msg=' + jres.message);
+                }
+            } catch (Exception e) {
+                // Don't fail the approval action because of JIRA — the warehouse decision is recorded already.
+                System.debug('JiraTicketService callout failed: ' + e.getMessage());
+            }
         }
         return results;
     }

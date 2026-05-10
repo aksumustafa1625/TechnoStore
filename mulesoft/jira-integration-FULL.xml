@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+
+    <!-- ============== CONFIGURATION-PROPERTIES ============== -->
+    <configuration-properties file="dev.yaml" doc:name="Configuration properties"/>
+
+    <!-- ============== SALESFORCE CONFIG ============== -->
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce">
+        <salesforce:basic-connection
+            username="${sfdc.username}"
+            password="${sfdc.password}"
+            securityToken="${sfdc.token}"
+            url="${sfdc.url}"/>
+    </salesforce:sfdc-config>
+
+    <!-- ============== JIRA HTTP CONFIG ============== -->
+    <http:request-config name="JIRA_HTTP_Config" doc:name="JIRA HTTP">
+        <http:request-connection
+            host="${jira.host}"
+            port="443"
+            protocol="HTTPS">
+            <http:authentication>
+                <http:basic-authentication
+                    username="${jira.email}"
+                    password="${jira.api.token}"/>
+            </http:authentication>
+        </http:request-connection>
+    </http:request-config>
+
+    <!-- ============== JIRA TICKET FLOW ============== -->
+    <flow name="inventory-jira-ticket-flow" doc:id="3d8b4c5a-2345-6789-bcde-f12345678901">
+        <salesforce:replay-channel-listener
+            streamingChannel="/event/Inventory_Check_Requested__e"
+            replayOption="ONLY_NEW"
+            doc:name="On Inventory Check Requested"
+            config-ref="Salesforce_Config"
+            replayId="-1"/>
+
+        <logger level="INFO" doc:name="Log Event Received"
+            message="Inventory Check Requested received: order=#[payload.data.payload.Order_Number__c]"/>
+
+        <set-variable variableName="orderNumber" value="#[payload.data.payload.Order_Number__c]" doc:name="Save Order Number"/>
+        <set-variable variableName="accountName" value="#[payload.data.payload.Account_Name__c]" doc:name="Save Account Name"/>
+        <set-variable variableName="totalAmount" value="#[payload.data.payload.Total_Amount__c]" doc:name="Save Total Amount"/>
+        <set-variable variableName="itemCount"   value="#[payload.data.payload.Item_Count__c]"   doc:name="Save Item Count"/>
+        <set-variable variableName="itemsSummary" value="#[payload.data.payload.Items_Summary__c]" doc:name="Save Items Summary"/>
+        <set-variable variableName="orderUrl"    value="#[payload.data.payload.Order_Url__c]"    doc:name="Save Order Url"/>
+
+        <ee:transform doc:name="Build JIRA Issue Payload">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    fields: {
+        project: { key: p('jira.project.key') },
+        issuetype: { name: "Task" },
+        summary: "Inventory check needed: " ++ (vars.orderNumber default "(no order)") ++ " - " ++ (vars.accountName default "(no account)"),
+        description: "Inventory check requested by Salesforce.\n\n"
+            ++ "Order: " ++ (vars.orderNumber default "(unknown)") ++ "\n"
+            ++ "Account: " ++ (vars.accountName default "(no account)") ++ "\n"
+            ++ "Total: USD " ++ ((vars.totalAmount as String) default "0") ++ "\n"
+            ++ "Lines: " ++ ((vars.itemCount as String) default "0") ++ "\n\n"
+            ++ "Products:\n" ++ (vars.itemsSummary default "(none)") ++ "\n\n"
+            ++ "Salesforce link: " ++ (vars.orderUrl default "(no url)") ++ "\n\n"
+            ++ "Action required: warehouse team to confirm stock availability.",
+        priority: { name: "High" },
+        labels: ["inventory", "warehouse", "salesforce-auto"]
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <http:request method="POST" path="/rest/api/2/issue" config-ref="JIRA_HTTP_Config" doc:name="Create JIRA Issue">
+            <http:headers><![CDATA[#[output application/java
+---
+{
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}]]]></http:headers>
+        </http:request>
+
+        <logger level="INFO" doc:name="Log JIRA Result"
+            message="JIRA ticket created: #[payload.key default 'unknown'] for order #[vars.orderNumber]"/>
+    </flow>
+
+</mule>

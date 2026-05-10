@@ -1,0 +1,20 @@
+# Mule app properties — TEMPLATE for Anypoint Code Builder JIRA integration project.
+# Copy this to src/main/resources/dev.yaml in your Code Builder project, then fill values.
+# Never commit dev.yaml with real credentials.
+
+# Salesforce connection (technostore-admin@example.com Mule OAuth user)
+sfdc:
+  username: "your-mule-user@example.com"
+  password: "YOUR_SF_PASSWORD"
+  token: "YOUR_SF_SECURITY_TOKEN"
+  url: "https://login.salesforce.com/services/Soap/u/57.0"
+
+# JIRA Cloud
+jira:
+  host: "demo-alias.atlassian.net"
+  url: "https://demo-alias.atlassian.net"
+  email: "demo-alias2@gmail.com"
+  api:
+    token: "REPLACE_WITH_YOUR_API_TOKEN_FROM_jira-properties.yaml"
+  project:
+    key: "TS"

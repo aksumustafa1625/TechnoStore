@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants read/edit on Order.JIRA_Ticket_Id__c so Apex (JiraTicketService) can write the JIRA ticket key back to the Order, and grants access to the Jira_Config__c protected custom setting.</description>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Order.JIRA_Ticket_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Jira_Config__c.Host__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Jira_Config__c.Email__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Jira_Config__c.API_Token__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Jira_Config__c.Project_Key__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Jira Integration Access</label>
+</PermissionSet>
