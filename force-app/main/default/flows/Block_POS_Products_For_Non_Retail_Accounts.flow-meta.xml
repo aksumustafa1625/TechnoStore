@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <description>Before-save flow that throws a custom error when a POS Solutions product (POS01, ENPOS101, REG01, SCN01) is added to a QuoteLineItem on a Quote whose Account is not in the Retail industry. Replaces the native Industry-based ProductDisqualification, which doesn't enforce at runtime in this org.</description>
+    <environments>Default</environments>
+    <interviewLabel>Block POS Products For Non Retail Accounts {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Block POS Products For Non-Retail Accounts</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_Quote_Account</name>
+        <label>Get Quote Account</label>
+        <locationX>176</locationX>
+        <locationY>335</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Is_Account_Not_Retail</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Is_Account_Not_Retail</targetReference>
+        </faultConnector>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Quote</object>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>AccountId</queriedFields>
+        <queriedFields>Account.Industry</queriedFields>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.QuoteId</elementReference>
+            </value>
+        </filters>
+    </recordLookups>
+    <decisions>
+        <name>Is_Account_Not_Retail</name>
+        <label>Account industry NOT Retail?</label>
+        <locationX>176</locationX>
+        <locationY>455</locationY>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Block</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_Quote_Account.Account.Industry</leftValueReference>
+                <operator>NotEqualTo</operator>
+                <rightValue>
+                    <stringValue>Retail</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Throw_POS_Industry_Error</targetReference>
+            </connector>
+            <label>Block</label>
+        </rules>
+    </decisions>
+    <customErrors>
+        <name>Throw_POS_Industry_Error</name>
+        <label>Throw POS Industry Error</label>
+        <locationX>176</locationX>
+        <locationY>575</locationY>
+        <customErrorMessages>
+            <errorMessage>POS Solutions are reserved for Retail-industry customers. The selected Account is not in the Retail industry, so this product cannot be added to the quote.</errorMessage>
+            <isFieldError>false</isFieldError>
+        </customErrorMessages>
+    </customErrors>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Quote_Account</targetReference>
+        </connector>
+        <filterFormula>OR(
+{!$Record.Product2.ProductCode} = &quot;POS01&quot;,
+{!$Record.Product2.ProductCode} = &quot;ENPOS101&quot;,
+{!$Record.Product2.ProductCode} = &quot;REG01&quot;,
+{!$Record.Product2.ProductCode} = &quot;SCN01&quot;
+)</filterFormula>
+        <object>QuoteLineItem</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Obsolete</status>
+</Flow>

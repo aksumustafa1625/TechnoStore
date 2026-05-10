@@ -37,11 +37,13 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
 
     protected override void beforeInsert() {
         autoPopulateDescription();
+        enforcePOSIndustryEligibility(records);
     }
 
     protected override void beforeUpdate() {
         autoPopulateDescription();
         applyAttributeAdjustmentsInPlace(records);
+        enforcePOSIndustryEligibility(records);
     }
 
     protected override void afterInsert() {
@@ -400,6 +402,55 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             Decimal newUnitPrice = (dbInfo.PricebookEntry.UnitPrice + totalAdjustment).setScale(2);
             System.debug('applyAttributeAdjustmentsInPlace: QLI ' + q.Id + ' base=' + dbInfo.PricebookEntry.UnitPrice + ' adj=' + totalAdjustment + ' new=' + newUnitPrice);
             q.UnitPrice = newUnitPrice;
+        }
+    }
+
+    /**
+     * Enforce industry-based POS Solutions eligibility at QuoteLineItem save time.
+     *
+     * The native Browse Catalog runtime engine does NOT enforce ProductDisqualification.Industry__c
+     * blocks in this org configuration — products show in the catalog regardless of Account industry.
+     * This trigger is the safety net: it blocks DML (insert / update) when a POS Solutions product
+     * is being added to a Quote whose Account is not in the Retail industry.
+     *
+     * POS product codes hard-coded for transparency. Add new POS codes here when introducing them.
+     * Returns custom errors via addError() so the user sees a clear, demo-friendly message instead
+     * of a low-level platform exception (PlaceSalesTransactionPersistException) from the
+     * Industries CPQ cart persistence layer.
+     */
+    private static final Set<String> POS_PRODUCT_CODES = new Set<String>{'POS01', 'ENPOS101', 'REG01', 'SCN01'};
+
+    private static void enforcePOSIndustryEligibility(List<QuoteLineItem> qlis) {
+        if (qlis == null || qlis.isEmpty()) return;
+
+        Set<Id> productIds = new Set<Id>();
+        for (QuoteLineItem q : qlis) {
+            if (q.Product2Id != null) productIds.add(q.Product2Id);
+        }
+        if (productIds.isEmpty()) return;
+
+        Map<Id, Product2> productMap = new Map<Id, Product2>([
+            SELECT Id, ProductCode FROM Product2 WHERE Id IN :productIds AND ProductCode IN :POS_PRODUCT_CODES
+        ]);
+        if (productMap.isEmpty()) return;
+
+        Set<Id> quoteIds = new Set<Id>();
+        for (QuoteLineItem q : qlis) {
+            if (productMap.containsKey(q.Product2Id) && q.QuoteId != null) quoteIds.add(q.QuoteId);
+        }
+        if (quoteIds.isEmpty()) return;
+
+        Map<Id, String> industryByQuote = new Map<Id, String>();
+        for (Quote q : [SELECT Id, AccountId, Account.Industry FROM Quote WHERE Id IN :quoteIds]) {
+            industryByQuote.put(q.Id, q.Account != null ? q.Account.Industry : null);
+        }
+
+        for (QuoteLineItem qli : qlis) {
+            if (!productMap.containsKey(qli.Product2Id)) continue;
+            String industry = industryByQuote.get(qli.QuoteId);
+            if (industry != 'Retail') {
+                qli.Product2Id.addError('POS Solutions are reserved for Retail-industry customers. This account is in ' + (industry == null ? 'a non-Retail industry' : industry) + ', so this product cannot be added to the quote.');
+            }
         }
     }
 

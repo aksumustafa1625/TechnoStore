@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account_Industry__c</fullName>
+    <description>Mirrors Account.Industry on the Quote so QuoteLineItem validation rules can reference industry-based product eligibility without needing 2-hop cross-object traversal.</description>
+    <externalId>false</externalId>
+    <formula>TEXT(Account.Industry)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Account Industry</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
