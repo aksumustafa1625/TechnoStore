@@ -71,6 +71,16 @@ The publishing pipeline itself is part of the demo (entry 45): an Apex service t
 
 ---
 
+## 🚀 Copado Integration Plan (production scaling)
+
+TechnoStore currently uses **GitHub Actions + SFDX** for CI/CD. For production scaling beyond a single Developer Edition org, the migration path to **Copado** (the enterprise Salesforce DevOps platform standard in DACH consultancy + enterprise teams) is documented:
+
+> **[docs/copado-integration-plan.md](docs/copado-integration-plan.md)**
+
+The plan covers: 4-org pipeline design (Dev → SIT → UAT → Prod), User Story lifecycle, GitHub Actions → Copado feature mapping, declarative pipeline YAML target, cost analysis, and when migration becomes justified. Includes honest framing — TechnoStore is not currently on Copado; this is the planned future state captured so the architecture conversation has a defensible answer.
+
+---
+
 ## 🏛️ Solution Blueprint (arc42)
 
 For the **single-document architect briefing** in [arc42](https://docs.arc42.org) format covering all 12 standard sections (Introduction & Goals → Architecture Constraints → System Scope → Solution Strategy → Building Blocks → Runtime → Deployment → Cross-cutting Concepts → Architecture Decisions → Quality Requirements → Risks & Tech Debt → Glossary), see:
