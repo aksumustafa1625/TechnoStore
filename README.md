@@ -71,6 +71,22 @@ The publishing pipeline itself is part of the demo (entry 45): an Apex service t
 
 ---
 
+## 📐 Architecture diagrams
+
+Five system architecture diagrams documenting TechnoStore's design at increasing levels of detail. All rendered natively in GitHub via **Mermaid** — no external tool required to view, no broken images, version-controlled with the rest of the project.
+
+| # | Diagram | Question it answers | What you see |
+|---|---------|---------------------|--------------|
+| 01 | [Context](docs/architecture/01-context.md) | "Who talks to TechnoStore and what does it integrate with?" | 5 actors + 1 central system + 7 external services + 1 orchestration layer |
+| 02 | [Container](docs/architecture/02-container.md) | "What are the major technical pieces inside?" | Salesforce subsystems (Lightning + Apex 5-package + Data + Industries) + MuleSoft (HTTP listeners + flows + connectors) |
+| 03 | [Q2C Sequence](docs/architecture/03-sequence-q2c.md) | "How does a single Order traverse the full lifecycle?" | Time-ordered message exchange across all 7 systems, with measured latencies |
+| 04 | [Data Model](docs/architecture/04-data-model.md) | "What is the schema?" | Core sObject ERD + integration support objects + per-integration custom field map |
+| 05 | [CI/CD Pipeline](docs/architecture/05-cicd.md) | "How does code reach production?" | Developer → Husky → GitHub Actions (lint + scratch-org tests) → manual promotion to sandbox + prod |
+
+These are the same diagrams a senior architect would draw on a whiteboard during an interview. Each links to the next level of detail at the bottom of the file.
+
+---
+
 ## System architecture
 
 ```
