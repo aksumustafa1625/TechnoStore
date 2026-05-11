@@ -71,6 +71,16 @@ The publishing pipeline itself is part of the demo (entry 45): an Apex service t
 
 ---
 
+## 🏛️ Solution Blueprint (arc42)
+
+For the **single-document architect briefing** in [arc42](https://docs.arc42.org) format covering all 12 standard sections (Introduction & Goals → Architecture Constraints → System Scope → Solution Strategy → Building Blocks → Runtime → Deployment → Cross-cutting Concepts → Architecture Decisions → Quality Requirements → Risks & Tech Debt → Glossary), see:
+
+> **[docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md)**
+
+The Blueprint synthesizes everything in this repo — README, ADRs, Mermaid diagrams, OpenAPI specs, Notion portfolio — into one document you can read top-to-bottom in 15 minutes. Each section links to the deeper artifact for drill-down. Recruiter-friendly executive summary format that DACH enterprise architecture documentation standards expect.
+
+---
+
 ## 🔌 API Documentation
 
 TechnoStore exposes inbound webhook APIs (Salesforce Public Site + MuleSoft HTTP listeners) and consumes outbound APIs from seven external systems. Both surfaces are formally documented:
