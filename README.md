@@ -71,6 +71,27 @@ The publishing pipeline itself is part of the demo (entry 45): an Apex service t
 
 ---
 
+## 📜 Architecture Decision Records (ADRs)
+
+Ten ADRs in [`docs/adr/`](docs/adr/) capturing the significant architectural decisions made during TechnoStore's development. Each follows the Michael Nygard format (Status / Context / Decision / Consequences / Alternatives Considered / References) and is **immutable once Accepted** — superseded by new ADRs rather than edited in place.
+
+| ADR | Decision | Status |
+|---|---|---|
+| [001](docs/adr/ADR-001-mule-vs-apex-decision-matrix.md) | Mule vs Apex per integration use case | Accepted |
+| [002](docs/adr/ADR-002-custom-metadata-over-attribute-based-adjustment.md) | Custom Metadata Type over native AttributeBasedAdjustment | Accepted (workaround) |
+| [003](docs/adr/ADR-003-site-guest-user-platform-event-indirection.md) | Salesforce Site + Guest User + Platform Event indirection for inbound webhooks | Accepted |
+| [004](docs/adr/ADR-004-six-package-sfdx-layout.md) | Six-package SFDX layout for separation of concerns | Accepted |
+| [005](docs/adr/ADR-005-kevin-ohara-trigger-handler-adoption.md) | Kevin O'Hara TriggerHandler framework adoption | Accepted |
+| [006](docs/adr/ADR-006-anypoint-studio-over-code-builder.md) | MuleSoft Anypoint Studio over Code Builder | Accepted (revisit Q4 2026) |
+| [007](docs/adr/ADR-007-org-wide-email-address.md) | Org-Wide Email Address for DACH B2B deliverability | Accepted |
+| [008](docs/adr/ADR-008-flying-saucer-vf-pdf.md) | Flying Saucer VF over LWC for branded PDFs | Accepted |
+| [009](docs/adr/ADR-009-quote-tax-formula-invoice-tax-adapter.md) | Quote tax via formula fields, Invoice tax via commercetax adapter | Accepted |
+| [010](docs/adr/ADR-010-notion-api-multi-call-orchestration.md) | Notion API multi-call orchestration for 3-level nested toggles | Accepted |
+
+See [`docs/adr/README.md`](docs/adr/README.md) for the ADR template, lifecycle conventions, and rationale.
+
+---
+
 ## 📐 Architecture diagrams
 
 Five system architecture diagrams documenting TechnoStore's design at increasing levels of detail. All rendered natively in GitHub via **Mermaid** — no external tool required to view, no broken images, version-controlled with the rest of the project.
