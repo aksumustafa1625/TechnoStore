@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RemoteSiteSetting xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>SAP API Hub Sandbox endpoint for S/4HANA Cloud integration. Used by Apex callouts to GET/POST Business Partner, Sales Order, and Material data. Endpoints under /s4hanacloud/sap/opu/odata/sap/*.</description>
+    <disableProtocolSecurity>false</disableProtocolSecurity>
+    <isActive>true</isActive>
+    <url>https://sandbox.api.sap.com</url>
+</RemoteSiteSetting>

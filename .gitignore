@@ -19,6 +19,9 @@ scripts/setup_jira_config.apex
 # Notion credentials setup script (contains real integration token)
 scripts/setup_notion_config.apex
 
+# SAP API Hub credentials setup script (contains real API Key)
+scripts/setup_sap_config.apex
+
 # LWC VSCode autocomplete
 **/lwc/jsconfig.json
 

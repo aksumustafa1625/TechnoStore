@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants access to SAP_Config__c custom setting fields so SAP integration Apex services can read API Base URL and API Key at runtime. Assign to the OAuth runtime user (technostore-admin@example.com) before running scripts/setup_sap_config.apex.</description>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>SAP_Config__c.API_Base_URL__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>SAP_Config__c.API_Key__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>SAP Integration Access</label>
+</PermissionSet>
