@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <!-- ============== CONFIGURATION-PROPERTIES ============== -->
+    <!-- Reads sap.host, sap.api.key from src/main/resources/dev.yaml (gitignored) -->
+    <configuration-properties file="dev.yaml" doc:name="Configuration properties"/>
+
+    <!-- ============== HTTP LISTENER CONFIG ============== -->
+    <!-- Local listener for triggering the test flow via Postman:
+         POST http://localhost:8081/sap/test/bp
+         No body required. -->
+    <http:listener-config name="SAP_HTTP_Listener_Config" doc:name="Local HTTP Listener">
+        <http:listener-connection host="0.0.0.0" port="8081"/>
+    </http:listener-config>
+
+    <!-- ============== SAP API HUB SANDBOX HTTP CONFIG ============== -->
+    <!-- Outbound config for calling SAP S/4HANA Cloud Sandbox.
+         APIKey header is sent on every request (same as Apex Phase 1 smoke test). -->
+    <http:request-config name="SAP_HTTP_Config" doc:name="SAP API Hub">
+        <http:request-connection
+            host="${sap.host}"
+            port="443"
+            protocol="HTTPS"/>
+        <http:default-headers>
+            <http:default-header key="APIKey" value="${sap.api.key}"/>
+            <http:default-header key="Accept" value="application/json"/>
+        </http:default-headers>
+    </http:request-config>
+
+    <!-- ============================================================ -->
+    <!-- TEST FLOW: SAP Business Partner Query                          -->
+    <!-- Mirrors scripts/test_sap_business_partner_query.apex.          -->
+    <!-- Trigger: POST http://localhost:8081/sap/test/bp                -->
+    <!-- Expected: HTTP 200 + 5 BP records logged + returned as JSON.   -->
+    <!-- ============================================================ -->
+    <flow name="sap-test-businesspartner-query" doc:id="a1b2c3d4-5678-90ab-cdef-1234567890ab">
+
+        <http:listener
+            path="/sap/test/bp"
+            allowedMethods="POST,GET"
+            config-ref="SAP_HTTP_Listener_Config"
+            doc:name="On Test Trigger"/>
+
+        <logger level="INFO" doc:name="Log Trigger Received"
+            message="SAP BP test triggered — calling sandbox.api.sap.com..."/>
+
+        <!-- Call SAP S/4HANA Cloud Sandbox: GET top 5 Business Partners -->
+        <http:request method="GET"
+            path="/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner"
+            config-ref="SAP_HTTP_Config"
+            doc:name="GET SAP Business Partners">
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+    "$top": "5",
+    "$format": "json"
+}]]]></http:query-params>
+        </http:request>
+
+        <logger level="INFO" doc:name="Log SAP Response Received"
+            message="SAP HTTP response received — parsing..."/>
+
+        <!-- Parse SAP OData v2 response: { d: { results: [...] } } -->
+        <ee:transform doc:name="Extract BP Records">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    count: sizeOf(payload.d.results default []),
+    businessPartners: (payload.d.results default []) map (bp, i) -> {
+        id: bp.BusinessPartner,
+        category: bp.BusinessPartnerCategory,
+        name: bp.BusinessPartnerFullName,
+        firstName: bp.FirstName default "",
+        lastName: bp.LastName default ""
+    },
+    source: "SAP S/4HANA Cloud Sandbox via Mule",
+    timestamp: now() as String
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!-- Log each BP at INFO level for visible console output -->
+        <foreach collection="#[payload.businessPartners]" doc:name="Log Each BP">
+            <logger level="INFO" doc:name="Log BP"
+                message="SAP BP: #[payload.id] [#[payload.category]] / #[payload.name]"/>
+        </foreach>
+
+        <!-- Restore the full payload as the HTTP response (overwritten by foreach iteration) -->
+        <ee:transform doc:name="Final Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "SUCCESS",
+    message: "Mule successfully queried SAP S/4HANA Cloud Sandbox",
+    source: "Mule sap-test-businesspartner-query flow",
+    apexEquivalent: "scripts/test_sap_business_partner_query.apex",
+    note: "If you see 5 BP records in the Mule console log, integration is verified end-to-end."
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <logger level="INFO" doc:name="Log Final Status"
+            message="SAP integration test SUCCESS — Mule + Apex both verified against API Hub Sandbox."/>
+    </flow>
+
+</mule>

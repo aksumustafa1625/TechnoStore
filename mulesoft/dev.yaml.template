@@ -18,3 +18,10 @@ jira:
     token: "REPLACE_WITH_YOUR_API_TOKEN_FROM_jira-properties.yaml"
   project:
     key: "TS"
+
+# SAP S/4HANA Cloud Sandbox (API Hub) — used by sap-integration-FULL.xml
+# Get API Key from: https://api.sap.com/api/API_BUSINESS_PARTNER -> Show API Key
+sap:
+  host: "sandbox.api.sap.com"
+  api:
+    key: "REPLACE_WITH_YOUR_SAP_API_HUB_API_KEY"
