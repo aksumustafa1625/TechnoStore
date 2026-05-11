@@ -1,0 +1,365 @@
+openapi: 3.0.3
+
+info:
+  title: TechnoStore MuleSoft Integration APIs
+  version: 1.0.0
+  description: |
+    HTTP APIs exposed by the TechnoStore MuleSoft Anypoint Studio project,
+    deployed to CloudHub 1.0. These endpoints orchestrate payment processing
+    (Stripe), parcel logistics (Sendcloud + DHL), and team notifications
+    (Slack #payments-team + #warehouse).
+
+    Two endpoint families:
+
+    1. **Outbound proxies** — Salesforce calls these endpoints to trigger
+       downstream actions in external systems (e.g., `/stripe/intent` ->
+       Stripe API + return hosted payment URL to Salesforce).
+
+    2. **Inbound webhook receivers** — external systems (Stripe Connect, future
+       Sendcloud delivery tracking) call these endpoints to notify TechnoStore
+       of events that originate outside Salesforce.
+
+    The Mule vs Apex routing decision per integration is documented in
+    [ADR-001](../docs/adr/ADR-001-mule-vs-apex-decision-matrix.md).
+  contact:
+    name: TechnoStore Engineering
+    url: https://github.com/aksumustafa1625/TechnoStore
+    email: support@technostore.example
+  license:
+    name: MIT
+    url: https://github.com/aksumustafa1625/TechnoStore/blob/main/LICENSE
+
+servers:
+  - url: https://technostore-mule.{region}.cloudhub.io
+    description: CloudHub 1.0 deployment
+    variables:
+      region:
+        default: eu
+        enum: [eu, us]
+        description: Anypoint region (TechnoStore is hosted in EU per DACH data residency)
+  - url: http://localhost:8081
+    description: Local Mule Standalone runtime (development)
+
+tags:
+  - name: Stripe
+    description: Payment processing — outbound PaymentIntent + inbound webhook
+  - name: Sendcloud
+    description: Parcel logistics — outbound v3 /orders creation
+  - name: Fulfillment
+    description: Post-payment fulfillment router (Mule Choice)
+
+paths:
+
+  # ============================================================
+  # Stripe — outbound (Salesforce -> Mule -> Stripe)
+  # ============================================================
+  /stripe/intent:
+    post:
+      tags: [Stripe]
+      summary: Create Stripe PaymentIntent for an Order
+      description: |
+        Called by Salesforce on Order activation. Mule transforms the Order
+        payload to Stripe's form-encoded schema (amount in cents, currency
+        lowercase, metadata.order_id for correlation), POSTs to
+        `https://api.stripe.com/v1/payment_intents` with Basic Auth (Stripe
+        secret key from `mule-app.properties.stripe.secret.key`), and returns
+        the hosted payment URL + client_secret for Salesforce to embed in the
+        customer's INVOICE email.
+      operationId: createStripePaymentIntent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesforceOrderPayload'
+      responses:
+        '200':
+          description: PaymentIntent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripePaymentIntentResponse'
+        '400':
+          description: Invalid Order payload (missing required field)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Stripe API call failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ============================================================
+  # Stripe — inbound (Stripe Connect -> Mule)
+  # ============================================================
+  /stripe/webhook:
+    post:
+      tags: [Stripe]
+      summary: Receive Stripe Connect webhook event
+      description: |
+        Called by Stripe Connect when a payment event fires
+        (`payment_intent.succeeded`, `payment_intent.payment_failed`, etc.).
+
+        Mule:
+        1. Extracts the `Stripe-Signature` header (`t=<unix-ts>,v1=<hmac>`)
+        2. Verifies HMAC-SHA256 against `mule-app.properties.stripe.webhook.secret`
+        3. Rejects requests where timestamp is older than 5 minutes (replay protection)
+        4. On `payment_intent.succeeded`: Scatter-Gather fan-out to (a) SF Order
+           upsert with `Status=Paid`, (b) Slack `#payments-team` notification,
+           (c) `EmailWithBrandedPdf` invocable for green RECEIPT email
+        5. Returns 200 to Stripe within 30 seconds (Stripe's retry threshold)
+
+        **Idempotency**: queries SF for Order where `Stripe_Payment_Intent_Id__c`
+        matches and `Status='Paid'`; if found, skips fan-out (re-delivered event).
+      operationId: receiveStripeWebhook
+      security:
+        - StripeSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeWebhookEvent'
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: true
+          schema:
+            type: string
+          description: |
+            Stripe-supplied signature with format `t=<unix-timestamp>,v1=<hmac-sha256-hex>`.
+            See https://stripe.com/docs/webhooks/signatures.
+      responses:
+        '200':
+          description: Event verified + processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean, example: true }
+        '400':
+          description: Signature invalid or timestamp older than 5 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ============================================================
+  # Sendcloud — outbound (Salesforce -> Mule -> Sendcloud v3)
+  # ============================================================
+  /sendcloud/order:
+    post:
+      tags: [Sendcloud]
+      summary: Create Sendcloud v3 order for parcel logistics
+      description: |
+        Called by Salesforce on Mule Choice router Physical fulfillment branch.
+        Mule pulls extended Order + Account + Contact + OrderItems via SF
+        Connector SOQL, transforms to Sendcloud v3 bare-array payload
+        (with integration_id 577997 + street splitter + ISO country mapping),
+        POSTs to `https://panel.sendcloud.sc/api/v3/orders` with Basic Auth.
+        Sendcloud auto-routes to DHL for German shipping addresses.
+      operationId: createSendcloudOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId]
+              properties:
+                orderId:
+                  type: string
+                  description: Salesforce Order Id (Mule fetches the rest via SOQL)
+                  example: 801aj00000pYyM9
+      responses:
+        '200':
+          description: Sendcloud order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendcloudOrderResponse'
+        '400':
+          description: Missing or invalid Order Id
+        '502':
+          description: Sendcloud API call failed
+
+  # ============================================================
+  # Fulfillment — Mule Choice router (Salesforce -> Mule)
+  # ============================================================
+  /order/fulfill:
+    post:
+      tags: [Fulfillment]
+      summary: Post-payment fulfillment router
+      description: |
+        Called by the Stripe webhook handler after `payment_intent.succeeded`.
+        Mule Choice router branches on `Order.Product_Type__c`:
+
+        - **Physical** -> Sendcloud v3 order + shipping notification email
+        - **Digital** -> license key UUID generation + welcome email
+        - **Mixed** -> Scatter-Gather both Physical and Digital branches in parallel
+        - **Unknown** -> Slack ops team alert
+
+        Internal flow; called from within Mule, not directly from SF in
+        production. Documented here for testability + observability.
+      operationId: routeOrderFulfillment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesforceOrderPayload'
+      responses:
+        '200':
+          description: Fulfillment branch(es) executed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  branchesExecuted:
+                    type: array
+                    items:
+                      type: string
+                      enum: [Physical, Digital]
+
+components:
+
+  securitySchemes:
+    StripeSignature:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+      description: |
+        Stripe webhook signature header. Format: `t=<unix-timestamp>,v1=<hmac>`.
+        Mule verifies via HMAC-SHA256 against the configured webhook secret.
+
+  schemas:
+
+    # ============================================================
+    # Shared schemas
+    # ============================================================
+
+    SalesforceOrderPayload:
+      type: object
+      required: [OrderId, TotalAmount, CurrencyIsoCode]
+      properties:
+        OrderId:
+          type: string
+          description: Salesforce Order Id (18-char)
+          example: 801aj00000pYyM9
+        OrderNumber:
+          type: string
+          example: '00000120'
+        TotalAmount:
+          type: number
+          format: float
+          example: 1499.00
+        CurrencyIsoCode:
+          type: string
+          example: EUR
+        Product_Type__c:
+          type: string
+          enum: [Physical, Digital, Mixed]
+        Account:
+          type: object
+          properties:
+            Name:
+              type: string
+              example: Hamburg DataWorks
+            ShippingStreet:
+              type: string
+              example: Reeperbahn 142
+            ShippingCity:
+              type: string
+              example: Hamburg
+            ShippingPostalCode:
+              type: string
+              example: '20095'
+            ShippingCountry:
+              type: string
+              example: DE
+        BillToContact:
+          type: object
+          properties:
+            Name:
+              type: string
+              example: Demo Buyer
+            Email:
+              type: string
+              format: email
+              example: demo+hamburg@technostore.example
+            Phone:
+              type: string
+              example: +49 40 1234567
+
+    StripePaymentIntentResponse:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+          example: pi_3ABCdef4567Hij89K0
+        clientSecret:
+          type: string
+          example: pi_3ABCdef4567Hij89K0_secret_abc123def456
+        paymentUrl:
+          type: string
+          format: uri
+          example: https://checkout.stripe.com/c/pay/abc123
+
+    StripeWebhookEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          example: evt_3ABCdef4567Hij89K0
+        type:
+          type: string
+          enum:
+            - payment_intent.succeeded
+            - payment_intent.payment_failed
+            - checkout.session.completed
+        created:
+          type: integer
+          format: int64
+          description: Unix timestamp
+          example: 1715425200
+        data:
+          type: object
+          properties:
+            object:
+              type: object
+              description: |
+                The Stripe object that triggered the event. Schema varies by
+                event type — see Stripe API docs for `PaymentIntent`, etc.
+
+    SendcloudOrderResponse:
+      type: object
+      properties:
+        sendcloudOrderRef:
+          type: string
+          example: TEST-001
+        sendcloudOrderId:
+          type: integer
+          example: 12345678
+        status:
+          type: string
+          example: success
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_PAYLOAD
+            - SIGNATURE_VERIFICATION_FAILED
+            - TIMESTAMP_TOO_OLD
+            - EXTERNAL_API_ERROR
+        message:
+          type: string
+          example: Stripe-Signature header missing or malformed

@@ -71,6 +71,34 @@ The publishing pipeline itself is part of the demo (entry 45): an Apex service t
 
 ---
 
+## 🔌 API Documentation
+
+TechnoStore exposes inbound webhook APIs (Salesforce Public Site + MuleSoft HTTP listeners) and consumes outbound APIs from seven external systems. Both surfaces are formally documented:
+
+| Artifact | Format | Purpose |
+|----------|--------|---------|
+| [`openapi/technostore-webhooks.yaml`](openapi/technostore-webhooks.yaml) | OpenAPI 3.0.3 | Salesforce Public Site webhook receivers (DocuSign Connect) |
+| [`openapi/technostore-mule.yaml`](openapi/technostore-mule.yaml) | OpenAPI 3.0.3 | MuleSoft Anypoint HTTP listeners (Stripe, Sendcloud, Fulfillment router) |
+| [`postman/TechnoStore.postman_collection.json`](postman/TechnoStore.postman_collection.json) | Postman v2.1 | 17 ready-to-run requests across 8 folders (JIRA / Notion / DocuSign / Stripe / Sendcloud / Slack / SF) |
+| [`postman/TechnoStore.postman_environment.json`](postman/TechnoStore.postman_environment.json) | Postman environment | Placeholder credentials — populate locally, never commit real values |
+
+**Quick start:**
+
+```bash
+# Render OpenAPI specs in a browser (no install needed)
+npx @redocly/cli preview-docs openapi/technostore-webhooks.yaml
+npx @redocly/cli preview-docs openapi/technostore-mule.yaml
+
+# Run the Postman collection headless via Newman
+npm install -g newman
+newman run postman/TechnoStore.postman_collection.json \
+  --environment postman/TechnoStore.postman_environment.json
+```
+
+See [`openapi/README.md`](openapi/README.md) + [`postman/README.md`](postman/README.md) for full setup instructions, variable descriptions, and chained workflow examples.
+
+---
+
 ## 📜 Architecture Decision Records (ADRs)
 
 Ten ADRs in [`docs/adr/`](docs/adr/) capturing the significant architectural decisions made during TechnoStore's development. Each follows the Michael Nygard format (Status / Context / Decision / Consequences / Alternatives Considered / References) and is **immutable once Accepted** — superseded by new ADRs rather than edited in place.

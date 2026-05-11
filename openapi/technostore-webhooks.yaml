@@ -1,0 +1,198 @@
+openapi: 3.0.3
+
+info:
+  title: TechnoStore Webhook APIs (Salesforce Public Site)
+  version: 1.0.0
+  description: |
+    Inbound HTTP APIs exposed by TechnoStore via Salesforce Public Sites + Apex
+    `@RestResource` classes running under the Guest User profile.
+
+    These endpoints receive event notifications from external systems
+    (currently DocuSign Connect) and translate them into internal Salesforce
+    record updates via the Platform Event indirection pattern documented in
+    [ADR-003](../docs/adr/ADR-003-site-guest-user-platform-event-indirection.md).
+
+    Authentication is HMAC-SHA256 signature verification at the controller
+    boundary — no OAuth, no API key in headers. Each external system signs
+    requests with a shared secret stored in the corresponding Custom Setting
+    (`DocuSign_Config__c.HMAC_Secret__c`, etc.).
+  contact:
+    name: TechnoStore Engineering
+    url: https://github.com/aksumustafa1625/TechnoStore
+    email: support@technostore.example
+  license:
+    name: MIT
+    url: https://github.com/aksumustafa1625/TechnoStore/blob/main/LICENSE
+
+servers:
+  - url: https://{salesforce_subdomain}.my.site.com
+    description: TechnoStore Salesforce Public Site (replace {salesforce_subdomain})
+    variables:
+      salesforce_subdomain:
+        default: technostore-demo
+        description: The org-specific subdomain assigned to the Salesforce Site
+
+tags:
+  - name: DocuSign
+    description: DocuSign Connect webhook events (envelope state transitions)
+  - name: Health
+    description: Liveness checks
+
+paths:
+
+  /services/apexrest/docusign_webhook:
+    post:
+      tags: [DocuSign]
+      summary: Receive DocuSign Connect envelope event
+      description: |
+        Called by DocuSign Connect when an envelope transitions to a terminal
+        state (Completed / Declined / Voided). Performs HMAC-SHA256 signature
+        verification on the request body and, on a `Completed` event, publishes
+        a `DocuSign_Signed__e` Platform Event. A separate Apex trigger
+        subscriber (`DocuSignStatusUpdateTriggerHandler`) runs in system
+        context and updates `Contract.Status` to `Signed` for the matching
+        envelope ID.
+
+        **Idempotency**: re-delivery of the same envelope event is safe — the
+        trigger subscriber filters `WHERE Status != 'Signed'` so duplicate
+        deliveries do not double-flip state.
+
+        **Retry behavior**: DocuSign retries non-2xx responses with exponential
+        backoff for up to 3 days. Signature mismatches return `401`
+        (non-recoverable on our side, but DocuSign still retries; the retries
+        also fail until the configuration is corrected).
+      operationId: receiveDocuSignSignedEvent
+      security:
+        - DocuSignHMAC: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocuSignConnectEvent'
+            examples:
+              completed_envelope:
+                summary: Envelope completed (customer signed)
+                value:
+                  envelopeStatus:
+                    envelopeId: 4f8c9d3a-1b2e-4f5d-9a8b-1c2d3e4f5a6b
+                    status: Completed
+                    signedDateTime: 2026-05-06T14:32:18Z
+                    recipients:
+                      - email: hamburg-buyer@dataworks.example
+                        name: Demo Buyer
+                        status: Completed
+      parameters:
+        - in: header
+          name: X-DocuSign-Signature-1
+          required: true
+          schema:
+            type: string
+          description: |
+            Base64-encoded HMAC-SHA256 of the raw request body using the
+            shared secret stored in `DocuSign_Config__c.HMAC_Secret__c`.
+      responses:
+        '200':
+          description: Event received and processed (or idempotently skipped)
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+        '401':
+          description: Signature verification failed
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Invalid HMAC signature
+        '500':
+          description: Internal Apex exception
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Error: System.LimitException'
+
+  /services/apexrest/health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      description: |
+        Simple liveness probe for monitoring tools. Returns 200 with the
+        current org timestamp when the Salesforce Site + Apex `@RestResource`
+        chain is healthy.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Site is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2026-05-11T12:34:56Z
+
+components:
+
+  securitySchemes:
+    DocuSignHMAC:
+      type: apiKey
+      in: header
+      name: X-DocuSign-Signature-1
+      description: |
+        Base64-encoded HMAC-SHA256 of the raw request body, signed with the
+        shared secret configured in DocuSign Admin → Integrations → Connect →
+        HMAC Security. The secret is mirrored on Salesforce side in
+        `DocuSign_Config__c.HMAC_Secret__c` (gitignored Protected Hierarchy
+        Custom Setting).
+
+  schemas:
+
+    DocuSignConnectEvent:
+      type: object
+      required: [envelopeStatus]
+      properties:
+        envelopeStatus:
+          $ref: '#/components/schemas/EnvelopeStatus'
+
+    EnvelopeStatus:
+      type: object
+      required: [envelopeId, status]
+      properties:
+        envelopeId:
+          type: string
+          format: uuid
+          description: DocuSign envelope identifier (UUID v4)
+          example: 4f8c9d3a-1b2e-4f5d-9a8b-1c2d3e4f5a6b
+        status:
+          type: string
+          enum: [Sent, Delivered, Completed, Declined, Voided]
+          description: Envelope terminal state
+        signedDateTime:
+          type: string
+          format: date-time
+          description: Timestamp the envelope was signed (only present when status=Completed)
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+
+    Recipient:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        status:
+          type: string
+          enum: [Sent, Delivered, Completed, Declined]

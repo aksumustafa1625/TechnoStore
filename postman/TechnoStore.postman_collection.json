@@ -1,0 +1,544 @@
+{
+  "info": {
+    "_postman_id": "33333333-aaaa-bbbb-cccc-333333333333",
+    "name": "TechnoStore Integration APIs",
+    "description": "All HTTP requests for TechnoStore's external integrations organized by target system. Authentication, headers, example bodies, and chaining tests are pre-configured. Set the `TechnoStore Local` environment as active before running.\n\nFor full setup instructions and variable descriptions, see [postman/README.md](README.md).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. JIRA Cloud (outbound)",
+      "description": "JIRA Cloud REST API v3 + Agile API. Used by Apex `JiraTicketService` and `JiraSprintService` for ticket auto-creation on Order activation and sprint management.",
+      "item": [
+        {
+          "name": "Create issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Basic {{JIRA_AUTH_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{JIRA_BASE_URL}}/rest/api/3/issue",
+              "host": ["{{JIRA_BASE_URL}}"],
+              "path": ["rest", "api", "3", "issue"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"project\": { \"key\": \"{{JIRA_PROJECT_KEY}}\" },\n    \"summary\": \"TS Fulfillment — Order {{DEMO_ORDER_NUMBER}}\",\n    \"description\": {\n      \"type\": \"doc\",\n      \"version\": 1,\n      \"content\": [\n        { \"type\": \"paragraph\", \"content\": [{ \"type\": \"text\", \"text\": \"Customer: {{DEMO_ACCOUNT_NAME}}\" }] },\n        { \"type\": \"paragraph\", \"content\": [{ \"type\": \"text\", \"text\": \"Total Amount: €1,499.00\" }] },\n        { \"type\": \"paragraph\", \"content\": [{ \"type\": \"text\", \"text\": \"Salesforce Order: {{DEMO_ORDER_NUMBER}}\" }] }\n      ]\n    },\n    \"issuetype\": { \"name\": \"Task\" },\n    \"priority\": { \"name\": \"Medium\" },\n    \"labels\": [\"technostore\", \"fulfillment\"]\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response has issue key', () => pm.expect(body.key).to.match(/^TS-\\d+$/));",
+                  "pm.environment.set('LAST_JIRA_ISSUE_KEY', body.key);",
+                  "console.log('Captured JIRA issue key:', body.key);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create sprint (Agile API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Basic {{JIRA_AUTH_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{JIRA_BASE_URL}}/rest/agile/1.0/sprint",
+              "host": ["{{JIRA_BASE_URL}}"],
+              "path": ["rest", "agile", "1.0", "sprint"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"TS Sprint May 10-24\",\n  \"startDate\": \"2026-05-10T09:00:00.000Z\",\n  \"endDate\": \"2026-05-24T17:00:00.000Z\",\n  \"originBoardId\": {{JIRA_BOARD_ID}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response has sprint id', () => pm.expect(body.id).to.be.a('number'));",
+                  "pm.environment.set('LAST_JIRA_SPRINT_ID', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add issues to sprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Basic {{JIRA_AUTH_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{JIRA_BASE_URL}}/rest/agile/1.0/sprint/{{LAST_JIRA_SPRINT_ID}}/issue",
+              "host": ["{{JIRA_BASE_URL}}"],
+              "path": ["rest", "agile", "1.0", "sprint", "{{LAST_JIRA_SPRINT_ID}}", "issue"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issues\": [\"{{LAST_JIRA_ISSUE_KEY}}\"]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set story points on issue",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Basic {{JIRA_AUTH_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{JIRA_BASE_URL}}/rest/api/3/issue/{{LAST_JIRA_ISSUE_KEY}}",
+              "host": ["{{JIRA_BASE_URL}}"],
+              "path": ["rest", "api", "3", "issue", "{{LAST_JIRA_ISSUE_KEY}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"{{JIRA_STORY_POINTS_FIELD}}\": 3\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Notion (outbound)",
+      "description": "Notion API v1. Used by Apex `NotionPublishService.publishEnterprise()` for the 50-entry portfolio. Three-call orchestration: POST page → PATCH main toggles → PATCH sub-toggles per main toggle. See ADR-010.",
+      "item": [
+        {
+          "name": "Create page (title only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{NOTION_TOKEN}}", "type": "text" },
+              { "key": "Notion-Version", "value": "2022-06-28", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "https://api.notion.com/v1/pages",
+              "protocol": "https",
+              "host": ["api", "notion", "com"],
+              "path": ["v1", "pages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent\": { \"page_id\": \"{{NOTION_PARENT_PAGE_ID}}\" },\n  \"properties\": {\n    \"title\": [\n      { \"text\": { \"content\": \"Postman Test Entry — \" } },\n      { \"text\": { \"content\": \"created from Postman\" } }\n    ]\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response has page id (UUID)', () => pm.expect(body.id).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.environment.set('LAST_NOTION_PAGE_ID', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Append children (toggle blocks)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{NOTION_TOKEN}}", "type": "text" },
+              { "key": "Notion-Version", "value": "2022-06-28", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "https://api.notion.com/v1/blocks/{{LAST_NOTION_PAGE_ID}}/children",
+              "protocol": "https",
+              "host": ["api", "notion", "com"],
+              "path": ["v1", "blocks", "{{LAST_NOTION_PAGE_ID}}", "children"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"children\": [\n    {\n      \"object\": \"block\",\n      \"type\": \"toggle\",\n      \"toggle\": {\n        \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": \"Situation\" } }],\n        \"children\": [\n          {\n            \"object\": \"block\",\n            \"type\": \"paragraph\",\n            \"paragraph\": {\n              \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": \"This is a test paragraph appended via Postman.\" } }]\n            }\n          }\n        ]\n      }\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retrieve page",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{NOTION_TOKEN}}", "type": "text" },
+              { "key": "Notion-Version", "value": "2022-06-28", "type": "text" }
+            ],
+            "url": {
+              "raw": "https://api.notion.com/v1/pages/{{LAST_NOTION_PAGE_ID}}",
+              "protocol": "https",
+              "host": ["api", "notion", "com"],
+              "path": ["v1", "pages", "{{LAST_NOTION_PAGE_ID}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. DocuSign (outbound)",
+      "description": "DocuSign REST API v2.1 for envelope creation. Used by Apex `DocuSignSendForSignatureService` from the Send for Signature custom screen flow.",
+      "item": [
+        {
+          "name": "Create envelope (Send for Signature)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{DOCUSIGN_ACCESS_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{DOCUSIGN_BASE_URL}}/restapi/v2.1/accounts/{{DOCUSIGN_ACCOUNT_ID}}/envelopes",
+              "host": ["{{DOCUSIGN_BASE_URL}}"],
+              "path": ["restapi", "v2.1", "accounts", "{{DOCUSIGN_ACCOUNT_ID}}", "envelopes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailSubject\": \"TechnoStore Contract — Signature Required\",\n  \"emailBlurb\": \"Please review and sign the attached contract.\",\n  \"documents\": [\n    {\n      \"documentBase64\": \"JVBERi0xLjQKJaqrrK0KMSAwIG9iagogIDw8IC9UaXBlIC9DYXRhbG9nIC9QYWdlcyAyIDAgUiA+PiBlbmRvYmoKJSBmYWtlIFBERg==\",\n      \"name\": \"Contract.pdf\",\n      \"fileExtension\": \"pdf\",\n      \"documentId\": \"1\"\n    }\n  ],\n  \"recipients\": {\n    \"signers\": [\n      {\n        \"email\": \"demo+hamburg@technostore.example\",\n        \"name\": \"Demo Buyer\",\n        \"recipientId\": \"1\",\n        \"routingOrder\": \"1\",\n        \"tabs\": {\n          \"signHereTabs\": [\n            {\n              \"anchorString\": \"Authorized Signature:\",\n              \"anchorYOffset\": \"0\",\n              \"anchorXOffset\": \"200\",\n              \"anchorUnits\": \"pixels\"\n            }\n          ]\n        }\n      }\n    ]\n  },\n  \"status\": \"sent\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response has envelopeId', () => pm.expect(body.envelopeId).to.match(/^[0-9a-f-]{36}$/));",
+                  "pm.environment.set('LAST_DOCUSIGN_ENVELOPE_ID', body.envelopeId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get envelope status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{DOCUSIGN_ACCESS_TOKEN}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{DOCUSIGN_BASE_URL}}/restapi/v2.1/accounts/{{DOCUSIGN_ACCOUNT_ID}}/envelopes/{{LAST_DOCUSIGN_ENVELOPE_ID}}",
+              "host": ["{{DOCUSIGN_BASE_URL}}"],
+              "path": ["restapi", "v2.1", "accounts", "{{DOCUSIGN_ACCOUNT_ID}}", "envelopes", "{{LAST_DOCUSIGN_ENVELOPE_ID}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. DocuSign Webhook Simulator (inbound → SF Site)",
+      "description": "Simulates a DocuSign Connect POST to the Salesforce Site webhook receiver. Use this to test the SF-side `DocuSignConnectWebhook` Apex controller + Platform Event + trigger subscriber chain without waiting for a real customer signing event. NOTE: HMAC verification will reject this request unless the `X-DocuSign-Signature-1` header is correctly computed.",
+      "item": [
+        {
+          "name": "Simulate envelopeStatus=Completed event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              {
+                "key": "X-DocuSign-Signature-1",
+                "value": "REPLACE_WITH_VALID_HMAC_OR_DISABLE_VERIFY_IN_DEV",
+                "type": "text",
+                "description": "Base64-encoded HMAC-SHA256 of the request body using DocuSign_Config__c.HMAC_Secret__c. Pre-request script can compute this — see Notion entry 28."
+              }
+            ],
+            "url": {
+              "raw": "{{SF_SITE_URL}}/services/apexrest/docusign_webhook",
+              "host": ["{{SF_SITE_URL}}"],
+              "path": ["services", "apexrest", "docusign_webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"envelopeStatus\": {\n    \"envelopeId\": \"{{LAST_DOCUSIGN_ENVELOPE_ID}}\",\n    \"status\": \"Completed\",\n    \"signedDateTime\": \"2026-05-11T13:00:00Z\",\n    \"recipients\": [\n      {\n        \"email\": \"demo+hamburg@technostore.example\",\n        \"name\": \"Demo Buyer\",\n        \"status\": \"Completed\"\n      }\n    ]\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Stripe (via Mule)",
+      "description": "Stripe integration via MuleSoft Anypoint. Salesforce posts to the Mule HTTP listener which calls Stripe with the correct form-encoded payload and HMAC-verified webhook handling. See OpenAPI spec at openapi/technostore-mule.yaml.",
+      "item": [
+        {
+          "name": "Create PaymentIntent (POST /stripe/intent)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{MULE_BASE_URL}}/stripe/intent",
+              "host": ["{{MULE_BASE_URL}}"],
+              "path": ["stripe", "intent"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"OrderId\": \"801aj00000pYyM9\",\n  \"OrderNumber\": \"{{DEMO_ORDER_NUMBER}}\",\n  \"TotalAmount\": 1499.00,\n  \"CurrencyIsoCode\": \"EUR\",\n  \"Account\": {\n    \"Name\": \"{{DEMO_ACCOUNT_NAME}}\"\n  },\n  \"BillToContact\": {\n    \"Email\": \"demo+hamburg@technostore.example\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Response has paymentIntentId', () => pm.expect(body.paymentIntentId).to.match(/^pi_/));",
+                  "pm.environment.set('LAST_STRIPE_PAYMENT_INTENT_ID', body.paymentIntentId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Simulate Stripe webhook (POST /stripe/webhook)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              {
+                "key": "Stripe-Signature",
+                "value": "t=REPLACE_WITH_UNIX_TS,v1=REPLACE_WITH_HMAC_SHA256_HEX",
+                "type": "text",
+                "description": "Pre-request script should compute: t=Math.floor(Date.now()/1000); v1=HMAC-SHA256(t + '.' + body, STRIPE_WEBHOOK_SECRET)"
+              }
+            ],
+            "url": {
+              "raw": "{{MULE_BASE_URL}}/stripe/webhook",
+              "host": ["{{MULE_BASE_URL}}"],
+              "path": ["stripe", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_postman\",\n  \"type\": \"payment_intent.succeeded\",\n  \"created\": 1715425200,\n  \"data\": {\n    \"object\": {\n      \"id\": \"{{LAST_STRIPE_PAYMENT_INTENT_ID}}\",\n      \"amount\": 149900,\n      \"currency\": \"eur\",\n      \"status\": \"succeeded\",\n      \"metadata\": {\n        \"order_id\": \"801aj00000pYyM9\",\n        \"order_number\": \"{{DEMO_ORDER_NUMBER}}\",\n        \"account_name\": \"{{DEMO_ACCOUNT_NAME}}\"\n      }\n    }\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Compute Stripe-Signature header.",
+                  "// Requires crypto-js library (available in Postman by default via pm.crypto in newer versions).",
+                  "const secret = pm.environment.get('STRIPE_WEBHOOK_SECRET');",
+                  "const body = pm.request.body.raw;",
+                  "const t = Math.floor(Date.now() / 1000);",
+                  "const signedPayload = t + '.' + body;",
+                  "// Note: For full HMAC computation in Postman, use CryptoJS via require() if available,",
+                  "// or compute the signature externally and paste it into the Stripe-Signature header.",
+                  "// This pre-request script is a placeholder — production CI would use Stripe CLI:",
+                  "//   stripe trigger payment_intent.succeeded",
+                  "console.log('Timestamp for signature:', t);",
+                  "console.log('Replace Stripe-Signature header value with: t=' + t + ',v1=<hmac-sha256-hex>');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Sendcloud v3 Orders (via Mule)",
+      "description": "Sendcloud parcel logistics. Mule pulls extended SF Order + Account + Contact via SOQL, transforms to v3 bare-array payload, POSTs to Sendcloud. See ADR-001 + Notion entry 33.",
+      "item": [
+        {
+          "name": "Create order (POST /sendcloud/order)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{MULE_BASE_URL}}/sendcloud/order",
+              "host": ["{{MULE_BASE_URL}}"],
+              "path": ["sendcloud", "order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"801aj00000pYyM9\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Direct Sendcloud v3 POST (skip Mule — for schema testing)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Basic {{SENDCLOUD_PUBLIC_KEY}}:{{SENDCLOUD_SECRET_KEY}}",
+                "type": "text",
+                "description": "Postman computes base64 automatically when you use Authorization tab → Basic Auth with username/password"
+              },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "https://panel.sendcloud.sc/api/v3/orders",
+              "protocol": "https",
+              "host": ["panel", "sendcloud", "sc"],
+              "path": ["api", "v3", "orders"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"external_order_id\": \"POSTMAN-TEST-001\",\n    \"integration_id\": {{SENDCLOUD_INTEGRATION_ID}},\n    \"order_status\": { \"code\": \"fulfilled\" },\n    \"order_items\": [\n      {\n        \"name\": \"Workstation Pro 32GB\",\n        \"quantity\": 1,\n        \"total_price\": { \"value\": \"1499.00\", \"currency\": \"EUR\" },\n        \"sku\": \"WS-PRO\",\n        \"weight\": { \"value\": \"1000\", \"unit\": \"gram\" }\n      }\n    ],\n    \"ship_to_address\": {\n      \"name\": \"{{DEMO_ACCOUNT_NAME}}\",\n      \"street\": \"Reeperbahn\",\n      \"house_number\": \"142\",\n      \"postal_code\": \"20095\",\n      \"city\": \"Hamburg\",\n      \"country_code\": \"DE\",\n      \"email\": \"demo+hamburg@technostore.example\",\n      \"telephone\": \"+49 40 1234567\"\n    }\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Slack Notifications (outbound)",
+      "description": "Slack incoming webhooks for #payments-team and #warehouse channels. Block Kit JSON payloads from Mule Stripe webhook handler + Platform Event subscriber.",
+      "item": [
+        {
+          "name": "Post to #payments-team",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SLACK_PAYMENTS_WEBHOOK_URL}}",
+              "host": ["{{SLACK_PAYMENTS_WEBHOOK_URL}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *Payment Received* — {{DEMO_ACCOUNT_NAME}}\"\n      }\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        { \"type\": \"mrkdwn\", \"text\": \"*Amount:*\\nEUR 1,499.00\" },\n        { \"type\": \"mrkdwn\", \"text\": \"*Order:*\\n{{DEMO_ORDER_NUMBER}}\" },\n        { \"type\": \"mrkdwn\", \"text\": \"*Method:*\\nCard\" },\n        { \"type\": \"mrkdwn\", \"text\": \"*Test source:*\\nPostman\" }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Post to #warehouse",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SLACK_WAREHOUSE_WEBHOOK_URL}}",
+              "host": ["{{SLACK_WAREHOUSE_WEBHOOK_URL}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"📦 Stock check needed\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"📦 *Stock Check Required*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        { \"type\": \"mrkdwn\", \"text\": \"*Order:*\\n{{DEMO_ORDER_NUMBER}}\" },\n        { \"type\": \"mrkdwn\", \"text\": \"*Customer:*\\n{{DEMO_ACCOUNT_NAME}}\" }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Open Approval Page\" },\n          \"url\": \"{{SF_INSTANCE_URL}}/apex/WarehouseInventoryApproval?id=801aj00000pYyM9\",\n          \"style\": \"primary\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Salesforce REST API (sanity checks)",
+      "description": "Direct Salesforce REST API calls for verifying the org state. Useful to confirm Apex callouts succeeded by querying the resulting records.",
+      "item": [
+        {
+          "name": "Query 4 DACH demo Accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{SF_ACCESS_TOKEN}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SF_INSTANCE_URL}}/services/data/v60.0/query?q=SELECT Id, Name, NumberOfEmployees, Industry, BillingCity FROM Account WHERE Name IN ('Hamburg DataWorks','München Industrial GmbH','Frankfurt FinTech Hub AG','Köln Retail Cloud SE')",
+              "host": ["{{SF_INSTANCE_URL}}"],
+              "path": ["services", "data", "v60.0", "query"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "SELECT Id, Name, NumberOfEmployees, Industry, BillingCity FROM Account WHERE Name IN ('Hamburg DataWorks','München Industrial GmbH','Frankfurt FinTech Hub AG','Köln Retail Cloud SE')"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns 4 DACH demo accounts', () => pm.expect(body.totalSize).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get current user info",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{SF_ACCESS_TOKEN}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SF_INSTANCE_URL}}/services/oauth2/userinfo",
+              "host": ["{{SF_INSTANCE_URL}}"],
+              "path": ["services", "oauth2", "userinfo"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level pre-request: nothing global yet.",
+          "// Per-request scripts (e.g., Stripe-Signature computation) live in their own request's events."
+        ]
+      }
+    }
+  ],
+  "variable": []
+}
