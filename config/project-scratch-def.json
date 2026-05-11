@@ -1,13 +1,44 @@
 {
-  "orgName": "Demo company",
+  "orgName": "TechnoStore",
   "edition": "Developer",
-  "features": ["EnableSetPasswordInApi"],
+  "description": "B2B electronics retailer (Hamburg / Munich / Frankfurt / Cologne) — Salesforce RLM + CLM + Industries CPQ demo with 7-system integration (Stripe + Sendcloud + DHL + Slack ×2 + DocuSign + JIRA + Notion) orchestrated via MuleSoft. Apex API 66, German market context.",
+  "features": [
+    "EnableSetPasswordInApi",
+    "Communities",
+    "ServiceCloud",
+    "Industries",
+    "IndustriesCPQ",
+    "RevenueLifecycleManagement",
+    "ContractLifecycleManagement"
+  ],
   "settings": {
     "lightningExperienceSettings": {
       "enableS1DesktopEnabled": true
     },
     "mobileSettings": {
       "enableS1EncryptedStoragePref2": false
+    },
+    "apexSettings": {
+      "enableApexAccessRightsPref": true,
+      "enableAuraApexCtrlAuthUserAccessCheckPref": true,
+      "enableCompileOnDeploy": true
+    },
+    "securitySettings": {
+      "passwordPolicies": {
+        "complexity": "AlphaNumeric",
+        "expiration": "NinetyDays",
+        "minimumPasswordLength": 8
+      },
+      "sessionSettings": {
+        "sessionTimeout": "TwoHours",
+        "lockSessionsToIp": false
+      }
+    },
+    "userManagementSettings": {
+      "enableEnhancedProfileMgmt": true
+    },
+    "languageSettings": {
+      "enableTranslationWorkbench": true
     }
   }
 }

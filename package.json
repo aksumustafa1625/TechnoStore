@@ -1,8 +1,8 @@
 {
-  "name": "salesforce-app",
+  "name": "technostore",
   "private": true,
-  "version": "1.0.0",
-  "description": "Salesforce App",
+  "version": "0.1.0",
+  "description": "Salesforce DX project — TechnoStore B2B electronics retailer (DACH). RLM + CLM + Industries CPQ + 7-system integration (Stripe + Sendcloud + DHL + Slack ×2 + DocuSign + JIRA + Notion) orchestrated via MuleSoft.",
   "scripts": {
     "lint": "eslint **/{aura,lwc}/**/*.js",
     "test": "npm run test:unit",

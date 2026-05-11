@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel in-progress runs on the same branch when a newer commit lands.
+# Prevents the 'Cancelled after Nm' artifact when several commits push
+# back-to-back (the older run is correctly superseded instead of racing).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint job: always runs, no secrets needed.
+  #
+  # Runs PMD against the Apex source so a recruiter or contributor sees
+  # green-on-every-PR static analysis without having to set up a DevHub.
+  # Scans all 5 SFDX package directories (force-app, force-app-controllers,
+  # force-app-services, force-app-handlers, force-app-actions).
+  # ---------------------------------------------------------------------------
+  lint:
+    name: PMD static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java (PMD requires JRE 11+)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache PMD
+        id: cache-pmd
+        uses: actions/cache@v4
+        with:
+          path: pmd
+          key: pmd-7.7.0
+
+      - name: Install PMD 7.7.0
+        if: steps.cache-pmd.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.7.0/pmd-dist-7.7.0-bin.zip" -o pmd.zip
+          unzip -q pmd.zip
+          mv pmd-bin-* pmd
+
+      - name: Run PMD on Apex (warm-up — violations don't fail the build yet)
+        # `|| true` keeps the step exit code 0 regardless of PMD findings, so
+        # CI stays green during the rule-tuning warm-up period documented in
+        # pmd-ruleset.xml. Once the codebase is clean against the ruleset,
+        # remove the trailing `|| true` to make violations a hard CI failure.
+        #
+        # Scans all 5 SFDX package directories — the enterprise layout splits
+        # Apex into controllers / services / handlers / actions / tests.
+        run: |
+          ./pmd/bin/pmd check \
+            --dir force-app/main/default/classes \
+            --dir force-app/main/default/triggers \
+            --dir force-app-controllers/main/default/classes \
+            --dir force-app-services/main/default/classes \
+            --dir force-app-handlers/main/default/classes \
+            --dir force-app-handlers/main/default/triggers \
+            --dir force-app-actions/main/default/classes \
+            --rulesets pmd-ruleset.xml \
+            --format text \
+            --threads 4 || true
+
+  # ---------------------------------------------------------------------------
+  # Preflight: tiny job that checks whether the SFDX_AUTH_URL secret is
+  # configured and exposes the answer as a job output. Keeps the (heavy)
+  # scratch-org-tests job out of the queue entirely when there is no secret,
+  # so the run shows 'Skipped' cleanly at the job level instead of running a
+  # runner that no-ops every step for 15 minutes and then gets cancelled.
+  # ---------------------------------------------------------------------------
+  preflight:
+    name: Check deploy prerequisites
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      can-deploy: ${{ steps.check.outputs.value }}
+    steps:
+      - name: Check for SFDX_AUTH_URL
+        id: check
+        env:
+          AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          if [ -z "$AUTH_URL" ]; then
+            echo "::notice::SFDX_AUTH_URL secret is not configured. Scratch-org tests will be skipped — see CONTRIBUTING.md for one-time setup."
+            echo "value=false" >> $GITHUB_OUTPUT
+          else
+            echo "value=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Deploy + test job: only runs when preflight reports can-deploy=true,
+  # which only happens if the SFDX_AUTH_URL secret has been configured.
+  #
+  # Authorizes a DevHub via the secret, spins up a 1-day scratch org with
+  # Industries CPQ + RLM + CLM features enabled, deploys all 5 SFDX package
+  # directories, assigns the permission set, and runs the full Apex test
+  # suite with code coverage. The scratch org is deleted at the end so we
+  # don't blow through scratch-org limits.
+  #
+  # Setup (one-time) — see CONTRIBUTING.md for full instructions:
+  #   1. sf org login web --set-default-dev-hub
+  #   2. sf org display --target-org <DevHub> --verbose --json
+  #      Copy the `sfdxAuthUrl` value.
+  #   3. Add it as a repo secret named SFDX_AUTH_URL.
+  # ---------------------------------------------------------------------------
+  scratch-org-tests:
+    name: Scratch org deploy + test
+    runs-on: ubuntu-latest
+    needs: [lint, preflight]
+    if: needs.preflight.outputs.can-deploy == 'true'
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Authorize DevHub
+        env:
+          AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          echo "$AUTH_URL" > authurl.txt
+          sf org login sfdx-url --sfdx-url-file authurl.txt --alias DevHub --set-default-dev-hub
+          rm authurl.txt
+
+      - name: Create scratch org
+        # The scratch-def opts into Industries CPQ + RLM + CLM features which
+        # the demo depends on (PricingProcedure, ProductQualification, Contract
+        # lifecycle actions). Without these features the deploy fails before
+        # any test runs.
+        run: |
+          sf org create scratch \
+            --definition-file config/project-scratch-def.json \
+            --alias TechnoStoreCI \
+            --duration-days 1 \
+            --set-default
+
+      - name: Deploy source (all 5 package directories)
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --source-dir force-app-controllers \
+            --source-dir force-app-services \
+            --source-dir force-app-handlers \
+            --source-dir force-app-actions \
+            --source-dir force-app-tests
+
+      - name: Assign permission set
+        run: sf org assign permset --name Notion_Publisher_Access || true
+
+      - name: Run Apex tests with coverage
+        run: |
+          sf apex run test \
+            --test-level RunLocalTests \
+            --code-coverage \
+            --result-format human \
+            --synchronous \
+            --wait 10
+
+      - name: Delete scratch org
+        if: always()
+        run: sf org delete scratch --no-prompt --target-org TechnoStoreCI || true
