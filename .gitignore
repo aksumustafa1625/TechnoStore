@@ -16,6 +16,9 @@ salesforce-jira-integration/.mule/
 # JIRA credentials setup script (contains real API token)
 scripts/setup_jira_config.apex
 
+# Notion credentials setup script (contains real integration token)
+scripts/setup_notion_config.apex
+
 # LWC VSCode autocomplete
 **/lwc/jsconfig.json
 

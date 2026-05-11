@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants access to Notion_Config__c custom setting fields so the NotionPublishService Apex class can read Token and Parent Page Id at runtime.</description>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Notion_Config__c.Token__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Notion_Config__c.Parent_Page_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Notion Publisher Access</label>
+</PermissionSet>
