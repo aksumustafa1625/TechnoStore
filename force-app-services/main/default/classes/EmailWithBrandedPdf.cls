@@ -47,8 +47,9 @@ public with sharing class EmailWithBrandedPdf {
         // PDF Files'a kaydetmiyoruz (Dev Edition storage limit). Sadece email eki olarak gider.
         // Production'da: ContentVersion + ContentDocumentLink insert blokunu aktive et.
 
-        String recipient = (inv.BillToContact != null && inv.BillToContact.Email != null)
-            ? inv.BillToContact.Email : 'demo-recipient@example.com';
+        String recipient = EmailFallbackResolver.resolve(
+            inv.BillToContact != null ? inv.BillToContact.Email : null
+        );
 
         Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
         efa.setFileName(fileName);

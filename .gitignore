@@ -22,6 +22,13 @@ scripts/setup_notion_config.apex
 # SAP API Hub credentials setup script (contains real API Key)
 scripts/setup_sap_config.apex
 
+# Email Config setup script (contains dev fallback mailbox)
+scripts/setup_email_config.apex
+
+# General pattern — any future setup_*_config.apex script that holds real
+# credentials. Add a specific entry above when adding a new Custom Setting.
+scripts/setup_*_config.apex
+
 # LWC VSCode autocomplete
 **/lwc/jsconfig.json
 

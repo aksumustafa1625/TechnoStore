@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Default_Fallback_Email__c</fullName>
+    <description>Recipient address used when an outbound email service (Invoice preview, Receipt, Shipping notification, etc.) finds no Contact email on the related record. Leave blank in production to force "missing contact email" errors as a data-quality signal. Populate in demo/dev orgs with a developer mailbox to receive test emails. Protected Hierarchy setting — value not exposed to subscriber orgs.</description>
+    <externalId>false</externalId>
+    <label>Default Fallback Email</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Email</type>
+    <unique>false</unique>
+</CustomField>

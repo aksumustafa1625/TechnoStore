@@ -39,8 +39,9 @@ public with sharing class AttachAndEmailInvoicePreview {
 
         // PDF Files'a kaydetmiyoruz (Dev Edition storage limit). Sadece email eki olarak gider.
 
-        String recipient = (inv.BillToContact != null && inv.BillToContact.Email != null)
-            ? inv.BillToContact.Email : 'demo-recipient@example.com';
+        String recipient = EmailFallbackResolver.resolve(
+            inv.BillToContact != null ? inv.BillToContact.Email : null
+        );
 
         Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
         efa.setFileName(fileName);

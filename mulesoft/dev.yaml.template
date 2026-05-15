@@ -1,23 +1,36 @@
-# Mule app properties — TEMPLATE for Anypoint Code Builder JIRA integration project.
-# Copy this to src/main/resources/dev.yaml in your Code Builder project, then fill values.
-# Never commit dev.yaml with real credentials.
+# Mule app properties — TEMPLATE for the TechnoStore Mule integration project.
+# Copy this to src/main/resources/dev.yaml in your Mule project, then fill in
+# real values. Real dev.yaml is gitignored — NEVER commit it with secrets.
+#
+# Quick start (one-time):
+#   1. cp mulesoft/dev.yaml.template <your-mule-project>/src/main/resources/dev.yaml
+#   2. Fill in the values below (each REPLACE_WITH_* needs a real value)
+#   3. Verify by running the smoke test flow (e.g., sap-test-businesspartner-query)
+#
+# Companion Salesforce-side credential storage:
+#   - Jira_Config__c   (Protected Hierarchy Custom Setting)
+#   - Notion_Config__c (Protected Hierarchy Custom Setting)
+#   - SAP_Config__c    (Protected Hierarchy Custom Setting)
+#   - Email_Config__c  (Protected Hierarchy Custom Setting)
+# Set up via scripts/setup_*_config.apex (gitignored).
 
-# Salesforce connection (technostore-admin@example.com Mule OAuth user)
+# Salesforce connection (Mule's OAuth user)
 sfdc:
-  username: "your-mule-user@example.com"
-  password: "YOUR_SF_PASSWORD"
-  token: "YOUR_SF_SECURITY_TOKEN"
-  url: "https://login.salesforce.com/services/Soap/u/57.0"
+  username: "REPLACE_WITH_MULE_USER_EMAIL"
+  password: "REPLACE_WITH_SALESFORCE_PASSWORD"
+  token:    "REPLACE_WITH_SALESFORCE_SECURITY_TOKEN"
+  url:      "https://login.salesforce.com/services/Soap/u/57.0"
 
 # JIRA Cloud
+# Get API token from: id.atlassian.com -> Security -> API tokens
 jira:
-  host: "demo-alias.atlassian.net"
-  url: "https://demo-alias.atlassian.net"
-  email: "demo-alias2@gmail.com"
+  host: "REPLACE_WITH_YOUR_JIRA_HOST"        # e.g. "yourcompany.atlassian.net"
+  url:  "REPLACE_WITH_YOUR_JIRA_URL"         # e.g. "https://yourcompany.atlassian.net"
+  email: "REPLACE_WITH_ATLASSIAN_ACCOUNT_EMAIL"
   api:
-    token: "REPLACE_WITH_YOUR_API_TOKEN_FROM_jira-properties.yaml"
+    token: "REPLACE_WITH_JIRA_API_TOKEN"
   project:
-    key: "TS"
+    key: "REPLACE_WITH_PROJECT_KEY"           # e.g. "TS"
 
 # SAP S/4HANA Cloud Sandbox (API Hub) — used by sap-integration-FULL.xml
 # Get API Key from: https://api.sap.com/api/API_BUSINESS_PARTNER -> Show API Key
@@ -25,3 +38,32 @@ sap:
   host: "sandbox.api.sap.com"
   api:
     key: "REPLACE_WITH_YOUR_SAP_API_HUB_API_KEY"
+
+# Stripe — outbound Checkout Session creation + inbound webhook verification
+# Secret key from: dashboard.stripe.com/test/apikeys (Secret key)
+# Webhook secret from: dashboard.stripe.com/test/webhooks (whsec_*)
+stripe:
+  secret:
+    key: "REPLACE_WITH_STRIPE_SECRET_KEY"     # sk_test_* (test mode) or sk_live_* (production)
+  webhook:
+    secret: "REPLACE_WITH_STRIPE_WEBHOOK_SECRET"   # whsec_*
+
+# Sendcloud v3 Orders API — DACH logistics integration
+# Credentials from: panel.sendcloud.sc -> Settings -> Integrations -> API
+sendcloud:
+  public:
+    key: "REPLACE_WITH_SENDCLOUD_PUBLIC_KEY"
+  secret:
+    key: "REPLACE_WITH_SENDCLOUD_SECRET_KEY"
+  integration:
+    id: "REPLACE_WITH_SENDCLOUD_INTEGRATION_ID"   # numeric, e.g. 577997
+
+# Slack incoming webhooks — one per channel
+# Generate at: api.slack.com -> Your Apps -> Incoming Webhooks
+slack:
+  warehouse:
+    webhook:
+      path: "/services/REPLACE/WAREHOUSE/WEBHOOK_PATH"
+  payments:
+    webhook:
+      path: "/services/REPLACE/PAYMENTS/WEBHOOK_PATH"
