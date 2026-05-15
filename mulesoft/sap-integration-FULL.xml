@@ -15,10 +15,11 @@
 
     <!-- ============== HTTP LISTENER CONFIG ============== -->
     <!-- Local listener for triggering the test flow via Postman:
-         POST http://localhost:8081/sap/test/bp
-         No body required. -->
+         POST http://localhost:8082/sap/test/bp
+         No body required. Port 8082 to avoid conflict with existing
+         Webhook_HTTP_Listener on 8081. -->
     <http:listener-config name="SAP_HTTP_Listener_Config" doc:name="Local HTTP Listener">
-        <http:listener-connection host="0.0.0.0" port="8081"/>
+        <http:listener-connection host="0.0.0.0" port="8082"/>
     </http:listener-config>
 
     <!-- ============== SAP API HUB SANDBOX HTTP CONFIG ============== -->
@@ -32,6 +33,10 @@
         <http:default-headers>
             <http:default-header key="APIKey" value="${sap.api.key}"/>
             <http:default-header key="Accept" value="application/json"/>
+            <!-- SAP API Hub gzip-compresses responses by default. Mule's HTTP
+                 connector does not auto-decompress like Apex Http does. Force
+                 SAP to return uncompressed JSON via Accept-Encoding: identity. -->
+            <http:default-header key="Accept-Encoding" value="identity"/>
         </http:default-headers>
     </http:request-config>
 
@@ -53,20 +58,31 @@
             message="SAP BP test triggered — calling sandbox.api.sap.com..."/>
 
         <!-- Call SAP S/4HANA Cloud Sandbox: GET top 5 Business Partners -->
+        <!-- Query params (?$top=5&$format=json) are embedded directly in the path.
+             DataWeave interprets `$` as a variable reference inside object keys, so
+             we avoid the DataWeave map syntax for params starting with $.
+             `&` is XML-escaped as `&amp;`.
+             Accept-Encoding: identity is inline (NOT default-header) because Mule 4
+             HTTP connector silently overrides compression headers from default-headers. -->
         <http:request method="GET"
-            path="/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner"
+            path="/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner?$top=5&amp;$format=json"
             config-ref="SAP_HTTP_Config"
             doc:name="GET SAP Business Partners">
-            <http:query-params><![CDATA[#[output application/java
----
-{
-    "$top": "5",
-    "$format": "json"
-}]]]></http:query-params>
+            <http:headers><![CDATA[#[{
+                "APIKey": p('sap.api.key'),
+                "Accept": "application/json",
+                "Accept-Encoding": "identity"
+            }]]]></http:headers>
         </http:request>
 
         <logger level="INFO" doc:name="Log SAP Response Received"
             message="SAP HTTP response received — parsing..."/>
+
+        <!-- Diagnostic: log payload class + mediaType so we can see if Mule
+             actually decompressed the response or if we still have binary/gzip.
+             TOMORROW: add compression:decompress + set-payload re-type AFTER this. -->
+        <logger level="INFO" doc:name="Diagnostic Payload Type"
+            message='#["DEBUG payload class=" ++ (payload.^class default "null") ++ " mediaType=" ++ ((payload.^mediaType) default "n/a")]'/>
 
         <!-- Parse SAP OData v2 response: { d: { results: [...] } } -->
         <ee:transform doc:name="Extract BP Records">
