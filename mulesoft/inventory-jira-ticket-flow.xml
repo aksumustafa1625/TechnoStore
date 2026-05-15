@@ -1,25 +1,25 @@
-<!--
+﻿<!--
     inventory-jira-ticket-flow
 
     Drop this flow into the existing technostore-integration Mule app's
     integration-flows.xml, right after inventory-check-flow. Subscribes to the
     SAME Salesforce Platform Event (Inventory_Check_Requested__e) in parallel
-    with the existing Slack notification — fan-out pattern: one event,
+    with the existing Slack notification â€” fan-out pattern: one event,
     multiple downstream systems.
 
     Result on click "Request Inventory Check":
       - Slack message goes to #warehouse channel (existing flow)
       - JIRA Task auto-created in TS project (this flow)
 
-    Required properties (add to dev.yaml — do NOT commit secrets):
-        jira.url=https://demo-alias.atlassian.net
-        jira.email=demo-alias2@gmail.com
+    Required properties (add to dev.yaml â€” do NOT commit secrets):
+        jira.url=https://your-org.atlassian.net
+        jira.email=jira-bot@technostore.example
         jira.api.token=...
         jira.project.key=TS
 
     Required global config (add to integration-globals.xml):
         <http:request-config name="JIRA_HTTP_Config" basePath="${jira.url}">
-            <http:request-connection host="demo-alias.atlassian.net" port="443" protocol="HTTPS">
+            <http:request-connection host="your-org.atlassian.net" port="443" protocol="HTTPS">
                 <http:authentication>
                     <http:basic-authentication
                         username="${jira.email}"
@@ -37,7 +37,7 @@
         replayId="-1"/>
 
     <logger level="INFO" doc:name="Log Event Received"
-        message="JIRA branch — Inventory Check Requested: #[payload]"/>
+        message="JIRA branch â€” Inventory Check Requested: #[payload]"/>
 
     <set-variable variableName="orderNumber" value="#[payload.data.payload.Order_Number__c]" doc:name="Save Order Number"/>
     <set-variable variableName="accountName" value="#[payload.data.payload.Account_Name__c]" doc:name="Save Account Name"/>

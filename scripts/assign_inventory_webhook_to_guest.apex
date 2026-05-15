@@ -1,8 +1,8 @@
-// Assign Inventory_Webhook_Access permission set to the DocuSign Webhook Site Guest User.
+﻿// Assign Inventory_Webhook_Access permission set to the DocuSign Webhook Site Guest User.
 // This guest user is the principal that runs the Apex REST callback when MuleSoft hits
 // /services/apexrest/inventory/callback through the public Site URL.
 
-Id guestUserId = '005xx0000000000XXX'; // DocuSign Webhook Site guest user (reused)
+Id guestUserId = '005000000000000XXX'; // DocuSign Webhook Site guest user (reused)
 
 PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Inventory_Webhook_Access' LIMIT 1];
 

@@ -1,4 +1,4 @@
-try {
+﻿try {
     ContentVersion cv = [SELECT Id, VersionData, Title FROM ContentVersion WHERE Id = '068aj00000InLwzAAF' LIMIT 1];
     String pdfBase64 = EncodingUtil.base64Encode(cv.VersionData);
 
@@ -17,7 +17,7 @@ try {
         'recipients' => new Map<String, Object>{
             'signers' => new List<Object>{
                 new Map<String, Object>{
-                    'email' => 'demo-recipient@example.com',
+                    'email' => 'demo@technostore.example',
                     'name' => 'Meliha Sari',
                     'recipientId' => '1',
                     'routingOrder' => '1',

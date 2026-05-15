@@ -1,4 +1,4 @@
-// Create 4 demo Quote headers (no line items - those will be added live via Browse Catalog)
+﻿// Create 4 demo Quote headers (no line items - those will be added live via Browse Catalog)
 // Each Quote linked to existing Account + Opportunity + Contact
 
 Id standardPricebookId = [SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1].Id;
@@ -67,15 +67,15 @@ if (accountByKey.containsKey('hamburg')) {
             ExpirationDate = Date.newInstance(2026, 6, 15),
             Description = 'Q2 workstation refresh for analyst and data engineering teams. Includes secure network infrastructure baseline (Network Security Kit) plus 8x developer towers, 4x analyst all-in-one units, and 3-year hardware coverage.',
             ContactId = (c != null ? c.Id : null),
-            Email = (c != null && c.Email != null ? c.Email : 'demo-recipient@example.com'),
+            Email = (c != null && c.Email != null ? c.Email : 'demo@technostore.example'),
             Phone = (c != null && c.Phone != null ? c.Phone : '+49 40 9988 1100'),
             BillingName = a.Name,
-            BillingStreet = 'Mönckebergstraße 27',
+            BillingStreet = 'MÃ¶nckebergstraÃŸe 27',
             BillingCity = 'Hamburg',
             BillingPostalCode = '20095',
             BillingCountry = 'Germany',
             ShippingName = a.Name,
-            ShippingStreet = 'Mönckebergstraße 27',
+            ShippingStreet = 'MÃ¶nckebergstraÃŸe 27',
             ShippingCity = 'Hamburg',
             ShippingPostalCode = '20095',
             ShippingCountry = 'Germany'
@@ -83,60 +83,60 @@ if (accountByKey.containsKey('hamburg')) {
     }
 }
 
-// 2. München Industrial Systems GmbH
+// 2. MÃ¼nchen Industrial Systems GmbH
 if (accountByKey.containsKey('munchen')) {
     Account a = accountByKey.get('munchen');
     Opportunity opp = oppByAccountId.get(a.Id);
     Contact c = contactByAccountId.get(a.Id);
     if (opp != null) {
         quotesToInsert.add(new Quote(
-            Name = 'München Industrial - IoT Pilot + Factory Floor Rollout 2026',
+            Name = 'MÃ¼nchen Industrial - IoT Pilot + Factory Floor Rollout 2026',
             OpportunityId = opp.Id,
             Pricebook2Id = standardPricebookId,
             Status = 'Draft',
             ExpirationDate = Date.newInstance(2026, 7, 1),
             Description = 'Phase-1 IoT pilot deployment: 5x Smart Home Starter kits as IoT pilot cells, 15x rugged factory-floor tablets, 6x control-room workstations, facility-grade WiFi backbone, 3-year coverage on all tablets.',
             ContactId = (c != null ? c.Id : null),
-            Email = (c != null && c.Email != null ? c.Email : 'demo-recipient@example.com'),
+            Email = (c != null && c.Email != null ? c.Email : 'demo@technostore.example'),
             Phone = (c != null && c.Phone != null ? c.Phone : '+49 89 4477 6655'),
             BillingName = a.Name,
-            BillingStreet = 'Maximilianstraße 13',
-            BillingCity = 'München',
+            BillingStreet = 'MaximilianstraÃŸe 13',
+            BillingCity = 'MÃ¼nchen',
             BillingPostalCode = '80539',
             BillingCountry = 'Germany',
             ShippingName = a.Name,
-            ShippingStreet = 'Maximilianstraße 13',
-            ShippingCity = 'München',
+            ShippingStreet = 'MaximilianstraÃŸe 13',
+            ShippingCity = 'MÃ¼nchen',
             ShippingPostalCode = '80539',
             ShippingCountry = 'Germany'
         ));
     }
 }
 
-// 3. Köln Retail Cloud GmbH
+// 3. KÃ¶ln Retail Cloud GmbH
 if (accountByKey.containsKey('koln')) {
     Account a = accountByKey.get('koln');
     Opportunity opp = oppByAccountId.get(a.Id);
     Contact c = contactByAccountId.get(a.Id);
     if (opp != null) {
         quotesToInsert.add(new Quote(
-            Name = 'Köln Retail Cloud - Omnichannel POS Refresh',
+            Name = 'KÃ¶ln Retail Cloud - Omnichannel POS Refresh',
             OpportunityId = opp.Id,
             Pricebook2Id = standardPricebookId,
             Status = 'Draft',
             ExpirationDate = Date.newInstance(2026, 6, 30),
             Description = 'In-store POS terminal modernization: 3x back-office Home Office Bundles for store managers, 4x AllInOne 27" Touch as customer-facing self-checkout / POS terminals, 6x TabPro 11" tablets for floor sales associates.',
             ContactId = (c != null ? c.Id : null),
-            Email = (c != null && c.Email != null ? c.Email : 'demo-recipient@example.com'),
+            Email = (c != null && c.Email != null ? c.Email : 'demo@technostore.example'),
             Phone = (c != null && c.Phone != null ? c.Phone : '+49 221 8855 9966'),
             BillingName = a.Name,
-            BillingStreet = 'Hohe Straße 88',
-            BillingCity = 'Köln',
+            BillingStreet = 'Hohe StraÃŸe 88',
+            BillingCity = 'KÃ¶ln',
             BillingPostalCode = '50667',
             BillingCountry = 'Germany',
             ShippingName = a.Name,
-            ShippingStreet = 'Hohe Straße 88',
-            ShippingCity = 'Köln',
+            ShippingStreet = 'Hohe StraÃŸe 88',
+            ShippingCity = 'KÃ¶ln',
             ShippingPostalCode = '50667',
             ShippingCountry = 'Germany'
         ));
@@ -157,15 +157,15 @@ if (accountByKey.containsKey('stuttgart')) {
             ExpirationDate = Date.newInstance(2026, 7, 10),
             Description = 'Connected-vehicle UX lab buildout for the OEM partner program: 4x Creator Studio Bundles for high-end CAD/3D rendering, 10x premium engineering laptops, 6x VisionXR headsets for in-vehicle HMI VR prototyping, 3x DrawPad Pro for UX/UI design team, 3-year hardware coverage.',
             ContactId = (c != null ? c.Id : null),
-            Email = (c != null && c.Email != null ? c.Email : 'demo-recipient@example.com'),
+            Email = (c != null && c.Email != null ? c.Email : 'demo@technostore.example'),
             Phone = (c != null && c.Phone != null ? c.Phone : '+49 711 4422 8877'),
             BillingName = a.Name,
-            BillingStreet = 'Königstraße 1A',
+            BillingStreet = 'KÃ¶nigstraÃŸe 1A',
             BillingCity = 'Stuttgart',
             BillingPostalCode = '70173',
             BillingCountry = 'Germany',
             ShippingName = a.Name,
-            ShippingStreet = 'Königstraße 1A',
+            ShippingStreet = 'KÃ¶nigstraÃŸe 1A',
             ShippingCity = 'Stuttgart',
             ShippingPostalCode = '70173',
             ShippingCountry = 'Germany'

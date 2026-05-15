@@ -1,8 +1,8 @@
-# Salesforce Revenue Cloud (RLM) — Cannot Extend Attribute-Based Pricing Beyond Initial Configuration
+﻿# Salesforce Revenue Cloud (RLM) â€” Cannot Extend Attribute-Based Pricing Beyond Initial Configuration
 
 ## TL;DR
 
-In a Dev Edition org running Salesforce Revenue Lifecycle Management (RLM), we have a working attribute-based pricing setup for ONE attribute (Memory/RAM) on a Bundle product. We need to add the SAME pattern for three more attributes (Storage, Processor, Screen Size) on the same Bundle. **Every Apex/REST DML attempt to insert `AttributeAdjustmentCondition` records is blocked by a platform validation: `FIELD_INTEGRITY_EXCEPTION: Ensure that your attribute is price impacting`** — even after setting `IsPriceImpacting=true` on every related `ProductAttributeDefinition` and `ProductClassificationAttr` record.
+In a Dev Edition org running Salesforce Revenue Lifecycle Management (RLM), we have a working attribute-based pricing setup for ONE attribute (Memory/RAM) on a Bundle product. We need to add the SAME pattern for three more attributes (Storage, Processor, Screen Size) on the same Bundle. **Every Apex/REST DML attempt to insert `AttributeAdjustmentCondition` records is blocked by a platform validation: `FIELD_INTEGRITY_EXCEPTION: Ensure that your attribute is price impacting`** â€” even after setting `IsPriceImpacting=true` on every related `ProductAttributeDefinition` and `ProductClassificationAttr` record.
 
 The existing working RAM configuration must have been created through a path that bypasses this validation. We need to know what that path is.
 
@@ -15,25 +15,25 @@ The Bundle product:
 - `Product2.BasedOnId = 11Baj000015O78DEAS` (a `ProductClassification`)
 
 The 5 attributes attached to this classification:
-- `Screen Size` — `AttributeDefinition.Id = 0tjaj000000FbXHAA0`
-- `Graphics` — `AttributeDefinition.Id = 0tjaj000000FbXIAA0`
-- `Memory` — `AttributeDefinition.Id = 0tjaj000000FbXJAA0` ← **WORKS**
-- `Processor` — `AttributeDefinition.Id = 0tjaj000000FbXMAA0`
-- `Storage` — `AttributeDefinition.Id = 0tjaj000000FbXNAA0`
+- `Screen Size` â€” `AttributeDefinition.Id = 0tjaj000000FbXHAA0`
+- `Graphics` â€” `AttributeDefinition.Id = 0tjaj000000FbXIAA0`
+- `Memory` â€” `AttributeDefinition.Id = 0tjaj000000FbXJAA0` â† **WORKS**
+- `Processor` â€” `AttributeDefinition.Id = 0tjaj000000FbXMAA0`
+- `Storage` â€” `AttributeDefinition.Id = 0tjaj000000FbXNAA0`
 
 For Memory, the data chain is fully populated:
 
 ```
 AttributeBasedAdjRule (3 records, one per RAM tier)
-  Name = "HomeOfficeBundle-RAM16"  → Id 12Haj000000IQSHEA4
-  Name = "HomeOfficeBundle-RAM32"  → Id 12Haj000000IQSIEA4
-  Name = "HomeOfficeBundle-RAM64"  → Id 12Haj000000IQSJEA4
+  Name = "HomeOfficeBundle-RAM16"  â†’ Id 12Haj000000IQSHEA4
+  Name = "HomeOfficeBundle-RAM32"  â†’ Id 12Haj000000IQSIEA4
+  Name = "HomeOfficeBundle-RAM64"  â†’ Id 12Haj000000IQSJEA4
 
 AttributeAdjustmentCondition (1 per rule, links rule to picklist Value)
   AttributeBasedAdjRuleId  = <rule Id>
   AttributeDefinitionId    = 0tjaj000000FbXJAA0  (Memory)
   Operator                 = "equals"
-  StringValue              = "RAM 32GB"           (← matches AttributePicklistValue.Value)
+  StringValue              = "RAM 32GB"           (â† matches AttributePicklistValue.Value)
 
 AttributeBasedAdjustment (1 per rule, with the actual price delta)
   AttributeBasedAdjRuleId  = <rule Id>
@@ -58,14 +58,14 @@ AttributePicklistValue (cosmetic display labels, separate from Value)
   Id = 0v6aj000000G24UAAS  (RAM 32GB)
   Name         = "RAM 32GB (+$200)"
   DisplayValue = "RAM 32GB (+$200)"
-  Value        = "RAM 32GB"   ← StringValue on the Condition matches against this
+  Value        = "RAM 32GB"   â† StringValue on the Condition matches against this
 ```
 
-**At runtime**: a custom QuoteLineItem trigger (`beforeUpdate`) reads the `QuoteLineItemAttribute` records on the Bundle QLI, joins to `AttributeAdjustmentCondition`, sums `AttributeBasedAdjustment.AdjustmentValue` for each match, and sets `q.UnitPrice = PricebookEntry.UnitPrice + totalAdjustment` directly on `Trigger.new` (no DML). This works perfectly — selecting RAM 32GB on the Configure UI changes the Bundle's Sales Price from $1,599 to $1,799.
+**At runtime**: a custom QuoteLineItem trigger (`beforeUpdate`) reads the `QuoteLineItemAttribute` records on the Bundle QLI, joins to `AttributeAdjustmentCondition`, sums `AttributeBasedAdjustment.AdjustmentValue` for each match, and sets `q.UnitPrice = PricebookEntry.UnitPrice + totalAdjustment` directly on `Trigger.new` (no DML). This works perfectly â€” selecting RAM 32GB on the Configure UI changes the Bundle's Sales Price from $1,599 to $1,799.
 
 The native Pricing Procedure for this product has 0 `CalculationProcedureSteps` configured. The Builder UI in Setup has been unreliable in this org, so we built the trigger to consume the same data layer the native engine would consume. Migration to the native engine later is config-only.
 
-The RAM rules above **were created some time ago** — we don't know precisely how. Best guess: the Pricing Procedure Builder UI in Setup, which has its own internal endpoint for creating these records.
+The RAM rules above **were created some time ago** â€” we don't know precisely how. Best guess: the Pricing Procedure Builder UI in Setup, which has its own internal endpoint for creating these records.
 
 ---
 
@@ -86,17 +86,17 @@ For the same Bundle product, identical configuration for three more attributes:
 | Screen Size | 24 Inch | +$200 | 0v6aj000000G24QAAS |
 | Screen Size | 27 Inch | +$300 | 0v6aj000000G24OAAS |
 
-Cosmetic dropdown labels (`AttributePicklistValue.Name` + `DisplayValue` with `(+$X)` suffix) are already in place — recruiters see the price differentials. The runtime trigger logic is generic and would consume any new `AttributeBasedAdjRule + Condition + Adjustment` records the same way it consumes RAM's. **The only blocker is creating those three records.**
+Cosmetic dropdown labels (`AttributePicklistValue.Name` + `DisplayValue` with `(+$X)` suffix) are already in place â€” recruiters see the price differentials. The runtime trigger logic is generic and would consume any new `AttributeBasedAdjRule + Condition + Adjustment` records the same way it consumes RAM's. **The only blocker is creating those three records.**
 
 ---
 
 ## What We Tried (and the Errors)
 
-### Attempt 1 — Straight Apex DML, Rule → Condition → Adjustment
+### Attempt 1 â€” Straight Apex DML, Rule â†’ Condition â†’ Adjustment
 
 ```apex
 AttributeBasedAdjRule rule = new AttributeBasedAdjRule(Name='HomeOfficeBundle-Storage512GB');
-insert rule;   // ✓ succeeds
+insert rule;   // âœ“ succeeds
 
 AttributeAdjustmentCondition cond = new AttributeAdjustmentCondition(
     AttributeBasedAdjRuleId = rule.Id,
@@ -104,37 +104,37 @@ AttributeAdjustmentCondition cond = new AttributeAdjustmentCondition(
     Operator                = 'equals',
     StringValue             = 'SSD Hard Drive 512GB'
 );
-insert cond;   // ✗ FAILS
+insert cond;   // âœ— FAILS
 ```
 
 > `System.DmlException: Insert failed. First exception on row 0; first error: FIELD_INTEGRITY_EXCEPTION, Ensure that your attribute is price impacting.: []`
 
-### Attempt 2 — Set `IsPriceImpacting=true` first, then retry
+### Attempt 2 â€” Set `IsPriceImpacting=true` first, then retry
 
-We set `IsPriceImpacting=true` on every `ProductAttributeDefinition` and `ProductClassificationAttr` record for Storage, Processor, Screen Size. Verified post-update with SOQL — all true.
+We set `IsPriceImpacting=true` on every `ProductAttributeDefinition` and `ProductClassificationAttr` record for Storage, Processor, Screen Size. Verified post-update with SOQL â€” all true.
 
 Re-ran the condition insert. **Same `FIELD_INTEGRITY_EXCEPTION`**.
 
-### Attempt 3 — Reverse the order: Rule → Adjustment → Condition
+### Attempt 3 â€” Reverse the order: Rule â†’ Adjustment â†’ Condition
 
 ```apex
-insert rule;          // ✓ succeeds
-insert adjustment;    // ✗ FAILS with a different error
+insert rule;          // âœ“ succeeds
+insert adjustment;    // âœ— FAILS with a different error
 ```
 
 > `FIELD_INTEGRITY_EXCEPTION, Associate all price impacting attributes with the relevant Attribute Adjustment Condition and try again.`
 
 So Adjustment requires the Rule to already have a Condition. And Condition refuses to insert until... something is true that we can't seem to satisfy. Chicken-and-egg.
 
-### Attempt 4 — Bulk DML, Condition + Adjustment in the same `Database.insert` call
+### Attempt 4 â€” Bulk DML, Condition + Adjustment in the same `Database.insert` call
 
 ```apex
 Database.SaveResult[] results = Database.insert(new SObject[]{cond, adj}, false);
 ```
 
-Both rows failed. Condition: "Ensure that your attribute is price impacting". Adjustment: "Associate all price impacting attributes...". The platform validates each record independently before commit — bulk DML doesn't bypass either check.
+Both rows failed. Condition: "Ensure that your attribute is price impacting". Adjustment: "Associate all price impacting attributes...". The platform validates each record independently before commit â€” bulk DML doesn't bypass either check.
 
-### Attempt 5 — Direct REST API POST (bypassing Apex)
+### Attempt 5 â€” Direct REST API POST (bypassing Apex)
 
 ```apex
 HttpRequest req = new HttpRequest();
@@ -156,7 +156,7 @@ HttpResponse res = new Http().send(req);
 
 Same validation. The block is on the platform record-write layer, not specific to Apex DML.
 
-### Attempt 6 — Test inserting a new condition for the WORKING Memory attribute
+### Attempt 6 â€” Test inserting a new condition for the WORKING Memory attribute
 
 To rule out Storage-specific issues, we tried inserting a brand-new condition for Memory (the attribute that already has 3 working conditions and produces correct $1,799 pricing at runtime):
 
@@ -165,11 +165,11 @@ AttributeBasedAdjRule r = new AttributeBasedAdjRule(Name='HomeOfficeBundle-TEST-
 insert r;
 AttributeAdjustmentCondition c = new AttributeAdjustmentCondition(
     AttributeBasedAdjRuleId = r.Id,
-    AttributeDefinitionId   = '0tjaj000000FbXJAA0',  // Memory — KNOWN WORKING
+    AttributeDefinitionId   = '0tjaj000000FbXJAA0',  // Memory â€” KNOWN WORKING
     Operator                = 'equals',
     StringValue             = 'RAM 8GB'
 );
-insert c;  // ✗ FAILS — same error as Storage
+insert c;  // âœ— FAILS â€” same error as Storage
 ```
 
 > `FIELD_INTEGRITY_EXCEPTION, Ensure that your attribute is price impacting.`
@@ -177,40 +177,40 @@ insert c;  // ✗ FAILS — same error as Storage
 **This is the smoking gun.** The validation blocks ALL new `AttributeAdjustmentCondition` inserts via Apex/REST DML, regardless of whether the target attribute is the known-working RAM. The existing 3 RAM conditions still serve runtime queries correctly, but no new conditions can be added through these paths. This means:
 
 1. The RAM conditions were not created through the Apex/REST DML path.
-2. Some other internal path created them — likely the Setup → Pricing Procedure Builder UI, which uses a private endpoint exempt from this check.
+2. Some other internal path created them â€” likely the Setup â†’ Pricing Procedure Builder UI, which uses a private endpoint exempt from this check.
 3. We have no way to reach that internal path programmatically from this Dev Edition org.
 
-### Attempt 7 — `ConnectApi.RevenueCloud` (recommended by one consultant)
+### Attempt 7 â€” `ConnectApi.RevenueCloud` (recommended by one consultant)
 
 ```apex
 Type t = Type.forName('ConnectApi.RevenueCloud');
 System.debug(t == null ? 'NOT FOUND' : 'EXISTS');
-// → NOT FOUND
+// â†’ NOT FOUND
 ```
 
 Probed adjacent namespaces:
-- `ConnectApi.RevenueCloud` → NOT FOUND
-- `ConnectApi.CommerceCart` → THROWS `Type is not visible` (exists but no access in this org)
-- `ConnectApi.RevenueSales` → NOT FOUND
-- `ConnectApi.CartItems` → NOT FOUND
-- `ConnectApi.Cart` → NOT FOUND
-- `ConnectApi.RevenueLifecycleManagement` → NOT FOUND
-- `ConnectApi.QuoteLineItem` → NOT FOUND
+- `ConnectApi.RevenueCloud` â†’ NOT FOUND
+- `ConnectApi.CommerceCart` â†’ THROWS `Type is not visible` (exists but no access in this org)
+- `ConnectApi.RevenueSales` â†’ NOT FOUND
+- `ConnectApi.CartItems` â†’ NOT FOUND
+- `ConnectApi.Cart` â†’ NOT FOUND
+- `ConnectApi.RevenueLifecycleManagement` â†’ NOT FOUND
+- `ConnectApi.QuoteLineItem` â†’ NOT FOUND
 
 So no documented or undocumented Apex bridge to a managed bundle/pricing API in this org.
 
-### Attempt 8 — Apex Triggers / Validation Rules / Flows on the target objects
+### Attempt 8 â€” Apex Triggers / Validation Rules / Flows on the target objects
 
 To rule out custom rules in the org:
 
 ```sql
 SELECT Name, TableEnumOrId, Status FROM ApexTrigger
 WHERE TableEnumOrId IN ('AttributeAdjustmentCondition','AttributeBasedAdjustment','AttributeBasedAdjRule')
--- → 0 records
+-- â†’ 0 records
 
 SELECT EntityDefinition.QualifiedApiName, ValidationName FROM ValidationRule
 WHERE EntityDefinition.QualifiedApiName IN ('AttributeAdjustmentCondition','AttributeBasedAdjustment')
--- → 0 records
+-- â†’ 0 records
 ```
 
 The validation is built into the platform managed code, not from any custom config in the org.
@@ -241,11 +241,11 @@ The two attribute groups look schema-identical. Yet only Memory's chain works, a
 
 A repeatable, scriptable way to insert `AttributeAdjustmentCondition` records (and the matching `AttributeBasedAdjustment` records) for a given Bundle product and AttributeDefinition. Specifically:
 
-1. **The exact Setup UI path** for creating attribute-based price adjustments in Salesforce RLM Dev Edition orgs — including any prerequisite catalog/pricing setup steps that must be completed in a specific order to satisfy the `IsPriceImpacting` validation. Screenshots of where to click would be ideal.
+1. **The exact Setup UI path** for creating attribute-based price adjustments in Salesforce RLM Dev Edition orgs â€” including any prerequisite catalog/pricing setup steps that must be completed in a specific order to satisfy the `IsPriceImpacting` validation. Screenshots of where to click would be ideal.
 
 2. **Any documented or undocumented `ConnectApi`, Tooling API, or Metadata API endpoint** that creates `AttributeAdjustmentCondition` records the way the Builder UI does (i.e. without the FIELD_INTEGRITY_EXCEPTION).
 
-3. **Any setup-time prerequisite we might be missing** — a Pricing Procedure step, a `CalculationProcedureVersion`, an `AttributeCategoryAttribute` record, a sync/refresh action — that the platform looks at when it decides whether the chicken-and-egg validation can be satisfied.
+3. **Any setup-time prerequisite we might be missing** â€” a Pricing Procedure step, a `CalculationProcedureVersion`, an `AttributeCategoryAttribute` record, a sync/refresh action â€” that the platform looks at when it decides whether the chicken-and-egg validation can be satisfied.
 
 4. **An explanation of why the validation now blocks even Memory inserts**, when Memory has working data already. Is there a recent platform change, a feature flag we toggled, or a piece of state the validation reads that we accidentally invalidated?
 
@@ -255,8 +255,8 @@ The runtime trigger that consumes this data is generic and works perfectly for M
 
 - Repo: TechnoStore (Salesforce DX project, multiple package directories)
 - Org: your-org.develop.my.salesforce.com (Developer Edition)
-- Org email: technostore-admin@example.com
+- Org email: admin@technostore.example
 - Trigger handler: `force-app-handlers/main/default/classes/QuoteLineItemTriggerHandler.cls`
-  - `applyAttributeAdjustmentsInPlace()` — generic runtime consumer; works for any attribute that has the data chain populated
+  - `applyAttributeAdjustmentsInPlace()` â€” generic runtime consumer; works for any attribute that has the data chain populated
 - Failed setup script: `scripts/add_storage_processor_screen_pricing.apex`
 - Diagnostic scripts: `scripts/test_*.apex` (some kept, some deleted as dead-end)

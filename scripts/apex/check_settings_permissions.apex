@@ -1,7 +1,7 @@
-// Check user permissions, feature settings, and license assignments
+﻿// Check user permissions, feature settings, and license assignments
 // for Browse Catalog / Product Discovery
 
-String userId = '005aj00000UuoAYAAZ'; // technostore-admin@example.com
+String userId = '005000000000000XXX'; // admin@technostore.example
 
 // 1. Check Permission Set Assignments for the user
 List<PermissionSetAssignment> psas = [

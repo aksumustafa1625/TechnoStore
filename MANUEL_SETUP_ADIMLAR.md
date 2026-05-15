@@ -1,100 +1,100 @@
-# Salesforce Setup'tan Context Use Case Mappings'e Manuel Gitme
+﻿# Salesforce Setup'tan Context Use Case Mappings'e Manuel Gitme
 
-## 🎯 ADIM ADIM TALİMATLAR
+## ðŸŽ¯ ADIM ADIM TALÄ°MATLAR
 
-### ADIM 1: Setup'ı Açın
-1. Salesforce'ta sağ üst köşedeki **⚙️ (dişli çark)** ikonuna tıklayın
-2. **Setup** seçeneğine tıklayın
-3. Setup ana sayfası açılacak
+### ADIM 1: Setup'Ä± AÃ§Ä±n
+1. Salesforce'ta saÄŸ Ã¼st kÃ¶ÅŸedeki **âš™ï¸ (diÅŸli Ã§ark)** ikonuna tÄ±klayÄ±n
+2. **Setup** seÃ§eneÄŸine tÄ±klayÄ±n
+3. Setup ana sayfasÄ± aÃ§Ä±lacak
 
-### ADIM 2: Quick Find (Hızlı Arama) Kullanın
-1. Sol taraftaki menüde **"Quick Find"** arama kutusunu göreceksiniz
-2. Bu kutuya şunu yazın: `context`
-3. Yazarken alt kısımda sonuçlar görünmeye başlayacak
+### ADIM 2: Quick Find (HÄ±zlÄ± Arama) KullanÄ±n
+1. Sol taraftaki menÃ¼de **"Quick Find"** arama kutusunu gÃ¶receksiniz
+2. Bu kutuya ÅŸunu yazÄ±n: `context`
+3. Yazarken alt kÄ±sÄ±mda sonuÃ§lar gÃ¶rÃ¼nmeye baÅŸlayacak
 
-### ADIM 3: Arama Sonuçlarında Bulun
-Arama sonuçlarında şunlardan birini arayın:
+### ADIM 3: Arama SonuÃ§larÄ±nda Bulun
+Arama sonuÃ§larÄ±nda ÅŸunlardan birini arayÄ±n:
 - **"Context Use Case Mappings"**
 - **"Context Definitions"**
 - **"Context Mappings"**
-- **"Contract Lifecycle Management"** altında bir şeyler
+- **"Contract Lifecycle Management"** altÄ±nda bir ÅŸeyler
 
-### ADIM 4A: Eğer "Context Use Case Mappings" Varsa
-1. **Context Use Case Mappings** üzerine tıklayın
-2. Açılan sayfada mapping'leri göreceksiniz
-3. Order → Contract mapping'ini bulun
+### ADIM 4A: EÄŸer "Context Use Case Mappings" Varsa
+1. **Context Use Case Mappings** Ã¼zerine tÄ±klayÄ±n
+2. AÃ§Ä±lan sayfada mapping'leri gÃ¶receksiniz
+3. Order â†’ Contract mapping'ini bulun
 
-### ADIM 4B: Eğer "Context Use Case Mappings" Yoksa - CLM Deneyin
-1. Quick Find'da şunu arayın: `clm`
+### ADIM 4B: EÄŸer "Context Use Case Mappings" Yoksa - CLM Deneyin
+1. Quick Find'da ÅŸunu arayÄ±n: `clm`
 2. Veya: `contract lifecycle`
-3. Şu seçenekleri arayın:
+3. Åžu seÃ§enekleri arayÄ±n:
    - **Contract Lifecycle Management**
    - **CLM Settings**
    - **CLM Configuration**
 
-### ADIM 5: Alternatif - Object Manager Üzerinden
-Eğer yukarıdakiler yoksa:
+### ADIM 5: Alternatif - Object Manager Ãœzerinden
+EÄŸer yukarÄ±dakiler yoksa:
 
-1. Quick Find'da: `object manager` yazın
-2. **Object Manager** tıklayın
-3. Object listesinde **Order** bulun ve tıklayın
-4. Sol menüde şunlara bakın:
+1. Quick Find'da: `object manager` yazÄ±n
+2. **Object Manager** tÄ±klayÄ±n
+3. Object listesinde **Order** bulun ve tÄ±klayÄ±n
+4. Sol menÃ¼de ÅŸunlara bakÄ±n:
    - **Buttons, Links, and Actions** 
    - **Page Layouts**
-5. "Create Contract" adında bir action var mı kontrol edin
+5. "Create Contract" adÄ±nda bir action var mÄ± kontrol edin
 
-### ADIM 6: Başka Alternatif - Process Builder/Flow
-1. Quick Find'da: `flows` yazın
-2. **Flows** sayfasını açın
-3. "Order" veya "Contract" kelimelerini içeren flow'ları arayın
-4. Varsa açın ve Name field mapping'ini kontrol edin
+### ADIM 6: BaÅŸka Alternatif - Process Builder/Flow
+1. Quick Find'da: `flows` yazÄ±n
+2. **Flows** sayfasÄ±nÄ± aÃ§Ä±n
+3. "Order" veya "Contract" kelimelerini iÃ§eren flow'larÄ± arayÄ±n
+4. Varsa aÃ§Ä±n ve Name field mapping'ini kontrol edin
 
-## 📸 Screenshot Paylaşın
+## ðŸ“¸ Screenshot PaylaÅŸÄ±n
 
-Eğer hiçbirini bulamıyorsanız, şunları yapın:
+EÄŸer hiÃ§birini bulamÄ±yorsanÄ±z, ÅŸunlarÄ± yapÄ±n:
 
-### Screenshot 1: Quick Find Sonuçları
-1. Quick Find'da `context` yazın
-2. Çıkan sonuçların screenshot'ını alın
+### Screenshot 1: Quick Find SonuÃ§larÄ±
+1. Quick Find'da `context` yazÄ±n
+2. Ã‡Ä±kan sonuÃ§larÄ±n screenshot'Ä±nÄ± alÄ±n
 
 ### Screenshot 2: Quick Find CLM
-1. Quick Find'da `clm` yazın
-2. Çıkan sonuçların screenshot'ını alın
+1. Quick Find'da `clm` yazÄ±n
+2. Ã‡Ä±kan sonuÃ§larÄ±n screenshot'Ä±nÄ± alÄ±n
 
 ### Screenshot 3: Quick Find Contract
-1. Quick Find'da `contract` yazın
-2. Çıkan sonuçların screenshot'ını alın
+1. Quick Find'da `contract` yazÄ±n
+2. Ã‡Ä±kan sonuÃ§larÄ±n screenshot'Ä±nÄ± alÄ±n
 
-## 🎯 Neyi Arıyoruz?
+## ðŸŽ¯ Neyi ArÄ±yoruz?
 
-Şu bilgileri içeren bir sayfa arıyoruz:
+Åžu bilgileri iÃ§eren bir sayfa arÄ±yoruz:
 - **Reference Object**: Order
 - **Target Object**: Contract
-- **Target Object Custom Field Name**: (burası düzeltilecek)
+- **Target Object Custom Field Name**: (burasÄ± dÃ¼zeltilecek)
 
-## ⚠️ Permission Sorunu Olabilir
+## âš ï¸ Permission Sorunu Olabilir
 
-"Page not found" hatası izin sorununa işaret edebilir:
+"Page not found" hatasÄ± izin sorununa iÅŸaret edebilir:
 1. System Administrator profili gerekebilir
-2. CLM lisansı aktif olmalı
-3. Contract Lifecycle Management permission set'i atanmış olmalı
+2. CLM lisansÄ± aktif olmalÄ±
+3. Contract Lifecycle Management permission set'i atanmÄ±ÅŸ olmalÄ±
 
-## 🔧 Geçici Çözüm - Direct URL
+## ðŸ”§ GeÃ§ici Ã‡Ã¶zÃ¼m - Direct URL
 
-Tarayıcıda bu URL'leri deneyin (Salesforce instance'ınıza göre):
+TarayÄ±cÄ±da bu URL'leri deneyin (Salesforce instance'Ä±nÄ±za gÃ¶re):
 
 ```
 [YOUR-INSTANCE].salesforce.com/lightning/setup/ContextUseCaseMappings/home
 ```
 
-Örnek:
+Ã–rnek:
 ```
 your-org.develop.my.salesforce.com/lightning/setup/ContextUseCaseMappings/home
 ```
 
-## 📞 Yardım
+## ðŸ“ž YardÄ±m
 
-Screenshot'ları paylaşın, beraber bulalım:
-1. Quick Find'da "context" arama sonuçları
-2. Quick Find'da "clm" arama sonuçları
-3. Soldaki Setup menüsünün görünen kısmı
+Screenshot'larÄ± paylaÅŸÄ±n, beraber bulalÄ±m:
+1. Quick Find'da "context" arama sonuÃ§larÄ±
+2. Quick Find'da "clm" arama sonuÃ§larÄ±
+3. Soldaki Setup menÃ¼sÃ¼nÃ¼n gÃ¶rÃ¼nen kÄ±smÄ±

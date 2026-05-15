@@ -1,5 +1,5 @@
-// Assign critical Permission Sets for Browse Catalog / Product Discovery
-String userId = '005aj00000UuoAYAAZ';
+﻿// Assign critical Permission Sets for Browse Catalog / Product Discovery
+String userId = '005000000000000XXX';
 
 // Get the key permission sets
 List<PermissionSet> psToAssign = [

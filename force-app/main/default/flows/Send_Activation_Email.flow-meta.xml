@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>63.0</apiVersion>
     <actionCalls>
@@ -24,16 +24,16 @@
         <inputParameters>
             <name>emailSubject</name>
             <value>
-                <stringValue>Payment Confirmed — Your TechnoStore Service is Active (Receipt {!$Record.DocumentNumber})</stringValue>
+                <stringValue>Payment Confirmed â€” Your TechnoStore Service is Active (Receipt {!$Record.DocumentNumber})</stringValue>
             </value>
         </inputParameters>
         <nameSegment>EmailWithBrandedPdf</nameSegment>
     </actionCalls>
-    <description>Auto-sends a payment confirmation / service activation email when an Invoice transitions to Stripe_Payment_Status__c=Paid. Falls back to demo-recipient@example.com if BillToContact.Email is null.</description>
+    <description>Auto-sends a payment confirmation / service activation email when an Invoice transitions to Stripe_Payment_Status__c=Paid. Falls back to demo@technostore.example if BillToContact.Email is null.</description>
     <formulas>
         <name>WelcomeRecipientEmail</name>
         <dataType>String</dataType>
-        <expression>IF(ISBLANK({!$Record.BillToContact.Email}), &quot;demo-recipient@example.com&quot;, {!$Record.BillToContact.Email})</expression>
+        <expression>IF(ISBLANK({!$Record.BillToContact.Email}), &quot;demo@technostore.example&quot;, {!$Record.BillToContact.Email})</expression>
     </formulas>
     <interviewLabel>Send Activation Email {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Send Activation Email</label>

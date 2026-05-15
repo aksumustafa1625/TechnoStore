@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>63.0</apiVersion>
     <actionCalls>
@@ -29,11 +29,11 @@
         </inputParameters>
         <nameSegment>EmailWithBrandedPdf</nameSegment>
     </actionCalls>
-    <description>Sends an order shipping notification email when an Invoice with Fulfillment_Type=Physical transitions to Stripe_Payment_Status=Paid. Falls back to demo-recipient@example.com if BillToContact.Email is null.</description>
+    <description>Sends an order shipping notification email when an Invoice with Fulfillment_Type=Physical transitions to Stripe_Payment_Status=Paid. Falls back to demo@technostore.example if BillToContact.Email is null.</description>
     <formulas>
         <name>ShippingRecipientEmail</name>
         <dataType>String</dataType>
-        <expression>IF(ISBLANK({!$Record.BillToContact.Email}), &quot;demo-recipient@example.com&quot;, {!$Record.BillToContact.Email})</expression>
+        <expression>IF(ISBLANK({!$Record.BillToContact.Email}), &quot;demo@technostore.example&quot;, {!$Record.BillToContact.Email})</expression>
     </formulas>
     <interviewLabel>Send Shipping Notification {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Send Shipping Notification</label>

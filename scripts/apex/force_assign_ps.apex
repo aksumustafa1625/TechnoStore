@@ -1,5 +1,5 @@
-// Force assign permission sets - check actual count and try insert
-String userId = '005aj00000UuoAYAAZ';
+﻿// Force assign permission sets - check actual count and try insert
+String userId = '005000000000000XXX';
 
 // Count ALL PSA records for user
 List<PermissionSetAssignment> allPSA = [

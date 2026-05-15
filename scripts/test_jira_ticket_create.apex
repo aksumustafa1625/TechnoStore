@@ -1,5 +1,5 @@
-// End-to-end test: pick an existing Order, call JiraTicketService, verify a real
-// JIRA ticket appears at demo-alias.atlassian.net/browse/<key>.
+﻿// End-to-end test: pick an existing Order, call JiraTicketService, verify a real
+// JIRA ticket appears at your-org.atlassian.net/browse/<key>.
 
 List<Order> orders = [SELECT Id, OrderNumber, Account.Name FROM Order ORDER BY CreatedDate DESC LIMIT 1];
 if (orders.isEmpty()) { System.debug('No orders found'); return; }

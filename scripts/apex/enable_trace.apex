@@ -1,8 +1,8 @@
-// Enable debug tracing for current user
+﻿// Enable debug tracing for current user
 // Deletes old trace flags and creates a fresh one with full Apex logging
 
 // Get current user
-User u = [SELECT Id, Username FROM User WHERE Username = 'technostore-admin@example.com' LIMIT 1];
+User u = [SELECT Id, Username FROM User WHERE Username = 'admin@technostore.example' LIMIT 1];
 System.debug('User: ' + u.Id);
 
 // Delete existing trace flags for this user

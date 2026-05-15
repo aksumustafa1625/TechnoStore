@@ -116,3 +116,21 @@ org_info.json
 **/sfdx_auth.txt
 **/sfdx-auth.txt
 **/access_token.txt
+
+# ============================================================
+# Salesforce CLI cached output artifacts — local-only, often
+# contain instance URLs and user IDs that should not be in repo
+# ============================================================
+# Schema describe caches
+c_desc.txt
+scl.json
+scl_describe.txt
+# Deploy output captures
+scripts/dep.json
+scripts/deploy_flow.json
+scripts/deploy_result.json
+scripts/deploy_errors.txt
+# Ad-hoc local working files
+cv_payload.json
+docx_b64.txt
+new_maps.json

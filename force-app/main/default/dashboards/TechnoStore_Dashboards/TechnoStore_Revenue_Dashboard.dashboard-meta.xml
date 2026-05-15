@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Dashboard xmlns="http://soap.sforce.com/2006/04/metadata">
     <backgroundEndColor>#FFFFFF</backgroundEndColor>
     <backgroundFadeDirection>Diagonal</backgroundFadeDirection>
@@ -99,9 +99,9 @@
         <rowHeight>40</rowHeight>
     </dashboardGridLayout>
     <dashboardType>SpecifiedUser</dashboardType>
-    <description>TechnoStore revenue insights — collected revenue, outstanding receivables, payment funnel, and monthly trend.</description>
+    <description>TechnoStore revenue insights â€” collected revenue, outstanding receivables, payment funnel, and monthly trend.</description>
     <isGridLayout>true</isGridLayout>
-    <runningUser>technostore-admin@example.com</runningUser>
+    <runningUser>admin@technostore.example</runningUser>
     <textColor>#000000</textColor>
     <title>TechnoStore Revenue Dashboard</title>
     <titleColor>#000000</titleColor>
