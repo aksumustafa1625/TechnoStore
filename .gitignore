@@ -97,3 +97,4 @@ ngrok.yml
 **/__pycache__/
 **/.venv/
 **/venv/
+interview-prep/

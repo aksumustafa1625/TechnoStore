@@ -30,7 +30,7 @@ In a project with 50+ Apex classes, 7 external integrations, and a 6-package SFD
 | [007](ADR-007-org-wide-email-address.md) | Org-Wide Email Address for DACH B2B deliverability | Accepted | 2026-05-02 |
 | [008](ADR-008-flying-saucer-vf-pdf.md) | Flying Saucer VF over LWC for branded PDFs | Accepted | 2026-04-22 |
 | [009](ADR-009-quote-tax-formula-invoice-tax-adapter.md) | Quote tax via formula fields, Invoice tax via commercetax adapter | Accepted | 2026-05-03 |
-| [010](ADR-010-notion-api-multi-call-orchestration.md) | Notion API multi-call orchestration for 3-level nested toggles | Accepted | 2026-05-11 |
+| [010](ADR-010-notion-api-multi-call-orchestration.md) | Notion API multi-call orchestration for 3-level nested toggles | **Superseded** (2026-05-14 — refactored to single-POST flat-heading structure; see ADR's Supersession Note) | 2026-05-11 |
 
 ## When to write a new ADR
 
@@ -114,4 +114,4 @@ Why it was rejected.
 - [Architecture diagrams](../architecture/) — 5 Mermaid views (Context / Container / Sequence / Data / CI-CD)
 - [README.md](../../README.md) — Project overview with Mule vs Apex matrix table
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — Standing rules including ADR conventions
-- Notion portfolio — 50 STAR-format entries on architectural decisions, debugging stories, and integration recipes
+- Notion portfolio — 51 STAR-format entries on architectural decisions, debugging stories, and integration recipes (entry 51 documents the Notion structure refactor itself — see ADR-010 supersession)

@@ -4,22 +4,34 @@
  * Two modes:
  *  - publish(StarEntry)            : single-page STAR with flat sections (legacy)
  *  - publishEnterprise(EnterpriseEntry): enterprise format with 4 STAR top-level toggles,
- *                                       each containing nested sub-toggles for sub-sections
+ *                                       each containing flat sub-section headings + content
  *
- * Enterprise structure per page:
+ * Enterprise structure per page (2-level nesting — single POST call):
  *  ▼ Situation
- *     ▼ Context | ▼ Problem
+ *     ### Context  → paragraphs
+ *     ### Problem  → paragraphs
  *  ▼ Task
- *     ▼ Goal | ▼ Constraints | ▼ Success Criteria
+ *     ### Goal              → paragraphs
+ *     ### Constraints       → paragraphs
+ *     ### Success Criteria  → paragraphs
  *  ▼ Action
- *     ▼ Approach | ▼ Implementation | ▼ Code | ▼ Screenshots (empty)
+ *     ### Approach        → paragraphs
+ *     ### Implementation  → bullets
+ *     ### Code            → code blocks
+ *     ### Screenshots     → (empty header, user fills manually)
  *  ▼ Result
- *     ▼ Outcome | ▼ Trade-offs & Lessons Learned | ▼ References | ▼ Future Work
+ *     ### Outcome                       → paragraphs
+ *     ### Trade-offs & Lessons Learned  → paragraphs
+ *     ### References                    → bullets
+ *     ### Future Work                   → paragraphs
  *
- * Multi-call flow (due to Notion 2-level nesting limit per request):
- *  1. POST /v1/pages with title only → returns page id
- *  2. PATCH /v1/blocks/{page_id}/children with 4 empty main toggles → returns main toggle ids
- *  3. For each main toggle: PATCH children with sub-toggles + their content (2 levels deep)
+ * Single-call flow:
+ *  1. POST /v1/pages with title + full children tree → returns page id
+ *  (No follow-up PATCH calls. Notion API allows 2 levels of nesting per request.)
+ *
+ * Previous version used 6 API calls per entry (3-level toggle nesting workaround).
+ * Refactored 2026-05-14 to flat heading_3 + content inside each main toggle
+ * — cleaner UX (no extra clicks) AND fewer API calls.
  *
  * Auth: Bearer token from Notion_Config__c protected Custom Setting.
  * Notion API version: 2022-06-28.
@@ -114,123 +126,99 @@ public with sharing class NotionPublishService {
     }
 
     // ============================================================
-    // Enterprise publish (the new structure)
+    // Enterprise publish — single POST with full 2-level tree
     // ============================================================
     public static String publishEnterprise(EnterpriseEntry entry) {
         Notion_Config__c cfg = config();
-        String token = cfg.Token__c;
 
-        // Step 1: Create page with title (no children yet)
-        Map<String, Object> pageBody = new Map<String, Object>{
+        List<Object> children = new List<Object>{
+            buildToggle('Situation', buildSituationChildren(entry.situation)),
+            buildToggle('Task',      buildTaskChildren(entry.task)),
+            buildToggle('Action',    buildActionChildren(entry.action)),
+            buildToggle('Result',    buildResultChildren(entry.result))
+        };
+
+        Map<String, Object> body = new Map<String, Object>{
             'parent' => new Map<String, String>{ 'page_id' => cfg.Parent_Page_Id__c },
             'properties' => new Map<String, Object>{
                 'title' => new List<Object>{
                     new Map<String, Object>{ 'text' => new Map<String, String>{ 'content' => entry.title } }
                 }
-            }
+            },
+            'children' => children
         };
-        HttpResponse pageResp = sendNotion('POST', 'https://api.notion.com/v1/pages', pageBody, token);
-        if (!isSuccess(pageResp)) throw new NotionPublishException('Page create: ' + pageResp.getBody());
-        String pageId = (String) ((Map<String, Object>) JSON.deserializeUntyped(pageResp.getBody())).get('id');
-
-        // Step 2: Append 4 empty main toggles → response gives us their ids
-        List<Object> mainToggles = new List<Object>{
-            buildToggle('Situation', new List<Object>()),
-            buildToggle('Task', new List<Object>()),
-            buildToggle('Action', new List<Object>()),
-            buildToggle('Result', new List<Object>())
-        };
-        HttpResponse mainResp = sendNotion(
-            'PATCH',
-            'https://api.notion.com/v1/blocks/' + pageId + '/children',
-            new Map<String, Object>{ 'children' => mainToggles },
-            token
-        );
-        if (!isSuccess(mainResp)) throw new NotionPublishException('Main toggles: ' + mainResp.getBody());
-        List<Object> mainResults = (List<Object>) ((Map<String, Object>) JSON.deserializeUntyped(mainResp.getBody())).get('results');
-        String situationId = (String) ((Map<String, Object>) mainResults.get(0)).get('id');
-        String taskId      = (String) ((Map<String, Object>) mainResults.get(1)).get('id');
-        String actionId    = (String) ((Map<String, Object>) mainResults.get(2)).get('id');
-        String resultId    = (String) ((Map<String, Object>) mainResults.get(3)).get('id');
-
-        // Step 3: Fill each main toggle with nested sub-toggles + content (4 PATCH calls)
-        fillToggle(situationId, buildSituationChildren(entry.situation), token);
-        fillToggle(taskId,      buildTaskChildren(entry.task),           token);
-        fillToggle(actionId,    buildActionChildren(entry.action),       token);
-        fillToggle(resultId,    buildResultChildren(entry.result),       token);
-
-        return pageId;
-    }
-
-    private static void fillToggle(String blockId, List<Object> children, String token) {
-        if (children == null || children.isEmpty()) return;
-        HttpResponse resp = sendNotion(
-            'PATCH',
-            'https://api.notion.com/v1/blocks/' + blockId + '/children',
-            new Map<String, Object>{ 'children' => children },
-            token
-        );
-        if (!isSuccess(resp)) throw new NotionPublishException('Fill toggle ' + blockId + ': ' + resp.getBody());
+        HttpResponse resp = sendNotion('POST', 'https://api.notion.com/v1/pages', body, cfg.Token__c);
+        if (!isSuccess(resp)) throw new NotionPublishException('Enterprise create: ' + resp.getStatusCode() + ' — ' + resp.getBody());
+        return (String) ((Map<String, Object>) JSON.deserializeUntyped(resp.getBody())).get('id');
     }
 
     private static List<Object> buildSituationChildren(SituationSection s) {
-        List<Object> subs = new List<Object>();
-        if (s != null) {
-            subs.add(buildToggle('Context', paragraphsFrom(s.context)));
-            subs.add(buildToggle('Problem', paragraphsFrom(s.problem)));
-        }
-        return subs;
+        List<Object> out = new List<Object>();
+        if (s == null) return out;
+        appendSection(out, 'Context', paragraphsFrom(s.context));
+        appendSection(out, 'Problem', paragraphsFrom(s.problem));
+        return out;
     }
 
     private static List<Object> buildTaskChildren(TaskSection t) {
-        List<Object> subs = new List<Object>();
-        if (t != null) {
-            subs.add(buildToggle('Goal',             paragraphsFrom(t.goal)));
-            subs.add(buildToggle('Constraints',      paragraphsFrom(t.constraints)));
-            subs.add(buildToggle('Success Criteria', paragraphsFrom(t.successCriteria)));
-        }
-        return subs;
+        List<Object> out = new List<Object>();
+        if (t == null) return out;
+        appendSection(out, 'Goal',             paragraphsFrom(t.goal));
+        appendSection(out, 'Constraints',      paragraphsFrom(t.constraints));
+        appendSection(out, 'Success Criteria', paragraphsFrom(t.successCriteria));
+        return out;
     }
 
     private static List<Object> buildActionChildren(ActionSection a) {
-        List<Object> subs = new List<Object>();
-        if (a != null) {
-            subs.add(buildToggle('Approach', paragraphsFrom(a.approach)));
+        List<Object> out = new List<Object>();
+        if (a == null) return out;
+        appendSection(out, 'Approach', paragraphsFrom(a.approach));
 
-            List<Object> implBlocks = new List<Object>();
-            if (a.implementation != null) {
-                for (String b : a.implementation) implBlocks.add(bulletItem(b));
-            }
-            subs.add(buildToggle('Implementation', implBlocks));
-
-            List<Object> codeBlocks = new List<Object>();
-            if (a.codeSnippets != null) {
-                for (CodeSnippet c : a.codeSnippets) {
-                    if (!String.isBlank(c.caption)) codeBlocks.add(paragraph(c.caption));
-                    codeBlocks.add(codeBlock(c.code, c.language));
-                }
-            }
-            subs.add(buildToggle('Code', codeBlocks));
-
-            // Screenshots = empty toggle, user fills manually
-            subs.add(buildToggle('Screenshots', new List<Object>()));
+        List<Object> implBlocks = new List<Object>();
+        if (a.implementation != null) {
+            for (String b : a.implementation) implBlocks.add(bulletItem(b));
         }
-        return subs;
+        appendSection(out, 'Implementation', implBlocks);
+
+        List<Object> codeBlocks = new List<Object>();
+        if (a.codeSnippets != null) {
+            for (CodeSnippet c : a.codeSnippets) {
+                if (!String.isBlank(c.caption)) codeBlocks.add(paragraph(c.caption));
+                codeBlocks.add(codeBlock(c.code, c.language));
+            }
+        }
+        appendSection(out, 'Code', codeBlocks);
+
+        // Screenshots: empty heading; user fills manually in Notion
+        out.add(heading3('Screenshots'));
+        return out;
     }
 
     private static List<Object> buildResultChildren(ResultSection r) {
-        List<Object> subs = new List<Object>();
-        if (r != null) {
-            subs.add(buildToggle('Outcome',                      paragraphsFrom(r.outcome)));
-            subs.add(buildToggle('Trade-offs & Lessons Learned', paragraphsFrom(r.tradeoffsAndLessons)));
+        List<Object> out = new List<Object>();
+        if (r == null) return out;
+        appendSection(out, 'Outcome',                      paragraphsFrom(r.outcome));
+        appendSection(out, 'Trade-offs & Lessons Learned', paragraphsFrom(r.tradeoffsAndLessons));
 
-            List<Object> refBlocks = new List<Object>();
-            if (r.references != null) for (String ref : r.references) refBlocks.add(bulletItem(ref));
-            subs.add(buildToggle('References', refBlocks));
+        List<Object> refBlocks = new List<Object>();
+        if (r.references != null) for (String ref : r.references) refBlocks.add(bulletItem(ref));
+        appendSection(out, 'References', refBlocks);
 
-            subs.add(buildToggle('Future Work', paragraphsFrom(r.futureWork)));
+        appendSection(out, 'Future Work', paragraphsFrom(r.futureWork));
+        return out;
+    }
+
+    /**
+     * Appends a flat sub-section as heading_3 + content blocks.
+     * If content is empty, only the heading is emitted (user fills manually).
+     */
+    private static void appendSection(List<Object> target, String title, List<Object> content) {
+        target.add(heading3(title));
+        if (content == null || content.isEmpty()) {
+            target.add(paragraph('(no content)'));
+            return;
         }
-        return subs;
+        target.addAll(content);
     }
 
     private static List<Object> paragraphsFrom(String text) {
@@ -302,6 +290,16 @@ public with sharing class NotionPublishService {
             'object' => 'block',
             'type'   => 'heading_2',
             'heading_2' => new Map<String, Object>{
+                'rich_text' => new List<Object>{ richText(text) }
+            }
+        };
+    }
+
+    private static Map<String, Object> heading3(String text) {
+        return new Map<String, Object>{
+            'object' => 'block',
+            'type'   => 'heading_3',
+            'heading_3' => new Map<String, Object>{
                 'rich_text' => new List<Object>{ richText(text) }
             }
         };

@@ -2,17 +2,76 @@
 
 ## Status
 
-**Accepted**
+**Superseded — 2026-05-14**
+
+This ADR is preserved as a historical record. The original 6-call orchestration described below was the right decision **at the time** given the 3-level nesting requirement. It has since been superseded by a structural redesign documented in **[Supersession Note](#supersession-note)** below.
+
+## Supersession Note
+
+**Date superseded:** 2026-05-14
+**Triggered by:** User UX feedback ("the 3-level toggle pattern is exhausting to read")
+**New approach:** Single POST per entry using flat `heading_3` + content blocks inside the 4 main S/T/A/R toggles (2-level nesting — well within Notion API limits)
+
+### What changed
+
+The original 3-level structure (Page → Main Toggle → Sub-Toggle → Content) required 6 API calls per entry because each main toggle had to be filled in a separate PATCH. The new 2-level structure (Page → Main Toggle → flat `heading_3` + content) achieves the same visual hierarchy with **a single POST call per entry**.
+
+```
+BEFORE (3-level, 6 calls):              AFTER (2-level, 1 call):
+▼ Entry Title                            ▼ Entry Title
+   ├── ▼ Situation                          ├── ▼ Situation
+   │      ├── ▼ Context                     │      ├── ### Context
+   │      │      └── [paragraphs]           │      │      └── [paragraphs]
+   │      └── ▼ Problem                     │      └── ### Problem
+   │             └── [paragraphs]           │             └── [paragraphs]
+   └── (Task, Action, Result similar)       └── (Task, Action, Result similar)
+```
+
+The S/T/A/R main toggles **remain collapsible** (recruiter still gets section-level overview). The sub-sections (Context, Problem, Goal, Constraints, etc.) are now **flat `heading_3` blocks** — visible immediately when the main toggle is expanded. **No extra click needed per sub-section.**
+
+### Why we changed direction
+
+Two factors converged:
+
+1. **UX:** Each entry required ~13 clicks to fully expand (4 main toggles + 9 sub-toggles). For a recruiter scanning 50 entries, that is up to 650 clicks to read the portfolio. User feedback was direct: the structure was exhausting.
+
+2. **Architectural insight:** The 3-level nesting requirement was **never actually required** — it was a design choice I made early on, then defended via this ADR. Removing the inner toggle layer keeps the STAR taxonomy fully intact while fitting within Notion's 2-level single-request limit. **I had been working around the wrong constraint.** The real binding constraint was UX, not API limits.
+
+### Measurable impact
+
+| Metric | Before (this ADR) | After (refactored) | Improvement |
+|--------|---------|---------|-------|
+| API calls per entry | 6 | 1 | 6× reduction |
+| API calls per full republish (50 entries) | 300 | 50 | 6× reduction |
+| Full republish elapsed time | ~25 minutes | ~5 minutes | 5× faster |
+| Reviewer clicks to read one entry | ~13 | 4 (main toggles only) | 3× reduction |
+| `NotionPublishService.cls` LOC for orchestration | ~80 lines | ~10 lines | 8× simpler |
+
+### Where the new pattern lives
+
+- **Code:** `force-app-services/main/default/classes/NotionPublishService.cls` (refactored 2026-05-14 — see header comment for current architecture)
+- **Smoke test:** `scripts/test_notion_enterprise_format.apex` (single-entry verifier for the new format)
+- **Meta-portfolio entry:** Notion portfolio entry **51 — "Notion Format Refactor — From 6-Call Orchestration to Single POST + Flat Headings"** (published 2026-05-14, batch script `scripts/notion_enterprise_batch_20.apex`)
+
+### Lesson preserved
+
+**When designing a workaround for a platform constraint, periodically question whether that constraint is the binding one.** Sometimes the workaround creates a worse problem than accepting the original limit would have caused. The 6-call orchestration was technically correct — it solved the 3-level-nesting-within-2-level-API-limit puzzle — but the 3-level structure itself was the unnecessary requirement. Re-examining the assumption that drove the workaround was where the real improvement came from.
+
+This pattern (ADR Accepted → ADR Superseded with documented rationale) is the intended healthy lifecycle for architecture decisions, not a sign of past failure. **Architectural artifacts should age gracefully, not become stale or hidden.**
+
+---
 
 ## Date
 
-2026-05-11
+2026-05-11 (original); superseded 2026-05-14
 
 ## Author
 
 Mustafa Aksu
 
 ## Context
+
+> The content below preserves the original Context / Decision / Consequences / Alternatives as written on 2026-05-11. It describes the design that was correct at the time, prior to the UX-driven refactor on 2026-05-14.
 
 TechnoStore's interview-preparation portfolio lives in Notion as **50 STAR-format entries** — each one a child page under the parent "TechnoStore Interview Prep" page. The required structural format per entry:
 
