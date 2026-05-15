@@ -98,3 +98,14 @@ ngrok.yml
 **/.venv/
 **/venv/
 interview-prep/
+
+# ============================================================
+# Salesforce CLI auth artifacts — NEVER commit (contain live access tokens)
+# ============================================================
+org_info.json
+**/org_info.json
+.tmp/
+**/auth.txt
+**/sfdx_auth.txt
+**/sfdx-auth.txt
+**/access_token.txt
