@@ -4,6 +4,10 @@
         <apexClass>InventoryCheckCallback</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>JiraStatusWebhook</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <fieldPermissions>
         <editable>true</editable>
         <field>Inventory_Status_Update__e.Order_Id__c</field>

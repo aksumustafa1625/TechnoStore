@@ -118,6 +118,9 @@ public with sharing class WarehouseInventoryApprovalController {
             if (result.isSuccess()) {
                 banner = userFacingMessage + '.';
                 bannerLevel = level;
+                if (action == 'Reject') {
+                    JiraTicketService.createTicketAsync(targetOrder.Id, 'Out of stock confirmed by warehouse via approval page.');
+                }
             } else {
                 String msgs = '';
                 for (Database.Error err : result.getErrors()) {

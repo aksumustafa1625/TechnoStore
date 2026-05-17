@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>false</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <allowedSubmitters>
+        <type>allInternalUsers</type>
+    </allowedSubmitters>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>technostore-admin@example.com</name>
+                <type>user</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <label>JIRA Confirmation</label>
+        <name>JIRA_Confirmation</name>
+    </approvalStep>
+    <description>Audit-only approval cycle invoked programmatically when a JIRA ticket transitions to Done and the warehouse replenishment workflow auto-activates the Order. No field updates fire (Order is already Activated by the time this runs); the sole purpose is to create a Process Instance Step record showing "Inventory confirmed in stock via JIRA TS-X" in the Order's Approval History — symmetric to the VF page Mark In Stock path.</description>
+    <emailTemplate>unfiled$public/SalesNewCustomerEmail</emailTemplate>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Inventory Audit Approval</label>
+    <recordEditability>AdminOnly</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

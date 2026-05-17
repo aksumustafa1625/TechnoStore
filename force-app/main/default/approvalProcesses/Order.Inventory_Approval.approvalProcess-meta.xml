@@ -25,6 +25,10 @@
             <name>Inventory_Set_In_Stock</name>
             <type>FieldUpdate</type>
         </action>
+        <action>
+            <name>Order_Activate</name>
+            <type>FieldUpdate</type>
+        </action>
     </finalApprovalActions>
     <finalApprovalRecordLock>false</finalApprovalRecordLock>
     <finalRejectionActions>

@@ -4,13 +4,21 @@
  * Responsibilities:
  *   - beforeInsert / beforeUpdate:
  *       Auto-populate BillToContactId, ShipToContactId, and Billing/Shipping
- *       address blocks from the related Account when they are blank. This
- *       prevents "missing required field" errors at Order activation when the
- *       upstream Quote → Order field mapping fails to copy these values.
+ *       address blocks from the related Account when they are blank. Prevents
+ *       "missing required field" errors at Order activation when the upstream
+ *       Quote → Order field mapping fails to copy these values.
  *
- * The handler is idempotent and safe — it only writes values when the target
- * field is null. If an admin/integration has already populated them, the
- * handler does not overwrite.
+ *   - afterUpdate:
+ *       When Order.Status transitions Draft → Activated, create one Asset per
+ *       OrderItem. This is the B2C / transactional Pattern 1 — appropriate for
+ *       one-time products (workstations, monitors, accessories) where legal
+ *       ownership transfers at order activation, not at contract signing.
+ *
+ * Industry context: Pattern 1 (Asset on Order Activation) is standard for
+ * direct-to-consumer + one-time B2B sales. Pattern 2 (Asset on Contract
+ * Activation) is standard for B2B with negotiated contracts. TechnoStore
+ * uses Pattern 1 because its product catalog is currently one-time hardware
+ * (no subscriptions, no negotiated multi-year contracts).
  *
  * Bypass: TriggerHandler.bypass('OrderTriggerHandler') for bulk data loads.
  */
@@ -24,13 +32,24 @@ public with sharing class OrderTriggerHandler extends TriggerHandler {
         backfillFromAccount((List<Order>) Trigger.new);
     }
 
-    /**
-     * For each Order, if any of BillToContactId / ShipToContactId / Billing or
-     * Shipping address fields are blank, copy them from the Account's primary
-     * Contact (first by CreatedDate) and Account address.
-     */
+    protected override void afterUpdate() {
+        Set<Id> ordersJustActivated = new Set<Id>();
+        for (Order o : (List<Order>) Trigger.new) {
+            Order oldOrder = (Order) Trigger.oldMap.get(o.Id);
+            // Status transition: anything → Activated
+            if (o.Status == 'Activated' && oldOrder.Status != 'Activated') {
+                ordersJustActivated.add(o.Id);
+            }
+        }
+        if (!ordersJustActivated.isEmpty()) {
+            createAssetsForActivatedOrders(ordersJustActivated);
+        }
+    }
+
+    // ============================================================
+    // Backfill: populate Contact + Address fields from Account
+    // ============================================================
     private void backfillFromAccount(List<Order> orders) {
-        // Collect Account IDs whose orders need backfilling
         Set<Id> accountIds = new Set<Id>();
         for (Order o : orders) {
             if (o.AccountId == null) continue;
@@ -38,7 +57,6 @@ public with sharing class OrderTriggerHandler extends TriggerHandler {
         }
         if (accountIds.isEmpty()) return;
 
-        // Load Account + first Contact in one round-trip
         Map<Id, Account> accountsById = new Map<Id, Account>([
             SELECT Id, Name,
                    BillingStreet, BillingCity, BillingState, BillingPostalCode, BillingCountry,
@@ -53,21 +71,17 @@ public with sharing class OrderTriggerHandler extends TriggerHandler {
             Account a = accountsById.get(o.AccountId);
             if (a == null) continue;
 
-            // Primary contact = first contact on account
             Id primaryContactId = (a.Contacts != null && !a.Contacts.isEmpty()) ? a.Contacts[0].Id : null;
 
-            // ----- Contact references -----
             if (o.BillToContactId == null && primaryContactId != null) o.BillToContactId = primaryContactId;
             if (o.ShipToContactId == null && primaryContactId != null) o.ShipToContactId = primaryContactId;
 
-            // ----- Billing address (only fill blanks) -----
             if (String.isBlank(o.BillingStreet))     o.BillingStreet     = a.BillingStreet;
             if (String.isBlank(o.BillingCity))       o.BillingCity       = a.BillingCity;
             if (String.isBlank(o.BillingState))      o.BillingState      = a.BillingState;
             if (String.isBlank(o.BillingPostalCode)) o.BillingPostalCode = a.BillingPostalCode;
             if (String.isBlank(o.BillingCountry))    o.BillingCountry    = a.BillingCountry;
 
-            // ----- Shipping address (only fill blanks) -----
             String shipStreet     = String.isNotBlank(a.ShippingStreet)     ? a.ShippingStreet     : a.BillingStreet;
             String shipCity       = String.isNotBlank(a.ShippingCity)       ? a.ShippingCity       : a.BillingCity;
             String shipState      = String.isNotBlank(a.ShippingState)      ? a.ShippingState      : a.BillingState;
@@ -89,5 +103,71 @@ public with sharing class OrderTriggerHandler extends TriggerHandler {
             || String.isBlank(o.BillingCity)
             || String.isBlank(o.ShippingStreet)
             || String.isBlank(o.ShippingCity);
+    }
+
+    // ============================================================
+    // Asset creation on Order Activation (Pattern 1 — transactional)
+    // ============================================================
+    private static void createAssetsForActivatedOrders(Set<Id> orderIds) {
+        // Query OrderItems with all data needed to mint Assets
+        List<OrderItem> orderItems = [
+            SELECT Id, OrderId,
+                   Order.AccountId, Order.BillToContactId, Order.EffectiveDate, Order.OrderNumber,
+                   Product2Id, Product2.Name, Product2.ProductCode,
+                   Quantity, UnitPrice, TotalPrice
+            FROM OrderItem
+            WHERE OrderId IN :orderIds
+            AND Product2Id != null
+        ];
+
+        if (orderItems.isEmpty()) return;
+
+        // Idempotency: skip OrderItems that already have a linked Asset for this Account+Product
+        // (prevents duplicate assets if Order re-activated)
+        Set<Id> accountIds = new Set<Id>();
+        Set<Id> productIds = new Set<Id>();
+        for (OrderItem oi : orderItems) {
+            accountIds.add(oi.Order.AccountId);
+            productIds.add(oi.Product2Id);
+        }
+        Set<String> existingKeys = new Set<String>();
+        for (Asset existing : [
+            SELECT AccountId, Product2Id, Description
+            FROM Asset
+            WHERE AccountId IN :accountIds
+            AND Product2Id IN :productIds
+        ]) {
+            existingKeys.add(existing.AccountId + '|' + existing.Product2Id + '|' + (existing.Description == null ? '' : existing.Description));
+        }
+
+        List<Asset> assetsToCreate = new List<Asset>();
+        for (OrderItem oi : orderItems) {
+            String dedupKey = oi.Order.AccountId + '|' + oi.Product2Id + '|Order ' + oi.Order.OrderNumber;
+            if (existingKeys.contains(dedupKey)) continue;
+
+            Asset a = new Asset(
+                Name         = oi.Product2.Name,
+                AccountId    = oi.Order.AccountId,
+                ContactId    = oi.Order.BillToContactId,
+                Product2Id   = oi.Product2Id,
+                Quantity     = oi.Quantity,
+                Price        = oi.UnitPrice,
+                Status       = 'Purchased',
+                PurchaseDate = oi.Order.EffectiveDate != null ? oi.Order.EffectiveDate : Date.today(),
+                InstallDate  = Date.today(),
+                Description  = 'Order ' + oi.Order.OrderNumber
+            );
+            assetsToCreate.add(a);
+        }
+
+        if (!assetsToCreate.isEmpty()) {
+            Database.SaveResult[] results = Database.insert(assetsToCreate, false);
+            Integer ok = 0;
+            for (Database.SaveResult r : results) {
+                if (r.isSuccess()) ok++;
+                else System.debug(LoggingLevel.WARN, 'Asset create failed: ' + r.getErrors()[0].getMessage());
+            }
+            System.debug('Order Activation → Created ' + ok + ' Asset(s) of ' + assetsToCreate.size() + ' attempted');
+        }
     }
 }

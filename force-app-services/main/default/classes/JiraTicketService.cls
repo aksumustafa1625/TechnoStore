@@ -29,6 +29,14 @@ public with sharing class JiraTicketService {
         public String message;
     }
 
+    @future(callout=true)
+    public static void createTicketAsync(Id orderId, String reason) {
+        Request r = new Request();
+        r.orderId = orderId;
+        r.reason = reason;
+        createTicket(new List<Request>{ r });
+    }
+
     @InvocableMethod(label='Create JIRA Ticket for Out-of-Stock Order' description='Posts to JIRA Cloud REST API to open a ticket for the given Order. Writes JIRA ticket key back to Order.JIRA_Ticket_Id__c.')
     public static List<Result> createTicket(List<Request> requests) {
         List<Result> results = new List<Result>();

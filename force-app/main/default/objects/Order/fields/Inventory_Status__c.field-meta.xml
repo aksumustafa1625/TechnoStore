@@ -4,6 +4,7 @@
     <description>Tracks the warehouse inventory check state for the order. Updated by the Slack-driven approval flow via MuleSoft callback.</description>
     <label>Inventory Status</label>
     <required>false</required>
+    <trackHistory>false</trackHistory>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
