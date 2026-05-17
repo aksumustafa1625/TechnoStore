@@ -79,6 +79,16 @@
         </rules>
     </decisions>
     <description>Submits the Quote for approval with a discount-threshold rule. If Quote.Discount &gt; 20% the standard approval process runs (manager approval). Otherwise the quote is auto-approved (Status=Approved) without a human in the loop. Entry point = Quick Action on Quote layout.</description>
+    <formulas>
+        <name>Approval_Tier_Label</name>
+        <dataType>String</dataType>
+        <expression>IF({!Get_Quote.Discount} &gt; 50, "Tier 3 — VP-level approval", IF({!Get_Quote.Discount} &gt; 30, "Tier 2 — Finance approval", "Tier 1 — Manager approval"))</expression>
+    </formulas>
+    <formulas>
+        <name>Approval_Path</name>
+        <dataType>String</dataType>
+        <expression>IF({!Get_Quote.Discount} &gt; 50, "Sales Manager &#8594; Finance Director &#8594; VP Sales", IF({!Get_Quote.Discount} &gt; 30, "Sales Manager &#8594; Finance Director", "Sales Manager only"))</expression>
+    </formulas>
     <interviewLabel>Submit Quote for Approval {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Submit Quote for Approval</label>
     <processMetadataValues>
@@ -162,7 +172,7 @@
         </connector>
         <fields>
             <name>ThresholdWarning</name>
-            <fieldText>&lt;p&gt;This quote has a discount of &lt;strong&gt;{!Get_Quote.Discount}%&lt;/strong&gt;, which exceeds the 20% threshold.&lt;/p&gt;&lt;p&gt;A manager approval is required before the quote can be accepted.&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;This quote has a discount of &lt;strong&gt;{!Get_Quote.Discount}%&lt;/strong&gt;, exceeding the 20% auto-approval threshold.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;{!Approval_Tier_Label}.&lt;/strong&gt; This quote will route through {!Approval_Path}.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <fields>
