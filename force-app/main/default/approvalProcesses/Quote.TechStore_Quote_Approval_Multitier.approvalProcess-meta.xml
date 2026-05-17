@@ -62,6 +62,7 @@
         <label>VP Sales Approval</label>
         <name>VP_Sales_Approval</name>
     </approvalStep>
+    <emailTemplate>unfiled$public/Quote_Approval_Request</emailTemplate>
     <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
     <entryCriteria>
         <formula>Discount &gt; 0.20</formula>

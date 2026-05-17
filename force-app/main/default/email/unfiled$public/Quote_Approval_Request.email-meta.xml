@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <available>true</available>
+    <description>Branded TechStore approval-request email with one-click Approve / Reject buttons (pre-filled mailto reply for Email Approval Response) plus Review-in-Salesforce link. Used by all three steps of the multi-tier Quote approval matrix.</description>
+    <encodingKey>UTF-8</encodingKey>
+    <name>TechStore Quote Approval Request</name>
+    <style>none</style>
+    <subject>[TechStore] Quote Approval Required: {!Quote.Name} — {!Quote.Discount}% discount</subject>
+    <type>custom</type>
+    <uiType>Aloha</uiType>
+</EmailTemplate>
