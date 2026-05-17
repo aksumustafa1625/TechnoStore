@@ -5,48 +5,59 @@
 <div style="background:#0070D2;color:#ffffff;padding:24px 32px;">
 <div style="font-size:14px;letter-spacing:1px;opacity:0.85;">TECHSTORE B2B</div>
 <div style="font-size:22px;font-weight:700;margin-top:4px;">Quote Approval Required</div>
+<div style="font-size:14px;margin-top:8px;opacity:0.9;">Step pending your approval: <strong>{!ApprovalRequest.Step_Name}</strong></div>
 </div>
 
 <div style="padding:24px 32px;">
-<p style="margin:0 0 16px;">Hello,</p>
-<p style="margin:0 0 16px;">You have a pending quote approval. Review the deal details below and act with a single reply or click the review link.</p>
+<p style="margin:0 0 8px;">Hello {!User.FirstName},</p>
+<p style="margin:0 0 16px;">A quote has been submitted for approval and routed to <strong>you</strong> at the <strong>{!ApprovalRequest.Step_Name}</strong> step. Two ways to act on it — pick whichever fits your workflow.</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
-<tr><td style="padding:10px;background:#f4f6f9;width:140px;font-weight:600;">Quote</td><td style="padding:10px;">{!Quote.Name}</td></tr>
-<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Account</td><td style="padding:10px;">{!Quote.AccountName}</td></tr>
-<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Total</td><td style="padding:10px;">{!Quote.TotalPrice}</td></tr>
-<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Discount</td><td style="padding:10px;"><strong>{!Quote.Discount}%</strong></td></tr>
-<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Owner</td><td style="padding:10px;">{!Quote.OwnerFullName}</td></tr>
-</table>
-
-<div style="background:#fff8e1;border-left:4px solid #f9a825;padding:14px 18px;margin:20px 0;font-size:14px;">
-<strong>One-click reply approval:</strong> hit Reply on this email, type <strong>APPROVE</strong> or <strong>REJECT</strong> on the first line, then send. Salesforce processes it automatically and advances the quote to the next tier (if any).
+<div style="background:#fff3e0;border:2px solid #ef6c00;padding:14px 18px;margin:16px 0;border-radius:6px;font-size:14px;">
+<strong>Overall deal tier:</strong> {!Quote.Approval_Tier_Label__c}
 </div>
 
-<table style="margin:24px 0;width:100%;border-collapse:separate;border-spacing:8px 0;">
+<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+<tr><td style="padding:10px;background:#f4f6f9;width:160px;font-weight:600;">Quote</td><td style="padding:10px;">{!Quote.Name}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Account</td><td style="padding:10px;">{!Quote.Account}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Quote Number</td><td style="padding:10px;">{!Quote.QuoteNumber}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Subtotal</td><td style="padding:10px;">{!Quote.Subtotal}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Discount</td><td style="padding:10px;"><strong>{!Quote.Discount}%</strong></td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Total Price</td><td style="padding:10px;"><strong>{!Quote.TotalPrice}</strong></td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Grand Total</td><td style="padding:10px;">{!Quote.GrandTotal}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Expiration Date</td><td style="padding:10px;">{!Quote.ExpirationDate}</td></tr>
+<tr><td style="padding:10px;background:#f4f6f9;font-weight:600;">Submitted By</td><td style="padding:10px;">{!Quote.LastModifiedBy}</td></tr>
+</table>
+
+<div style="background:#e8f5e9;border:2px solid #2e7d32;padding:18px 22px;margin:24px 0;border-radius:6px;">
+<div style="font-size:16px;font-weight:700;color:#1b5e20;margin-bottom:8px;">Option 1 · One-click via email reply</div>
+<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;">
+<li>Hit the <strong>Reply</strong> button on this email (your email client's native button)</li>
+<li>Type <strong>APPROVE</strong> or <strong>REJECT</strong> on the very first line</li>
+<li>Send — Salesforce picks up the keyword and processes the decision automatically</li>
+</ol>
+<div style="margin-top:10px;font-size:12px;color:#558b2f;">The keyword <strong>must be on the first line</strong> — before any signature, quoted message, or other text.</div>
+</div>
+
+<div style="background:#f4f6f9;border-left:4px solid #37474f;padding:14px 18px;margin:18px 0;font-size:14px;">
+<strong>Option 2 · Review in Salesforce</strong> — open the full approval page (line items, account history, audit trail, comments) and click Approve / Reject there.
+</div>
+
+<table style="margin:20px 0;width:100%;">
 <tr>
-<td style="text-align:center;background:#2e7d32;border-radius:6px;">
-<a href="mailto:?subject=Re:%20Quote%20Approval&amp;body=APPROVE%0A%0A--%0AApproved%20via%20TechStore%20one-click%20email%20action."
-style="display:block;padding:14px 0;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;">&#10004; APPROVE</a>
-</td>
-<td style="text-align:center;background:#c62828;border-radius:6px;">
-<a href="mailto:?subject=Re:%20Quote%20Approval&amp;body=REJECT%0A%0A--%0ARejected%20via%20TechStore%20one-click%20email%20action."
-style="display:block;padding:14px 0;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;">&#10006; REJECT</a>
-</td>
-<td style="text-align:center;background:#37474f;border-radius:6px;">
+<td style="text-align:center;background:#0070D2;border-radius:6px;">
 <a href="{!ApprovalRequest.External_URL}"
-style="display:block;padding:14px 0;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;">REVIEW IN SALESFORCE</a>
+style="display:block;padding:16px 0;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;">REVIEW IN SALESFORCE</a>
 </td>
 </tr>
 </table>
 
 <p style="font-size:12px;color:#888888;margin-top:24px;">
-The Approve / Reject buttons open your email client with a pre-filled reply. Click Send to dispatch — the Email Approval Response service will pick up the keyword and act. The Review in Salesforce button opens the full approval page with extra context (line items, account history, audit trail).
+Multi-tier approval matrix: Sales Manager (20-30%) → Finance Director (30-50%) → VP Sales (50%+). Each tier receives a fresh notification once the prior tier approves; you are the assigned approver for this specific step.
 </p>
 </div>
 
 <div style="background:#f4f6f9;padding:14px 32px;font-size:11px;color:#888888;text-align:center;">
-TechStore B2B Quote-to-Cash · Multi-Tier Approval Matrix · This email is auto-generated; do not delete the original headers when replying.
+TechStore B2B Quote-to-Cash · Email Approval Response enabled · Keep original headers intact when replying.
 </div>
 
 </div>

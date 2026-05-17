@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Approval_Tier_Label__c</fullName>
+    <description>Auto-computed approval tier label based on Discount: 20-30% = Tier 1 (Sales Manager), 30-50% = Tier 2 (Finance Director), 50%+ = Tier 3 (VP Sales). Used in approval emails so the recipient sees which deal-desk tier this quote escalated to.</description>
+    <externalId>false</externalId>
+    <formula>IF(Discount &gt; 0.50, "Tier 3 - VP Sales Approval",
+IF(Discount &gt; 0.30, "Tier 2 - Finance Director Approval",
+IF(Discount &gt; 0.20, "Tier 1 - Sales Manager Approval",
+"Auto-Approved (under 20%)")))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Approval Tier Label</label>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
