@@ -89,6 +89,11 @@
         <dataType>String</dataType>
         <expression>IF({!Get_Quote.Discount} &gt; 50, "Sales Manager &#8594; Finance Director &#8594; VP Sales", IF({!Get_Quote.Discount} &gt; 30, "Sales Manager &#8594; Finance Director", "Sales Manager only"))</expression>
     </formulas>
+    <formulas>
+        <name>Threshold_Reference</name>
+        <dataType>String</dataType>
+        <expression>IF({!Get_Quote.Discount} &gt; 50, "50%", IF({!Get_Quote.Discount} &gt; 30, "30%", "20%"))</expression>
+    </formulas>
     <interviewLabel>Submit Quote for Approval {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Submit Quote for Approval</label>
     <processMetadataValues>
@@ -172,7 +177,7 @@
         </connector>
         <fields>
             <name>ThresholdWarning</name>
-            <fieldText>&lt;p&gt;This quote has a discount of &lt;strong&gt;{!Get_Quote.Discount}%&lt;/strong&gt;, exceeding the 20% auto-approval threshold.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;{!Approval_Tier_Label}.&lt;/strong&gt; This quote will route through {!Approval_Path}.&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;This quote has a discount of &lt;strong&gt;{!Get_Quote.Discount}%&lt;/strong&gt;, exceeding the &lt;strong&gt;{!Threshold_Reference}&lt;/strong&gt; approval threshold.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;{!Approval_Tier_Label}.&lt;/strong&gt; This quote will route through {!Approval_Path}.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <fields>
@@ -226,7 +231,7 @@
         <allowPause>false</allowPause>
         <fields>
             <name>ManagerApprovalText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;Quote submitted for manager approval.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Status is now &lt;strong&gt;In Review&lt;/strong&gt;. The assigned approver will receive an email notification.&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;Quote submitted — {!Approval_Tier_Label}.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Routing through &lt;strong&gt;{!Approval_Path}&lt;/strong&gt;.&lt;/p&gt;&lt;p&gt;Status is now &lt;strong&gt;In Review&lt;/strong&gt;. The first approver will receive an email notification; the quote will advance automatically as each step is approved.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <showFooter>true</showFooter>
