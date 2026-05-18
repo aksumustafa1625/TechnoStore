@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Inventory_Checked_At__c</fullName>
+    <description>Timestamp of the most recent SapMaterialStockService.checkOrderStock call for this Order. Used in dashboards to spot stale ATP data and in audit reports to correlate SF inventory decisions with SAP state at decision time.</description>
+    <externalId>false</externalId>
+    <label>SAP Inventory Checked At</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
