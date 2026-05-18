@@ -11,8 +11,7 @@
         <chartType>Donut</chartType>
         <enableHoverLabels>true</enableHoverLabels>
         <expandOthers>true</expandOthers>
-        <groupingColumn>Integration_Error__c.Severity__c</groupingColumn>
-        <legendPosition>Right</legendPosition>
+        <groupingColumn>Integration_Error__c$Severity__c</groupingColumn>
         <showValues>true</showValues>
         <size>Medium</size>
         <summaryAxisRange>Auto</summaryAxisRange>
@@ -23,28 +22,22 @@
         <titleSize>14</titleSize>
     </chart>
     <columns>
-        <field>Integration_Error__c.Severity__c</field>
+        <field>Integration_Error__c$Source_System__c</field>
     </columns>
     <columns>
-        <field>Integration_Error__c.Error_Type__c</field>
-    </columns>
-    <columns>
-        <field>Integration_Error__c.Source_System__c</field>
-    </columns>
-    <columns>
-        <field>Integration_Error__c.Operation__c</field>
+        <field>Integration_Error__c$Operation__c</field>
     </columns>
     <format>Summary</format>
     <groupingsDown>
-        <field>Integration_Error__c.Severity__c</field>
+        <field>Integration_Error__c$Severity__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <groupingsDown>
-        <field>Integration_Error__c.Error_Type__c</field>
+        <field>Integration_Error__c$Error_Type__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>Errors by Type and Severity</name>
-    <reportType>Integration_Errors</reportType>
+    <reportType>Integration_Errors__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>

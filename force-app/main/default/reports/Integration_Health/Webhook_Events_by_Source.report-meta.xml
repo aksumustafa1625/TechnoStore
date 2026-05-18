@@ -11,9 +11,7 @@
         <chartType>VerticalColumn</chartType>
         <enableHoverLabels>true</enableHoverLabels>
         <expandOthers>true</expandOthers>
-        <groupingColumn>Webhook_Event__c.Source__c</groupingColumn>
-        <legendPosition>Bottom</legendPosition>
-        <secondaryGroupingColumn>Webhook_Event__c.Status__c</secondaryGroupingColumn>
+        <groupingColumn>Webhook_Event__c$Source__c</groupingColumn>
         <showAxisLabels>true</showAxisLabels>
         <showValues>true</showValues>
         <size>Medium</size>
@@ -25,23 +23,17 @@
         <titleSize>14</titleSize>
     </chart>
     <columns>
-        <field>Webhook_Event__c.Source__c</field>
+        <field>Webhook_Event__c$Event_Type__c</field>
     </columns>
     <columns>
-        <field>Webhook_Event__c.Status__c</field>
+        <field>Webhook_Event__c$External_Id__c</field>
     </columns>
     <columns>
-        <field>Webhook_Event__c.Event_Type__c</field>
-    </columns>
-    <columns>
-        <field>Webhook_Event__c.External_Id__c</field>
-    </columns>
-    <columns>
-        <field>Webhook_Event__c.CreatedDate</field>
+        <field>Webhook_Event__c$CreatedDate</field>
     </columns>
     <filter>
         <criteriaItems>
-            <column>Webhook_Event__c.CreatedDate</column>
+            <column>Webhook_Event__c$CreatedDate</column>
             <columnToColumn>false</columnToColumn>
             <operator>equals</operator>
             <value>LAST_N_DAYS:7</value>
@@ -49,15 +41,15 @@
     </filter>
     <format>Matrix</format>
     <groupingsAcross>
-        <field>Webhook_Event__c.Status__c</field>
+        <field>Webhook_Event__c$Status__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsAcross>
     <groupingsDown>
-        <field>Webhook_Event__c.Source__c</field>
+        <field>Webhook_Event__c$Source__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
     <name>Webhook Events — Source x Status (7d)</name>
-    <reportType>Webhook_Events</reportType>
+    <reportType>Webhook_Events__c</reportType>
     <scope>organization</scope>
     <showDetails>false</showDetails>
     <showGrandTotal>true</showGrandTotal>

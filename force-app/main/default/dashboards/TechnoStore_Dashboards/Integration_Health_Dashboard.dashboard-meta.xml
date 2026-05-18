@@ -8,6 +8,7 @@
     <dashboardChartTheme>light</dashboardChartTheme>
     <dashboardColorPalette>unity</dashboardColorPalette>
     <dashboardGridLayout>
+        <rowHeight>40</rowHeight>
         <dashboardGridComponents>
             <colSpan>6</colSpan>
             <columnIndex>0</columnIndex>
@@ -99,12 +100,8 @@
                 <indicatorHighColor>#54C254</indicatorHighColor>
                 <indicatorLowColor>#C25454</indicatorLowColor>
                 <indicatorMiddleColor>#C2C254</indicatorMiddleColor>
-                <legendPosition>Bottom</legendPosition>
                 <report>Integration_Health/Unresolved_Critical_Errors</report>
-                <showPercentage>false</showPercentage>
                 <showPicturesOnTables>false</showPicturesOnTables>
-                <showTotal>true</showTotal>
-                <showValues>false</showValues>
                 <sortBy>RowValueDescending</sortBy>
                 <title>Unresolved — Critical + Error</title>
                 <useReportChart>false</useReportChart>
