@@ -71,9 +71,9 @@ Always pair-check `.gitignore` before adding a new credential file. Templates (`
 - Don't add a synchronous callout immediately after `Approval.process()` or any DML
 - Don't claim production traffic in interview narrative — say "demo verified" or "local end-to-end test"
 
-## SAP Integration Sprint — COMPLETE (2026-05-18 ~20:30)
+## SAP Integration Sprint — COMPLETE (2026-05-18 ~20:45)
 
-All 5 reviewer-flagged SAP showcases shipped in a single Saturday session. ADR catalogue is now contiguous 001-026, no gaps. Webhook idempotency + Integration_Error__c + Integration Health dashboard are live. Multi-tier discount approval + branded email response + tier-aware UX are live.
+All 6 SAP showcases shipped in a single Saturday session — 5 from the reviewer's enterprise-realism critique plus the Customer Master Sync sibling from the broader 8-phase vision. ADR catalogue is now contiguous 001-027, no gaps. Webhook idempotency + Integration_Error__c + Integration Health dashboard are live. Multi-tier discount approval + branded email response + tier-aware UX are live.
 
 ### What's in the org
 
@@ -84,6 +84,7 @@ All 5 reviewer-flagged SAP showcases shipped in a single Saturday session. ADR c
 | 3 | Tax Determination | `API_DETERMINE_TAX_SRV` (license-gated in sandbox) | `SapTaxCalculationService` (try SAP → country fallback table) | `Invoice.SAP_Tax_Amount__c`, `Invoice.SAP_Tax_Rate__c`, `Invoice.SAP_Tax_Calculated_At__c`, `Invoice.Tax_Engine_Used__c` | ADR-024 | `650f9b8` |
 | 4 | Payment Reconciliation | CAMT.053 XML parser (ISO 20022) | `SapPaymentReconciliationService` | `Invoice.Payment_Method__c`, `Invoice.SAP_Payment_Reference__c`, `Invoice.SAP_Payment_Posted_At__c` | ADR-025 | `288a95a` |
 | 5 | Material Master Sync | `API_PRODUCT_SRV` GET | `SapMaterialMasterSyncService` (upsert by SAP_Material_Number__c) | `Product2.SAP_Last_Synced_At__c`, `Product2.SAP_Product_Description__c` | ADR-026 | `71fdd0d` |
+| 6 | Customer Master Sync | `API_BUSINESS_PARTNER` GET | `SapCustomerMasterSyncService` (upsert by SAP_BP_Number__c) | `Account.SAP_BP_Number__c`, `Account.SAP_Customer_Category__c`, `Account.SAP_Customer_Group__c`, `Account.SAP_Last_Synced_At__c` | ADR-027 | `4af5584` |
 
 ### Hybrid + transparency patterns shared across all 5
 
