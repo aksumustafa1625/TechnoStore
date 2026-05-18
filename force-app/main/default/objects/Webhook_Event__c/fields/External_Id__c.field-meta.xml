@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>External_Id__c</fullName>
+    <description>Provider's unique event ID — Stripe evt_*, DocuSign envelopeId+event, JIRA issueKey+changelogTimestamp. Marked Unique so the DB blocks duplicate-event inserts even under race conditions (defense-in-depth alongside Apex pre-check).</description>
+    <externalId>true</externalId>
+    <label>External Id</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

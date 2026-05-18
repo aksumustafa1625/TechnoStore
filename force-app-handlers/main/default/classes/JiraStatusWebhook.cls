@@ -24,6 +24,12 @@
  *
  * Secret must match Inventory_Integration_Config__mdt.Default.Shared_Secret__c.
  *
+ * Idempotency: every accepted event is recorded in Webhook_Event__c via WebhookEventLogger.
+ * If the same issueKey+status+timestamp combination arrives again, the duplicate short-circuits
+ * with 200 OK and Status=Duplicate. Stripe and JIRA both deliver at-least-once; without this
+ * layer a retry causes the Order to re-activate and a duplicate Asset / FeedItem cascade.
+ * Failures route to Integration_Error__c so the ops dashboard surfaces them.
+ *
  * Pattern (mirrors DocuSignConnectWebhook + InventoryCheckCallback): the endpoint runs as
  * the Site Guest User with no direct Order edit permission. It publishes an
  * Inventory_Status_Update__e platform event; the after-insert trigger handler then updates
@@ -38,6 +44,8 @@ global without sharing class JiraStatusWebhook {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
         String body = (req.requestBody == null) ? '' : req.requestBody.toString();
+        String correlationId = IntegrationErrorLogger.newCorrelationId();
+        WebhookEventLogger.RecordResult eventRecord = null;
 
         try {
             Inventory_Integration_Config__mdt config = Inventory_Integration_Config__mdt.getInstance('Default');
@@ -59,12 +67,14 @@ global without sharing class JiraStatusWebhook {
             try {
                 payload = (Map<String, Object>) JSON.deserializeUntyped(body);
             } catch (Exception parseEx) {
+                IntegrationErrorLogger.log('JIRA', 'JiraStatusWebhook JSON parse', parseEx, null, correlationId);
                 respond(res, 400, 'Invalid JSON body.');
                 return;
             }
 
             String issueKey = extractIssueKey(payload);
             String status   = extractStatus(payload);
+            String timestamp = extractTimestamp(payload);
 
             if (String.isBlank(issueKey) || String.isBlank(status)) {
                 respond(res, 400, 'Missing issueKey or status (neither custom shape nor JIRA native webhook shape detected).');
@@ -75,6 +85,14 @@ global without sharing class JiraStatusWebhook {
                 return;
             }
 
+            // Idempotency check — same issueKey+status+timestamp deduped at DB level via Unique constraint.
+            String externalId = issueKey + '|' + status + (String.isBlank(timestamp) ? '' : ('|' + timestamp));
+            eventRecord = WebhookEventLogger.checkAndRecord(externalId, 'JIRA', 'jira:issue_updated', body);
+            if (eventRecord.isDuplicate) {
+                respond(res, 200, 'Event ' + externalId + ' already processed — duplicate delivery dropped.');
+                return;
+            }
+
             List<Order> orders = [
                 SELECT Id, Status
                 FROM Order
@@ -82,12 +100,14 @@ global without sharing class JiraStatusWebhook {
                 LIMIT 1
             ];
             if (orders.isEmpty()) {
+                WebhookEventLogger.markProcessed(eventRecord.row, null);
                 respond(res, 404, 'No Order linked to JIRA issue ' + issueKey + '.');
                 return;
             }
 
             Order o = orders[0];
             if (o.Status == 'Activated') {
+                WebhookEventLogger.markProcessed(eventRecord.row, o.Id);
                 respond(res, 200, 'Order already Activated for ' + issueKey + ' — no action taken.');
                 return;
             }
@@ -99,11 +119,29 @@ global without sharing class JiraStatusWebhook {
             );
             Database.SaveResult sr = EventBus.publish(evt);
             if (!sr.isSuccess()) {
-                respond(res, 500, 'Event publish failed: ' + sr.getErrors()[0].getMessage());
+                String pubErr = sr.getErrors()[0].getMessage();
+                IntegrationErrorLogger.Request errReq = new IntegrationErrorLogger.Request();
+                errReq.sourceSystem = 'JIRA';
+                errReq.operation = 'EventBus.publish Inventory_Status_Update__e';
+                errReq.errorMessage = pubErr;
+                errReq.errorType = 'Downstream';
+                errReq.severity = 'Critical';
+                errReq.relatedRecordId = o.Id;
+                errReq.correlationId = correlationId;
+                errReq.payload = body;
+                IntegrationErrorLogger.log(errReq);
+                WebhookEventLogger.markFailed(eventRecord.row, new EventPublishException(pubErr));
+                respond(res, 500, 'Event publish failed: ' + pubErr);
                 return;
             }
+
+            WebhookEventLogger.markProcessed(eventRecord.row, o.Id);
             respond(res, 200, 'Order activation queued for ' + issueKey + '.');
         } catch (Exception e) {
+            IntegrationErrorLogger.log('JIRA', 'JiraStatusWebhook unhandled', e, null, correlationId);
+            if (eventRecord != null && eventRecord.row != null) {
+                WebhookEventLogger.markFailed(eventRecord.row, e);
+            }
             respond(res, 500, e.getTypeName() + ': ' + e.getMessage());
         }
     }
@@ -114,6 +152,8 @@ global without sharing class JiraStatusWebhook {
         RestContext.response.responseBody = Blob.valueOf('{"status":"ok","service":"JiraStatusWebhook"}');
         RestContext.response.addHeader('Content-Type', 'application/json');
     }
+
+    public class EventPublishException extends Exception {}
 
     private static String extractIssueKey(Map<String, Object> p) {
         if (p == null) return null;
@@ -151,6 +191,12 @@ global without sharing class JiraStatusWebhook {
                 }
             }
         }
+        return null;
+    }
+
+    private static String extractTimestamp(Map<String, Object> p) {
+        if (p == null) return null;
+        if (p.get('timestamp') != null) return String.valueOf(p.get('timestamp'));
         return null;
     }
 

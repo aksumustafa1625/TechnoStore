@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Retry_Count__c</fullName>
+    <description>How many automatic retries the upstream system attempted before logging the error. Stripe webhook retries up to 3 days at exponential backoff; Mule until-successful retries per flow config. Helps distinguish transient vs persistent failures.</description>
+    <externalId>false</externalId>
+    <label>Retry Count</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

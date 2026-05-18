@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Payload__c</fullName>
+    <description>Request/response body at the moment of failure. Stripe/DocuSign webhook body for inbound failures; Sendcloud/SAP REST body for outbound callout failures.</description>
+    <externalId>false</externalId>
+    <label>Payload</label>
+    <length>32768</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

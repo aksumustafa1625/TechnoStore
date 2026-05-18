@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Correlation_Id__c</fullName>
+    <description>UUID propagated across SF → Mule → external provider hops. Lets ops triage trace a single business transaction end-to-end even when failures span systems. Generated at the SF entry point (Apex or Flow) and passed as X-Correlation-Id header on every downstream callout.</description>
+    <externalId>true</externalId>
+    <label>Correlation Id</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

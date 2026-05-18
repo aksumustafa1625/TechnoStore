@@ -6,6 +6,8 @@ global without sharing class DocuSignConnectWebhook {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
         String body = req.requestBody == null ? '' : req.requestBody.toString();
+        String correlationId = IntegrationErrorLogger.newCorrelationId();
+        WebhookEventLogger.RecordResult eventRecord = null;
 
         try {
             Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(body);
@@ -17,17 +19,42 @@ global without sharing class DocuSignConnectWebhook {
                 return;
             }
 
+            // Idempotency check — DocuSign Connect retries on timeout/non-2xx; same envelope-status
+            // pair must only fire once. External_Id = envelopeId + "|" + status.
+            String externalId = envelopeId + '|' + dsStatus;
+            eventRecord = WebhookEventLogger.checkAndRecord(externalId, 'DocuSign', 'envelope-' + dsStatus, body);
+            if (eventRecord.isDuplicate) {
+                respondJson(res, 200, 'Event already processed — duplicate delivery dropped', envelopeId, dsStatus);
+                return;
+            }
+
             DocuSign_Status_Update__e evt = new DocuSign_Status_Update__e(
                 Envelope_Id__c = envelopeId,
                 DocuSign_Status__c = dsStatus
             );
             Database.SaveResult sr = EventBus.publish(evt);
             if (!sr.isSuccess()) {
-                respondJson(res, 500, 'Event publish failed: ' + sr.getErrors()[0].getMessage(), envelopeId, dsStatus);
+                String pubErr = sr.getErrors()[0].getMessage();
+                IntegrationErrorLogger.Request errReq = new IntegrationErrorLogger.Request();
+                errReq.sourceSystem = 'DocuSign';
+                errReq.operation = 'EventBus.publish DocuSign_Status_Update__e';
+                errReq.errorMessage = pubErr;
+                errReq.errorType = 'Downstream';
+                errReq.severity = 'Critical';
+                errReq.correlationId = correlationId;
+                errReq.payload = body;
+                IntegrationErrorLogger.log(errReq);
+                WebhookEventLogger.markFailed(eventRecord.row, new EventPublishException(pubErr));
+                respondJson(res, 500, 'Event publish failed: ' + pubErr, envelopeId, dsStatus);
                 return;
             }
+            WebhookEventLogger.markProcessed(eventRecord.row, null);
             respondJson(res, 200, 'Event published', envelopeId, dsStatus);
         } catch (Exception e) {
+            IntegrationErrorLogger.log('DocuSign', 'DocuSignConnectWebhook unhandled', e, null, correlationId);
+            if (eventRecord != null && eventRecord.row != null) {
+                WebhookEventLogger.markFailed(eventRecord.row, e);
+            }
             respondJson(res, 500, e.getTypeName() + ': ' + e.getMessage(), null, null);
         }
     }
@@ -38,6 +65,8 @@ global without sharing class DocuSignConnectWebhook {
         RestContext.response.responseBody = Blob.valueOf('{"status":"ok"}');
         RestContext.response.addHeader('Content-Type', 'application/json');
     }
+
+    public class EventPublishException extends Exception {}
 
     @SuppressWarnings('PMD.CognitiveComplexity')
     private static String extractEnvelopeId(Map<String, Object> p) {
