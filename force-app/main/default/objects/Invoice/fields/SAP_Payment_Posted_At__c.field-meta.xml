@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Payment_Posted_At__c</fullName>
+    <description>When SAP posted the payment receipt to the Invoice's accounts receivable line. Sourced from the CAMT.053 ValueDate (when the bank actually credited the account, not when SAP processed the file). Used to compute Days-Sales-Outstanding and ageing reports.</description>
+    <externalId>false</externalId>
+    <label>SAP Payment Posted At</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

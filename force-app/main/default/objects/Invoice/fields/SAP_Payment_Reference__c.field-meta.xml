@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Payment_Reference__c</fullName>
+    <description>Bank transaction reference id from the CAMT.053 statement that closed this Invoice. Used to audit the SAP-side reconciliation match. Format is bank-specific (BIC + value-date + sequence number). Populated by SapPaymentReconciliationService when a CAMT line matches this Invoice by amount + reference.</description>
+    <externalId>true</externalId>
+    <label>SAP Payment Reference</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
