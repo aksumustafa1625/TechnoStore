@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Customer_Group__c</fullName>
+    <description>SAP BusinessPartnerGrouping code (e.g. BP01, BP02, BP03). Determines pricing terms, payment conditions, credit limits in SAP. Surfaces in SF so reps can see customer tier at a glance without jumping to SAP. Pure mirror — SF never writes this back to SAP.</description>
+    <label>SAP Customer Group</label>
+    <length>10</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

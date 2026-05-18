@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Last_Synced_At__c</fullName>
+    <description>Timestamp of the last SapCustomerMasterSyncService run that touched this Account record. Used by Integration Health dashboard to spot stale customer data and by audit reports to verify the nightly sync ran. Null = never synced from SAP (Account is either SF-only legacy data or never matched a BP).</description>
+    <externalId>false</externalId>
+    <label>SAP Last Synced At</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
