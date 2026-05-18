@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Fired by OrderTriggerHandler.afterUpdate whenever an Order transitions to Status=Activated. Subscribed by the platform-event trigger that hands off to SapSalesOrderService for SAP SD posting (ADR-023). Decoupling SF-side activation from outbound SAP integration via this event lets the activation transaction commit cleanly before any SAP callout runs (avoids "uncommitted work pending" on synchronous push patterns).</description>
+    <eventType>HighVolume</eventType>
+    <label>Order Activated</label>
+    <pluralLabel>Order Activated Events</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status_In_SAP__c</fullName>
+    <description>Mirror of the Order's lifecycle status in SAP SD. Populated by SapSalesOrderService when the SAP push succeeds, kept in sync with SAP events (future ADR-???: SAP→SF event mesh subscription).</description>
+    <label>Status In SAP</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Not Yet Pushed</fullName>
+                <default>true</default>
+                <label>Not Yet Pushed</label>
+            </value>
+            <value>
+                <fullName>Pushing</fullName>
+                <default>false</default>
+                <label>Pushing</label>
+            </value>
+            <value>
+                <fullName>Created</fullName>
+                <default>false</default>
+                <label>Created</label>
+            </value>
+            <value>
+                <fullName>Push Failed</fullName>
+                <default>false</default>
+                <label>Push Failed</label>
+            </value>
+            <value>
+                <fullName>Fulfilled</fullName>
+                <default>false</default>
+                <label>Fulfilled</label>
+            </value>
+            <value>
+                <fullName>Cancelled</fullName>
+                <default>false</default>
+                <label>Cancelled</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Sales_Order_Number__c</fullName>
+    <description>SAP SD Sales Order document number returned by API_SALES_ORDER_SRV after the Order acknowledgment push (ADR-023). Populated by SapSalesOrderService.publishToSap when the SAP push succeeds. Format is SAP's internal SO numbering (10-digit string with leading zeros, e.g. 0090000456). Null = SAP push has not yet succeeded for this Order; populated value = SAP has the SO recorded for fulfillment + billing.</description>
+    <externalId>true</externalId>
+    <label>SAP Sales Order Number</label>
+    <length>20</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

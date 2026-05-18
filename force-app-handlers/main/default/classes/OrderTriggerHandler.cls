@@ -43,7 +43,25 @@ public with sharing class OrderTriggerHandler extends TriggerHandler {
         }
         if (!ordersJustActivated.isEmpty()) {
             createAssetsForActivatedOrders(ordersJustActivated);
+            publishOrderActivatedEvents(ordersJustActivated);
         }
+    }
+
+    // ============================================================
+    // Publish Order_Activated__e platform event for SAP SD push (ADR-023)
+    // ============================================================
+    private static void publishOrderActivatedEvents(Set<Id> orderIds) {
+        if (orderIds.isEmpty()) return;
+        List<Order_Activated__e> events = new List<Order_Activated__e>();
+        for (Order o : [SELECT Id, OrderNumber, TotalAmount, Account.Name FROM Order WHERE Id IN :orderIds]) {
+            events.add(new Order_Activated__e(
+                Order_Id__c     = o.Id,
+                Order_Number__c = o.OrderNumber,
+                Account_Name__c = (o.Account != null) ? o.Account.Name : null,
+                Total_Amount__c = o.TotalAmount
+            ));
+        }
+        if (!events.isEmpty()) EventBus.publish(events);
     }
 
     // ============================================================
