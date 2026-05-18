@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Tax_Amount__c</fullName>
+    <description>Tax amount calculated by the SAP-side determination path (SapTaxCalculationService — ADR-024). Coexists with the native commercetax.TaxEngineAdapter chain that runs on Invoice generation; this field is the SAP-parallel reading for production-readiness verification. Populated as a side-effect of SapTaxCalculationService.calculateForInvoice; null until the service is run.</description>
+    <externalId>false</externalId>
+    <label>SAP Tax Amount</label>
+    <precision>16</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

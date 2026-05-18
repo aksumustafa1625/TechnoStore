@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SAP_Tax_Rate__c</fullName>
+    <description>Tax rate (percent) returned by SapTaxCalculationService. Examples: 19.00 for DE standard VAT, 20.00 for AT, 7.70 for CH, 21.00 for NL, 20.00 for FR. Picks up reduced rates (7% DE for some product categories) once the SAP_Material_Number__c is populated with reduced-rate-classified products.</description>
+    <externalId>false</externalId>
+    <label>SAP Tax Rate</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <type>Percent</type>
+</CustomField>
