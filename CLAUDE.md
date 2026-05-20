@@ -113,6 +113,31 @@ The mulesoft/sap-integration-FULL.xml file still has only the one BP-query test 
 
 Full sprint detail in `[memory] sap_integration_sprint_checkpoint.md`. ADRs 022-026 in `docs/adr/` carry the per-phase rationale + future-state notes.
 
+## DACH Finance Integration — COMPLETE (2026-05-21)
+
+Closes the Quote-to-Cash loop into German accounting. Two segments, two patterns (ADR-030 + ADR-031). All on the standard **Invoice** (Industries Billing) object — same record as Stripe + SAP tax/payment + Payment Journey LWC.
+
+| Segment | Integration | Pattern | Trigger | Verified |
+|---------|-------------|---------|---------|----------|
+| SME cloud accounting | **lexoffice** (Lexware Office) | Real REST API (POST contact + invoice) | **Event-driven**: `InvoiceTrigger` on `Stripe_Payment_Status__c` → 'Paid' calls `LexofficeInvoiceService.publishAsync` (@future). Idempotent on `Lexoffice_Status__c != Published` | ✅ Rechnung auto-created in lexoffice web UI (eb6daa9b) |
+| Steuerberater / enterprise | **DATEV** | File-based CSV (DATEV-konform Buchungsstapel) | Manual LWC button `invoiceFinanceActions` (+ `DatevExportRest` endpoint) | ✅ SKR04, UTF-8 BOM, German comma/DDMM |
+
+### Key facts
+
+- **lexoffice is automatic, DATEV is a button.** lexoffice publishes on payment (no click). DATEV is closed-by-design — opening a DATEV-Konto needs a 16-digit invitation code (existing customers / Steuerberater only); DATEVconnect Online API needs partner registration. So DATEV = generate-CSV-here, Steuerberater-imports-it. No DATEV account dependency.
+- **Config**: `Lexoffice_Config__c` (Protected Custom Setting, API key set via gitignored `scripts/setup_lexoffice_config.apex`). Remote Site `Lexoffice_API`. DATEV needs no external config.
+- **New fields**: `Invoice.Lexoffice_Invoice_Id__c / Lexoffice_Status__c / Lexoffice_Published_At__c`, `Account.DATEV_Debitor_Number__c` (SKR04 Debitor, auto-allocated from 10001). All added to `Inventory_Field_Access` permission set (FLS needed for SOQL reads — Apex DML bypasses FLS but SOQL/queries don't).
+- **Payment Journey LWC** gained a step "InvoiceTrigger → lexoffice: Rechnung created" after "Invoice marked Paid".
+- **DACH locale gotchas handled in DATEV CSV**: comma decimal (1449,00), Belegdatum DDMM, UTF-8 BOM (so Excel/DATEV render umlauts), `@AuraEnabled` on Result class (needed for LWC, not just `@InvocableVariable`).
+
+### SAP Phase 7 webhook (resolved 2026-05-21)
+
+Yesterday's 503 was the Postman placeholder Site URL. Fixed: call the authenticated REST endpoint `{SF_INSTANCE_URL}/services/apexrest/sap/event` with Bearer token + X-SAP-Secret. Verified 200 "dispatched". For recording, the cleaner path is anonymous Apex `scripts/demo_phase7_inbound.apex` (toggles Account.SAP_Customer_Group__c BP01↔BP02, no token expiry). SAP Event Mesh itself is BTP-only (not in trial) — Phase 7 events are honestly narrated as simulated; the dispatcher code is production-ready.
+
+### Resumption pointer
+
+Full detail in `[memory] dach_finance_integration_complete.md`. ADR-030 (lexoffice), ADR-031 (DATEV), ADR-029 (SAP trial limitation). ADR catalogue now contiguous 001-031.
+
 ## Memory
 
 User has persistent memory at `C:\Users\DELL\.claude\projects\c--Users-DELL-Documents-Projects-TechnoStore\memory\`. Key files indexed in `MEMORY.md`. Update memory after significant decisions; don't duplicate code-derivable facts.

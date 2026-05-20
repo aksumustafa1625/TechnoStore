@@ -9,8 +9,9 @@ import EMAIL_FIELD from '@salesforce/schema/Invoice.BillToContact.Email';
 import MODIFIED_FIELD from '@salesforce/schema/Invoice.LastModifiedDate';
 import HAS_PHYSICAL_FIELD from '@salesforce/schema/Invoice.Has_Physical__c';
 import HAS_DIGITAL_FIELD from '@salesforce/schema/Invoice.Has_Digital__c';
+import LEXOFFICE_STATUS_FIELD from '@salesforce/schema/Invoice.Lexoffice_Status__c';
 
-const FIELDS = [STATUS_FIELD, URL_FIELD, INTENT_FIELD, PAID_FIELD, EMAIL_FIELD, MODIFIED_FIELD, HAS_PHYSICAL_FIELD, HAS_DIGITAL_FIELD];
+const FIELDS = [STATUS_FIELD, URL_FIELD, INTENT_FIELD, PAID_FIELD, EMAIL_FIELD, MODIFIED_FIELD, HAS_PHYSICAL_FIELD, HAS_DIGITAL_FIELD, LEXOFFICE_STATUS_FIELD];
 const POLL_INTERVAL_MS = 4000;
 
 export default class PaymentJourney extends LightningElement {
@@ -57,6 +58,10 @@ export default class PaymentJourney extends LightningElement {
     get customerEmail() {
         if (!this.hasData) return 'customer';
         return getFieldValue(this.invoice.data, EMAIL_FIELD) || 'customer';
+    }
+
+    get lexofficePublished() {
+        return this.hasData && getFieldValue(this.invoice.data, LEXOFFICE_STATUS_FIELD) === 'Published';
     }
 
     get hasPhysical() {
@@ -153,6 +158,15 @@ export default class PaymentJourney extends LightningElement {
                 detail: isPaid ? 'Marked Paid at ' + this.formatDate(this.paidDate) : 'Webhook listener idle',
                 done: isPaid,
                 current: false
+            },
+            {
+                key: '8b',
+                title: 'InvoiceTrigger → lexoffice: Rechnung created',
+                detail: this.lexofficePublished
+                    ? 'Auto-published to lexoffice (German cloud accounting) — visible in lexoffice web UI'
+                    : (isPaid ? 'Publishing to lexoffice...' : 'Waiting for payment'),
+                done: this.lexofficePublished,
+                current: isPaid && !this.lexofficePublished
             }
         ];
 

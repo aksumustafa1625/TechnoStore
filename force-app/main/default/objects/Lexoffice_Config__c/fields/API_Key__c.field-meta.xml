@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>API_Key__c</fullName>
+    <description>lexoffice public API key (UUID). Sent as Bearer token on every callout. Treat as secret — populated via gitignored scripts/setup_lexoffice_config.apex, never committed.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Get from app.lexoffice.de -> Einstellungen -> Öffentliche API -> Neuen API-Schlüssel erstellen. UUID format.</inlineHelpText>
+    <label>API Key</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

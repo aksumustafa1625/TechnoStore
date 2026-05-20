@@ -1,0 +1,1 @@
+System.debug(JSON.serialize(new List<String>(Demo_Invoice__c.SObjectType.getDescribe().fields.getMap().keySet())));

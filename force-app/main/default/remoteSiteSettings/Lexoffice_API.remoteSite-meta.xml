@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RemoteSiteSetting xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>lexoffice (Lexware Office) public API endpoint. Used by Apex callouts to POST contacts and invoices to the German SME cloud accounting platform (ADR-030). Endpoints under /v1/*.</description>
+    <disableProtocolSecurity>false</disableProtocolSecurity>
+    <isActive>true</isActive>
+    <url>https://api.lexoffice.io</url>
+</RemoteSiteSetting>

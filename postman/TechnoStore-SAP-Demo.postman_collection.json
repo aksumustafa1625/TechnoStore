@@ -1,0 +1,394 @@
+{
+  "info": {
+    "_postman_id": "44444444-aaaa-bbbb-cccc-444444444444",
+    "name": "TechnoStore SAP Demo (7 Phases)",
+    "description": "Tek tıkla demo: 7 SAP entegrasyon fazının gerçek API çağrıları. Tüm istekler **sandbox.api.sap.com** (SAP API Hub Sandbox — gerçek SAP altyapısı) hedefini kullanır.\n\n**Honest demo notu**: Her istek **gerçek SAP altyapısına** gider, gerçek response döner. Sandbox read-mostly modunda olduğu için POST'lar (Phase 2) 200 dönse de persist etmez — bu transparent davranış audit field'larda görünür (`Status_In_SAP__c=Push Failed`).\n\nDemo recording'de her phase için:\n1. `Send` butonuna tıkla\n2. Real request / response paneline bak\n3. Aynı çağrı Salesforce Apex'ten de yapılıyor (split-screen)\n\nEnvironment **TechnoStore SAP Demo Env** aktif olmalı. `SAP_API_KEY` değerini SAP API Hub hesabınızdan alın (gitignored değil — placeholder).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Phase 1 — ATP Check (Material Stock)",
+      "description": "GET available stock for a material from SAP MM. Apex servisi: `SapMaterialStockService.checkOrderStock()`. ADR-022.",
+      "item": [
+        {
+          "name": "GET Material Stock for Material 221",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Accept-Encoding", "value": "identity", "type": "text", "description": "SAP API Hub gzip quirk — explicit identity prevents binary response" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod?$filter=Material eq '221'&$format=json",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_MATERIAL_STOCK_SRV", "A_MatlStkInAcctMod"],
+              "query": [
+                { "key": "$filter", "value": "Material eq '221'" },
+                { "key": "$format", "value": "json" }
+              ]
+            },
+            "description": "Material 221 için available stock. Sandbox tipik response: 0.000 units (read-only sample data)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK from SAP MM', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const results = body?.d?.results || [];",
+                  "pm.test('Response has OData envelope', () => pm.expect(body.d).to.exist);",
+                  "if (results.length > 0) {",
+                  "  console.log('SAP returned ' + results.length + ' stock record(s) for Material 221');",
+                  "  console.log('First record qty:', results[0].MatlWrhsStkQtyInMatlBaseUnit);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 2 — Sales Order Push (CSRF + POST)",
+      "description": "Two-step: HEAD for CSRF token, then POST Sales Order. Apex servisi: `SapSalesOrderService.pushOrders()` (@future). ADR-023. **Honest note**: Sandbox POST 200 dönse de persist etmez — bu transparent davranış demo'da gösterilir.",
+      "item": [
+        {
+          "name": "Step 1: HEAD CSRF Token",
+          "request": {
+            "method": "HEAD",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "x-csrf-token", "value": "fetch", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_SALES_ORDER_SRV/",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_SALES_ORDER_SRV", ""]
+            },
+            "description": "SAP CSRF protection: önce token al, sonra POST'ta header'a koy."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const token = pm.response.headers.get('x-csrf-token');",
+                  "if (token) {",
+                  "  pm.environment.set('SAP_CSRF_TOKEN', token);",
+                  "  console.log('Captured CSRF token (first 8 chars):', token.substring(0, 8) + '...');",
+                  "} else {",
+                  "  console.warn('No CSRF token in response — Step 2 may fail');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2: POST Sales Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "x-csrf-token", "value": "{{SAP_CSRF_TOKEN}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Accept-Encoding", "value": "identity", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_SALES_ORDER_SRV/A_SalesOrder",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_SALES_ORDER_SRV", "A_SalesOrder"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SalesOrderType\": \"OR\",\n  \"SalesOrganization\": \"1710\",\n  \"DistributionChannel\": \"10\",\n  \"OrganizationDivision\": \"00\",\n  \"SoldToParty\": \"17100001\",\n  \"PurchaseOrderByCustomer\": \"TS-DEMO-001\",\n  \"to_Item\": [\n    {\n      \"Material\": \"221\",\n      \"RequestedQuantity\": \"5\",\n      \"RequestedQuantityUnit\": \"PC\"\n    }\n  ]\n}"
+            },
+            "description": "Sales Order header + 1 item. Silverstar Corp. (17100001) için, TS-DEMO-001 reference."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Response status:', pm.response.code);",
+                  "console.log('Response time:', pm.response.responseTime + 'ms');",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  console.log('SAP returned SO:', body?.d?.SalesOrder);",
+                  "} else {",
+                  "  console.log('Sandbox POST may return 200 without persisting (read-mostly behavior) — see ADR-023 for production migration.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 — Tax Determination",
+      "description": "POST to SAP tax engine. Sandbox response: license-gated (403) — code transparently falls back to country table. Apex servisi: `SapTaxCalculationService.calculateInvoiceTax()`. ADR-024.",
+      "item": [
+        {
+          "name": "POST Tax Calculation (license-gated demo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Accept-Encoding", "value": "identity", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_DETERMINE_TAX_SRV/Tax",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_DETERMINE_TAX_SRV", "Tax"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"CountryCode\": \"DE\",\n  \"TaxBaseAmount\": \"100.00\",\n  \"DocumentDate\": \"2026-05-19\",\n  \"Currency\": \"EUR\"\n}"
+            },
+            "description": "DE 19% VAT calc. **Honest expectation**: license-gated 403 — code path falls back to local 19% DE rate table. `Tax_Engine_Used__c` field on Invoice records which engine was used."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('SAP tax response:', pm.response.code);",
+                  "if (pm.response.code === 403 || pm.response.code === 401) {",
+                  "  console.log('Expected sandbox behavior: license-gated. Apex falls back to country table (DE=19%). See ADR-024.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 — Payment Reconciliation (CAMT.053 — local parsing)",
+      "description": "**Not a SAP API call** — CAMT.053 ISO 20022 bank statement XML is parsed locally by `SapPaymentReconciliationService.parseCamt053()`. ADR-025.\n\nDemo'da Apex tarafında gösterilir (no Postman request). Bu folder dokümantasyon için var.",
+      "item": [
+        {
+          "name": "(See Apex SapPaymentReconciliationService for CAMT.053 parsing demo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://example.com/no-call",
+              "protocol": "https",
+              "host": ["example", "com"],
+              "path": ["no-call"]
+            },
+            "description": "Placeholder. Real demo: anonymous Apex `scripts/test_sap_payment_reconciliation.apex` parses sample CAMT.053 XML, matches transactions to Invoices via 3-rule cascade (EndToEndId → Remittance Reference → Amount Tolerance ±0.50 EUR)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 — Material Master Sync (Product GET)",
+      "description": "GET products from SAP, upsert to SF Product2 by SAP_Material_Number__c. Apex servisi: `SapMaterialMasterSyncService.syncMaterialMaster()`. ADR-026.",
+      "item": [
+        {
+          "name": "GET Top 10 SAP Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Accept-Encoding", "value": "identity", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_PRODUCT_SRV/A_Product?$top=10&$format=json",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_PRODUCT_SRV", "A_Product"],
+              "query": [
+                { "key": "$top", "value": "10" },
+                { "key": "$format", "value": "json" }
+              ]
+            },
+            "description": "Tüm SAP material master'lardan ilk 10. Sandbox sample: 10 record. Demo'da Apex aynı GET'i yapıyor → Product2 upsert."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK from SAP API_PRODUCT_SRV', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const products = body?.d?.results || [];",
+                  "console.log('SAP returned ' + products.length + ' products');",
+                  "if (products.length > 0) {",
+                  "  console.log('Sample products:');",
+                  "  products.slice(0, 5).forEach(p => console.log('  - ' + p.Product + ': ' + (p.to_Description?.results?.[0]?.ProductDescription || 'no description')));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 6 — Customer Master Sync (Business Partner GET)",
+      "description": "GET Business Partners (organizations) from SAP, upsert to SF Account by SAP_BP_Number__c. Apex servisi: `SapCustomerMasterSyncService.syncCustomerMaster()`. ADR-027.\n\n**Demo highlight**: Sample BPs include real German enterprises (Bechtle AG, Inlandskunde DE) — DACH market signal.",
+      "item": [
+        {
+          "name": "GET Top 10 SAP Business Partners (Organizations)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "APIKey", "value": "{{SAP_API_KEY}}", "type": "text" },
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Accept-Encoding", "value": "identity", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SAP_BASE_URL}}/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner?$top=10&$filter=BusinessPartnerCategory eq '2'&$format=json",
+              "host": ["{{SAP_BASE_URL}}"],
+              "path": ["s4hanacloud", "sap", "opu", "odata", "sap", "API_BUSINESS_PARTNER", "A_BusinessPartner"],
+              "query": [
+                { "key": "$top", "value": "10" },
+                { "key": "$filter", "value": "BusinessPartnerCategory eq '2'", "description": "2 = Organization (vs Person)" },
+                { "key": "$format", "value": "json" }
+              ]
+            },
+            "description": "Sandbox sample includes Bechtle AG, Inlandskunde DE — gerçek Alman kurumları. Filter: BusinessPartnerCategory='2' = Organization (sadece B2B)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK from SAP API_BUSINESS_PARTNER', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const bps = body?.d?.results || [];",
+                  "console.log('SAP returned ' + bps.length + ' Business Partners');",
+                  "if (bps.length > 0) {",
+                  "  console.log('Sample German BPs:');",
+                  "  bps.slice(0, 5).forEach(b => console.log('  - BP ' + b.BusinessPartner + ': ' + b.BusinessPartnerFullName + ' (Grp=' + b.BusinessPartnerGrouping + ')'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 7 — Event Mesh Inbound (CloudEvents Webhook)",
+      "description": "**Direction reversed**: SAP → Salesforce. Postman simulates SAP Event Mesh publishing a CloudEvent to the Salesforce Apex REST webhook `/services/apexrest/sap/event`.\n\nAuth: Salesforce session bearer token ({{SF_ACCESS_TOKEN}}) + HMAC X-SAP-Secret ({{SAP_WEBHOOK_SECRET}}, from Inventory_Integration_Config__mdt.Default.Shared_Secret__c). Set {{SF_INSTANCE_URL}} to your org's my.salesforce.com URL.\n\nApex handler: `SapEventWebhook.handle()` + `SapInboundEventDispatcher.route()`. ADR-028. Verified: POST returns 200 `Event ... dispatched.` and the dispatcher updates the matching Account/Order/Product2/Invoice audit field.\n\n**Honest note**: SAP Event Mesh itself requires SAP BTP (separate trial — not enabled). Postman replicates the exact CloudEvents 1.0 contract that production SAP Event Mesh would POST to this same endpoint.",
+      "item": [
+        {
+          "name": "POST CloudEvent — Business Partner Changed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{SF_ACCESS_TOKEN}}", "type": "text", "description": "Salesforce session bearer token (sf org display)" },
+              { "key": "Content-Type", "value": "application/cloudevents+json", "type": "text" },
+              { "key": "X-SAP-Secret", "value": "{{SAP_WEBHOOK_SECRET}}", "type": "text", "description": "HMAC validation (rotates per ADR-028)" }
+            ],
+            "url": {
+              "raw": "{{SF_INSTANCE_URL}}/services/apexrest/sap/event",
+              "host": ["{{SF_INSTANCE_URL}}"],
+              "path": ["services", "apexrest", "sap", "event"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"id\": \"evt-postman-bp-{{$timestamp}}\",\n  \"type\": \"sap.s4.beh.businesspartner.v1.BusinessPartner.Changed.v1\",\n  \"source\": \"/sap/s4hanacloud\",\n  \"subject\": \"11\",\n  \"time\": \"2026-05-19T22:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"data\": {\n    \"BusinessPartner\": \"11\",\n    \"BusinessPartnerGrouping\": \"BP02\"\n  }\n}"
+            },
+            "description": "SAP BP grouping değişti event'i. Dispatcher Account.SAP_Customer_Group__c'yi BP02'ye günceller."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Webhook accepted (200 or 201)', () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "console.log('Webhook response:', pm.response.text());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST CloudEvent — Sales Order Status Changed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/cloudevents+json", "type": "text" },
+              { "key": "X-SAP-Secret", "value": "{{SAP_WEBHOOK_SECRET}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SF_INSTANCE_URL}}/services/apexrest/sap/event",
+              "host": ["{{SF_INSTANCE_URL}}"],
+              "path": ["services", "apexrest", "sap", "event"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"id\": \"evt-postman-so-{{$timestamp}}\",\n  \"type\": \"sap.s4.beh.salesorder.v1.SalesOrder.Changed.v1\",\n  \"source\": \"/sap/s4hanacloud\",\n  \"subject\": \"325734\",\n  \"time\": \"2026-05-19T22:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"data\": {\n    \"SalesOrder\": \"325734\",\n    \"OverallSDProcessStatus\": \"C\"\n  }\n}"
+            },
+            "description": "SAP'de SO 325734 Completed (C) durumuna geçti event'i. Dispatcher Order.Status_In_SAP__c'yi 'Fulfilled' yapar."
+          }
+        },
+        {
+          "name": "POST CloudEvent — Payment Posted",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/cloudevents+json", "type": "text" },
+              { "key": "X-SAP-Secret", "value": "{{SAP_WEBHOOK_SECRET}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{SF_INSTANCE_URL}}/services/apexrest/sap/event",
+              "host": ["{{SF_INSTANCE_URL}}"],
+              "path": ["services", "apexrest", "sap", "event"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"id\": \"evt-postman-pay-{{$timestamp}}\",\n  \"type\": \"sap.s4.beh.payment.v1.Payment.Posted.v1\",\n  \"source\": \"/sap/s4hanacloud\",\n  \"subject\": \"INV-DOC-000000001-PAYMENT\",\n  \"time\": \"2026-05-19T22:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"data\": {\n    \"PaymentReference\": \"INV-DOC-000000001-PAYMENT\"\n  }\n}"
+            },
+            "description": "Payment posted event'i. Dispatcher Invoice.SAP_Payment_Posted_At__c'yi şimdiye günceller."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Architecture & Honest Caveats",
+      "description": "Demo recording'de recruiter'a açıklanan mimari kararlar ve transparent kısıtlamalar.",
+      "item": [
+        {
+          "name": "📋 README — Read this first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://example.com/readme",
+              "protocol": "https",
+              "host": ["example", "com"],
+              "path": ["readme"]
+            },
+            "description": "## TechnoStore SAP Demo — Architecture\n\n**Target**: `sandbox.api.sap.com` (SAP API Hub Sandbox — gerçek SAP altyapısı, public test endpoint).\n\n**Trial Tenant**: `my429998.s4hana.cloud.sap` (SAP S/4HANA Cloud Public Edition Trial — Communication Arrangements **trial'da kısıtlı** olduğu için Apex kodumuz buraya direkt yazamıyor).\n\n**Why this matters**:\n- Production migration: SAP_Config__c.API_Base_URL__c değeri sandbox URL'inden gerçek tenant URL'ine değişir + OAuth Communication Arrangement kurulur (ADR-029)\n- Apex contract aynı kalır → zero code change\n- Trial Fiori screenshots **sadece production UI referansı** olarak gösterilir, **kod entegrasyonu kanıtı değil**\n\n**Phase 2 — Sandbox POST honest behavior**: Sandbox POST 200 dönse de persist etmez → `Status_In_SAP__c=Push Failed` doğru audit field değeri. Production'da gerçek SO numarası döner ve `SAP_Sales_Order_Number__c`'ye yazılır.\n\n**Phase 3 — Tax engine license gating**: Sandbox tax modülü 403/license-gated → `Tax_Engine_Used__c=SAP_FALLBACK_TABLE` (kod transparent fallback). Production'da licensed tax module aktifse `SAP_API`.\n\n**Phase 7 — Event Mesh**: SAP BTP servisi, trial'da yok. Postman aynı CloudEvents 1.0 contract'ı kullanır → integration code yine production-ready.\n\n**Tüm ADR'ler**: `docs/adr/ADR-022` … `ADR-028` (per-phase), `ADR-029` (production migration path)."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "SAP_BASE_URL",
+      "value": "https://sandbox.api.sap.com",
+      "type": "default"
+    }
+  ]
+}

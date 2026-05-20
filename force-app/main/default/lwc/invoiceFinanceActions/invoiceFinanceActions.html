@@ -1,0 +1,46 @@
+<template>
+    <lightning-card>
+        <div slot="title" class="slds-grid slds-grid_vertical-align-center">
+            <lightning-icon icon-name="custom:custom19" size="small" class="slds-m-right_x-small"></lightning-icon>
+            <span class="slds-text-heading_small">DATEV Export &mdash; Steuerberater</span>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <div class="slds-box slds-theme_shade slds-p-around_small slds-m-bottom_small">
+                <p class="slds-text-body_small">
+                    <lightning-icon icon-name="utility:info" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                    Generates a <strong>DATEV-konform Buchungsstapel</strong> (SKR04 chart, format EXTF&nbsp;700)
+                    that a Steuerberater imports into DATEV Kanzlei-Rechnungswesen.
+                </p>
+                <p class="slds-text-body_small slds-text-color_weak slds-p-top_xx-small">
+                    <strong>Why a button, not a live DATEV UI?</strong> DATEV is closed-by-design: opening a
+                    DATEV-Konto needs a 16-digit invitation code issued only to existing customers or via a
+                    Steuerberater &mdash; there is no self-service signup, and the DATEVconnect Online API
+                    requires DATEV partner registration. So the industry-standard path is the
+                    <strong>Buchungsstapel CSV</strong>: TechnoStore generates it here, the Steuerberater
+                    imports it into their own DATEV. No DATEV account dependency on our side.
+                </p>
+            </div>
+
+            <lightning-button
+                variant="brand"
+                label="Export DATEV Buchungsstapel (CSV)"
+                icon-name="utility:download"
+                onclick={handleDatev}
+                disabled={datevLoading}
+                class="slds-m-right_small">
+            </lightning-button>
+            <template if:true={datevLoading}>
+                <lightning-spinner alternative-text="Generating DATEV CSV..." size="small"></lightning-spinner>
+            </template>
+
+            <template if:true={lastFileName}>
+                <div class="slds-m-top_small slds-text-body_small slds-text-color_success">
+                    <lightning-icon icon-name="utility:success" size="xx-small" variant="success"
+                        class="slds-m-right_xx-small"></lightning-icon>
+                    {lastFileName} attached to this invoice (see Files).
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>

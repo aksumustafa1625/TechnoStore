@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DATEV_Debitor_Number__c</fullName>
+    <description>DATEV Debitorenkonto (customer account) number for this Account, used in DATEV Buchungsstapel CSV export (ADR-031). SKR04 Debitoren range is 10000-69999. In production the Steuerberater assigns these; the demo allocates sequentially.</description>
+    <externalId>true</externalId>
+    <inlineHelpText>5-digit DATEV customer account (Debitor), SKR04 range 10000-69999. Used as Gegenkonto in CSV export.</inlineHelpText>
+    <label>DATEV Debitor Number</label>
+    <length>10</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

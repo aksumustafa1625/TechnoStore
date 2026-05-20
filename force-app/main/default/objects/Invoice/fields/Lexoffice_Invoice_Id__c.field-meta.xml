@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lexoffice_Invoice_Id__c</fullName>
+    <description>lexoffice invoice resource id (UUID) returned by POST /v1/invoices. Set by LexofficeInvoiceService on successful publish (ADR-030).</description>
+    <externalId>true</externalId>
+    <label>Lexoffice Invoice Id</label>
+    <length>40</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

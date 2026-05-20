@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>Hierarchy</customSettingsType>
+    <description>Stores lexoffice (Lexware Office) public API credentials (Base URL + API Key) for outbound invoice/contact sync. lexoffice is the German #1 SME cloud accounting platform; this integration publishes paid TechnoStore invoices to lexoffice for real-time accounting visibility (ADR-030).</description>
+    <enableFeeds>false</enableFeeds>
+    <label>Lexoffice Config</label>
+    <visibility>Protected</visibility>
+</CustomObject>

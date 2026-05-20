@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>API_Base_URL__c</fullName>
+    <description>lexoffice public API base URL. Default https://api.lexoffice.io. Used by LexofficeInvoiceService callouts.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Almost always https://api.lexoffice.io — no trailing slash.</inlineHelpText>
+    <label>API Base URL</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
