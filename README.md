@@ -568,6 +568,15 @@ Entry 5 of the Notion portfolio (`05. CLAUDE.md + Memory System`) documents this
 
 ---
 
+## License
+
+**Proprietary — All Rights Reserved.** © 2026 Mustafa Aksu. Published for portfolio review and
+evaluation only. No permission is granted to use, copy, modify, or redistribute any part of the
+code without prior written consent — see [`LICENSE`](LICENSE) for full terms. (Exception:
+`TriggerHandler.cls` is third-party MIT code by Kevin O'Hara and remains under its original MIT license.)
+
+---
+
 ## Credits
 
 - **Trigger framework:** [`kevinohara80/sfdc-trigger-framework`](https://github.com/kevinohara80/sfdc-trigger-framework) (MIT licensed). `TriggerHandler.cls` is a verbatim copy with only the API version updated.
