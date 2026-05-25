@@ -1,0 +1,1 @@
+try { Lead l = new Lead(LastName='WA src test', Company='WA', LeadSource='WhatsApp'); insert l; System.debug('LeadSource WhatsApp OK: ' + l.Id); delete l; } catch(Exception e){ System.debug('LeadSource FAILED: ' + e.getMessage()); }
