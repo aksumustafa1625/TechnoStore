@@ -138,6 +138,18 @@ Yesterday's 503 was the Postman placeholder Site URL. Fixed: call the authentica
 
 Full detail in `[memory] dach_finance_integration_complete.md`. ADR-030 (lexoffice), ADR-031 (DATEV), ADR-029 (SAP trial limitation). ADR catalogue now contiguous 001-031.
 
+## WhatsApp Integration (Twilio inbound) — COMPLETE (2026-05-25)
+
+8th external integration. Inbound WhatsApp message → Salesforce Lead in real time. Verified with a real WhatsApp message.
+
+- **`WhatsAppWebhookRestService`** (force-app-handlers) — `@RestResource(urlMapping='/whatsapp/webhook/*')` public Apex REST. Secret auth via `?secret=` (reuses `Inventory_Integration_Config__mdt.Default.Shared_Secret__c`); MessageSid idempotency (`WebhookEventLogger`, ADR-013); regex-extracts Email from message text → Lead.Email; From→Phone, LeadSource='WhatsApp', message→Description; English TwiML auto-reply.
+- **Body-parse gotcha**: Twilio sends `application/x-www-form-urlencoded`; on Sites that lands in `RestRequest.params` (requestBody empty). Code merges `req.params` + raw-body parse so it works via the public Site AND authenticated REST.
+- **Site limit workaround**: Developer Edition blocks new Sites ("limit exceeded"). Reused the shared webhook Site; renamed its label "DocuSign Webhook" → **"TechnoStore Webhooks"** — this auto-renames the guest user, so Created By on ALL webhook-created records (DocuSign/SAP/WhatsApp) reads "TechnoStore Webhooks Site Guest User". URL prefix unchanged (`docusign`) so Twilio + DocuSign keep working.
+- Guest access: `WhatsAppWebhookRestService` + Lead Create added to `Inventory_Webhook_Access` perm set. `WhatsApp` added to `Webhook_Event__c.Source__c` restricted picklist.
+- **NOT "Salesforce Headless Identity"** — it's a webhook/API integration. Label honestly in posts.
+- Production: verified WhatsApp Business number (Meta) + X-Twilio-Signature validation + GDPR consent; same code.
+- Detail in `[memory] whatsapp_twilio_integration.md`. Commit 92241a9.
+
 ## Memory
 
 User has persistent memory at `C:\Users\DELL\.claude\projects\c--Users-DELL-Documents-Projects-TechnoStore\memory\`. Key files indexed in `MEMORY.md`. Update memory after significant decisions; don't duplicate code-derivable facts.
