@@ -400,4 +400,427 @@ private class LexofficeInvoiceServiceTest {
             return res;
         }
     }
+
+    // ================================================================
+    // TS-TEST-004 — Full 2-callout choreography via JSON.deserialize
+    // + @TestVisible injection.
+    //
+    // Salesforce Industries Billing forbids `insert new Invoice(...)` in
+    // Apex, so we synthesise an Invoice + InvoiceLine graph in memory
+    // (with fake Ids that Id.valueOf() accepts) via JSON.deserialize —
+    // the community-verified "trick time in unit tests" pattern applied
+    // to a lookup relationship. The service class exposes three
+    // @TestVisible seams (testInvoiceOverride, testInvoiceLinesOverride,
+    // testSkipUpdateDml) that let the tests skip the SOQL + DML that
+    // would otherwise be unreachable. Together they make the entire
+    // createContact → createInvoice → write-back path exercised under
+    // HttpCalloutMock control.
+    // ================================================================
+
+    // ---------- Capturing mock ----------
+    // Records every request the service issues so we can assert on
+    // endpoint, headers, and body content (country code, tax rate, etc).
+    private static List<HttpRequest> CAPTURED;
+
+    private class CapturingMultistepMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            if (CAPTURED != null) {
+                // Snapshot only the fields we care about; HttpRequest itself
+                // isn't cloneable so we retain the reference — Apex reads
+                // are stable after the send() returns.
+                CAPTURED.add(req);
+            }
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            String ep = req.getEndpoint();
+            if (ep.contains('/v1/contacts')) {
+                res.setStatusCode(201);
+                res.setStatus('Created');
+                res.setBody(OK_CONTACT_BODY);
+            } else if (ep.contains('/v1/invoices')) {
+                res.setStatusCode(201);
+                res.setStatus('Created');
+                res.setBody(OK_INVOICE_BODY);
+            } else {
+                res.setStatusCode(404);
+                res.setStatus('Not Found');
+                res.setBody('{"unmapped":"' + ep + '"}');
+            }
+            return res;
+        }
+    }
+
+    // Contact 201, invoice 500 — exercises the createInvoice failure branch.
+    private class ContactOkInvoice500Mock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            if (req.getEndpoint().contains('/v1/contacts')) {
+                res.setStatusCode(201);
+                res.setStatus('Created');
+                res.setBody(OK_CONTACT_BODY);
+            } else {
+                res.setStatusCode(500);
+                res.setStatus('Internal Server Error');
+                res.setBody('{"error":"invoice endpoint down"}');
+            }
+            return res;
+        }
+    }
+
+    // ---------- In-memory builders ----------
+
+    private static Id fakeAccountId() {
+        String prefix = Account.SObjectType.getDescribe().getKeyPrefix();
+        return Id.valueOf(prefix + '000000000001');
+    }
+
+    /**
+     * Build an in-memory Invoice via JSON.deserialize. The Id is a valid
+     * Salesforce key format (prefix + 15 chars) but does NOT map to any
+     * real record — that's the whole point: we bypass the "Can't create
+     * Invoice in Apex" platform block. BillingAccount is nested so the
+     * SOQL relationship traversal (inv.BillingAccount.BillingCountry) has
+     * data to read from without requiring a real Account insert either.
+     */
+    private static Invoice buildInvoice(String country, Decimal grossTotal) {
+        Id fakeInvId = fakeInvoiceId();
+        Id fakeAcctId = fakeAccountId();
+        String json = '{'
+            + '"attributes":{"type":"Invoice"},'
+            + '"Id":"' + String.valueOf(fakeInvId) + '",'
+            + '"DocumentNumber":"RE-TEST-001",'
+            + '"InvoiceDate":"2026-07-15",'
+            + '"TotalAmountWithTax":' + grossTotal + ','
+            + '"TotalAmount":' + (grossTotal / 1.19).setScale(2) + ','
+            + '"BillingAccountId":"' + String.valueOf(fakeAcctId) + '",'
+            + '"BillingAccount":{'
+                + '"attributes":{"type":"Account"},'
+                + '"Id":"' + String.valueOf(fakeAcctId) + '",'
+                + '"Name":"Test DE GmbH",'
+                + '"BillingCountry":"' + country + '",'
+                + '"BillingStreet":"Musterstr 1",'
+                + '"BillingCity":"Berlin",'
+                + '"BillingPostalCode":"10115"'
+            + '}'
+            + '}';
+        return (Invoice) System.JSON.deserialize(json, Invoice.class);
+    }
+
+    /**
+     * Build a synthesised InvoiceLine list with a nested Product2 lookup.
+     * Uses GrossUnitPrice + Quantity so the line-item path builds a proper
+     * lineItems array in the createInvoice payload.
+     */
+    private static List<InvoiceLine> buildInvoiceLines() {
+        String prefix = InvoiceLine.SObjectType.getDescribe().getKeyPrefix();
+        Id lineId = Id.valueOf(prefix + '000000000001');
+        String prodPrefix = Product2.SObjectType.getDescribe().getKeyPrefix();
+        Id prodId = Id.valueOf(prodPrefix + '000000000001');
+        String json = '{'
+            + '"attributes":{"type":"InvoiceLine"},'
+            + '"Id":"' + String.valueOf(lineId) + '",'
+            + '"Quantity":2,'
+            + '"GrossUnitPrice":595.00,'
+            + '"UnitPrice":500.00,'
+            + '"Description":"Enterprise Laptop Pro",'
+            + '"Product2Id":"' + String.valueOf(prodId) + '",'
+            + '"Product2":{"attributes":{"type":"Product2"},"Id":"' + String.valueOf(prodId) + '","Name":"Laptop-15"}'
+            + '}';
+        return new List<InvoiceLine>{ (InvoiceLine) System.JSON.deserialize(json, InvoiceLine.class) };
+    }
+
+    /**
+     * Reset every @TestVisible seam and the capture list. Called at the
+     * top of every TS-TEST-004 test so cross-test state can't leak.
+     */
+    private static void resetSeams() {
+        LexofficeInvoiceService.testInvoiceOverride = null;
+        LexofficeInvoiceService.testInvoiceLinesOverride = null;
+        LexofficeInvoiceService.testSkipUpdateDml = true; // safe default: never DML the in-memory Invoice
+        CAPTURED = new List<HttpRequest>();
+    }
+
+    // ---------- Full-choreography tests ----------
+
+    @IsTest
+    static void publishFromButton_happyPath_bothCallsSucceed_writesLexofficeInvoiceIdBack() {
+        resetSeams();
+        Invoice inv = buildInvoice('Germany', 1190.00);
+        LexofficeInvoiceService.testInvoiceOverride = inv;
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.Result r = LexofficeInvoiceService.publishFromButton(inv.Id);
+        Test.stopTest();
+
+        System.assertEquals('Success', r.status, 'Happy path must return Success. Got: ' + r.message);
+        System.assertEquals('invoice-uuid-456', r.lexofficeInvoiceId,
+            'The lexoffice invoice id from the second callout must be surfaced on the Result');
+        System.assertEquals(2, CAPTURED.size(), 'Happy path must issue exactly two callouts');
+        System.assert(CAPTURED[0].getEndpoint().contains('/v1/contacts'),
+            'First call must be POST /v1/contacts');
+        System.assert(CAPTURED[1].getEndpoint().contains('/v1/invoices'),
+            'Second call must be POST /v1/invoices');
+    }
+
+    @IsTest
+    static void publishFromButton_contactCallFails_401_earlyReturnsErrorResult_secondCallSkipped() {
+        resetSeams();
+        Invoice inv = buildInvoice('Germany', 1190.00);
+        LexofficeInvoiceService.testInvoiceOverride = inv;
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new LexofficeMock401());
+
+        Test.startTest();
+        LexofficeInvoiceService.Result r = LexofficeInvoiceService.publishFromButton(inv.Id);
+        Test.stopTest();
+
+        System.assertEquals('Error', r.status, '401 on contact must produce Error');
+        System.assertNotEquals(null, r.message);
+        System.assert(r.message.contains('Contact create failed'),
+            'Error must specifically call out the contact-create failure. Got: ' + r.message);
+        System.assertEquals(null, r.lexofficeInvoiceId,
+            'A failed contact call must never populate a lexoffice invoice id');
+    }
+
+    @IsTest
+    static void publishFromButton_invoiceCallFails_500_marksLexofficeStatus_PublishFailed() {
+        resetSeams();
+        Invoice inv = buildInvoice('Germany', 1190.00);
+        LexofficeInvoiceService.testInvoiceOverride = inv;
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new ContactOkInvoice500Mock());
+
+        Test.startTest();
+        LexofficeInvoiceService.Result r = LexofficeInvoiceService.publishFromButton(inv.Id);
+        Test.stopTest();
+
+        System.assertEquals('Error', r.status, 'Invoice 500 must be reported as Error');
+        System.assert(r.message.contains('Invoice create failed'),
+            'Error must mention the invoice-create failure. Got: ' + r.message);
+        System.assertEquals(null, r.lexofficeInvoiceId);
+    }
+
+    // ---------- countryCode branches (via createContact payload) ----------
+
+    private static Map<String, Object> parseContactPayload() {
+        // First captured request is always the contact POST.
+        System.assert(!CAPTURED.isEmpty(), 'A callout must have been issued');
+        String body = CAPTURED[0].getBody();
+        return (Map<String, Object>) JSON.deserializeUntyped(body);
+    }
+
+    private static String contactCountryCode() {
+        Map<String, Object> payload = parseContactPayload();
+        Map<String, Object> addresses = (Map<String, Object>) payload.get('addresses');
+        List<Object> billing = (List<Object>) addresses.get('billing');
+        Map<String, Object> first = (Map<String, Object>) billing[0];
+        return String.valueOf(first.get('countryCode'));
+    }
+
+    @IsTest
+    static void country_deutschland_mapsTo_DE() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Deutschland', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('DE', contactCountryCode(),
+            '"Deutschland" must be normalised to ISO code DE');
+    }
+
+    @IsTest
+    static void country_oesterreich_mapsTo_AT() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Österreich', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('AT', contactCountryCode(),
+            '"Österreich" must be normalised to ISO code AT');
+    }
+
+    @IsTest
+    static void country_schweiz_mapsTo_CH() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Schweiz', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('CH', contactCountryCode(),
+            '"Schweiz" must be normalised to ISO code CH');
+    }
+
+    @IsTest
+    static void country_unknown_defaultsTo_DE() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Atlantis', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('DE', contactCountryCode(),
+            'Unknown country strings must default to DE (DACH-market safety default)');
+    }
+
+    // ---------- Payload shape ----------
+
+    @IsTest
+    static void germanVatRate_19_percent_isSentInTaxConditions() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 1190.00);
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals(2, CAPTURED.size());
+        String invoiceBody = CAPTURED[1].getBody();
+        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(invoiceBody);
+
+        Map<String, Object> taxConditions = (Map<String, Object>) payload.get('taxConditions');
+        System.assertEquals('gross', taxConditions.get('taxType'),
+            'DE VAT flow declares taxType=gross so lexoffice back-computes net + VAT');
+
+        List<Object> lineItems = (List<Object>) payload.get('lineItems');
+        Map<String, Object> firstLine = (Map<String, Object>) lineItems[0];
+        Map<String, Object> unitPrice = (Map<String, Object>) firstLine.get('unitPrice');
+        System.assertEquals(19, ((Decimal) unitPrice.get('taxRatePercentage')).intValue(),
+            'DE VAT rate must be 19% on every line item');
+        System.assertEquals('EUR', unitPrice.get('currency'),
+            'lexoffice line-item currency is hard-coded EUR for DACH');
+    }
+
+    @IsTest
+    static void lineItems_or_singleLineFallback_pathTested() {
+        // Empty InvoiceLine list → service must synthesise one fallback line
+        // built from TotalAmountWithTax + DocumentNumber.
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 1499.99);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.Result r = LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('Success', r.status);
+        System.assertEquals(2, CAPTURED.size());
+        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(CAPTURED[1].getBody());
+        List<Object> lineItems = (List<Object>) payload.get('lineItems');
+        System.assertEquals(1, lineItems.size(),
+            'Empty InvoiceLine list must produce exactly one fallback line');
+        Map<String, Object> line = (Map<String, Object>) lineItems[0];
+        System.assert(String.valueOf(line.get('name')).contains('RE-TEST-001'),
+            'Fallback line name must reference the DocumentNumber. Got: ' + line.get('name'));
+        Map<String, Object> unitPrice = (Map<String, Object>) line.get('unitPrice');
+        System.assertEquals(1499.99, unitPrice.get('grossAmount'),
+            'Fallback grossAmount must come from TotalAmountWithTax');
+    }
+
+    @IsTest
+    static void baseUrl_trailingSlashNormalized() {
+        // Cfg has "https://api.lexoffice.io/" — the service must strip
+        // the trailing slash so the endpoint isn't "…io//v1/contacts".
+        Lexoffice_Config__c cfg = Lexoffice_Config__c.getOrgDefaults();
+        cfg.API_Base_URL__c = 'https://api.lexoffice.io/';
+        upsert cfg;
+
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        String ep = CAPTURED[0].getEndpoint();
+        System.assert(!ep.contains('io//v1/'),
+            'Trailing slash on API_Base_URL__c must be normalised — no "io//v1/" in endpoint. Got: ' + ep);
+        System.assertEquals('https://api.lexoffice.io/v1/contacts', ep,
+            'Endpoint must be well-formed after trailing-slash removal');
+    }
+
+    @IsTest
+    static void authorizationHeader_isBearer_lexoffice_apiKey() {
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 100);
+        LexofficeInvoiceService.testInvoiceLinesOverride = new List<InvoiceLine>();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        String auth = CAPTURED[0].getHeader('Authorization');
+        System.assertEquals('Bearer test-api-key-uuid', auth,
+            'Authorization must be "Bearer <API_Key__c>" per lexoffice OAuth-token spec');
+        System.assertEquals('application/json', CAPTURED[0].getHeader('Content-Type'),
+            'Content-Type must be application/json');
+        System.assertEquals('application/json', CAPTURED[0].getHeader('Accept'),
+            'Accept header must be application/json');
+    }
+
+    @IsTest
+    static void publishAsync_futureMethod_worksWithMockAndInjection() {
+        // @future methods run in a new async context — but Test.startTest /
+        // Test.stopTest bracket forces them to execute synchronously and
+        // KEEPS the mock + @TestVisible statics from the calling context.
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 500);
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        Test.startTest();
+        LexofficeInvoiceService.publishAsync(new Set<Id>{ fakeInvoiceId() });
+        Test.stopTest();
+
+        System.assertEquals(2, CAPTURED.size(),
+            '@future must fire both callouts under Test.startTest/stopTest bracket');
+        System.assert(CAPTURED[0].getEndpoint().endsWith('/v1/contacts'));
+        System.assert(CAPTURED[1].getEndpoint().contains('/v1/invoices?finalize=true'),
+            'Invoice callout must include the finalize=true query param');
+    }
+
+    @IsTest
+    static void publishInvocable_happyPath_returnsSuccessPerRequest() {
+        // The @InvocableMethod entry point loops requests through doPublish.
+        // Prove the loop wiring + Result list construction on the happy path.
+        resetSeams();
+        LexofficeInvoiceService.testInvoiceOverride = buildInvoice('Germany', 200);
+        LexofficeInvoiceService.testInvoiceLinesOverride = buildInvoiceLines();
+        Test.setMock(HttpCalloutMock.class, new CapturingMultistepMock());
+
+        LexofficeInvoiceService.Request req = new LexofficeInvoiceService.Request();
+        req.invoiceId = fakeInvoiceId();
+
+        Test.startTest();
+        List<LexofficeInvoiceService.Result> results =
+            LexofficeInvoiceService.publish(new List<LexofficeInvoiceService.Request>{ req });
+        Test.stopTest();
+
+        System.assertEquals(1, results.size());
+        System.assertEquals('Success', results[0].status);
+        System.assertEquals('invoice-uuid-456', results[0].lexofficeInvoiceId);
+    }
 }

@@ -310,4 +310,400 @@ private class DatevExportServiceTest {
         System.assertNotEquals(null, res,
             'Result nested type must remain visible to Flow / Aura / LWC');
     }
+
+    // ---------- CSV format coverage — TS-TEST-009 closed via @TestVisible injection --------
+    //
+    // Salesforce Industries Billing forbids `insert new Invoice(...)` in Apex DML. The
+    // community-verified workaround (afigueiredo.medium.com JSON deserialization pattern)
+    // builds an in-memory Invoice via JSON.deserialize (which does NOT go through the DML
+    // pipeline) and injects it into the service through a `@TestVisible` seam. This lets
+    // us exercise buildBuchungsstapel + germanDecimal + pad2 + q end-to-end against a real
+    // Invoice sObject graph — no mock, no reflection, no altered production code path.
+
+    /**
+     * Builds a fake Invoice with an embedded BillingAccount by deserializing JSON. Bypasses
+     * the "Can't create in Apex" restriction on standard Industries Billing Invoice records.
+     */
+    private static Invoice buildInvoiceForDatev(Id fakeId, Account acc, Decimal amountWithTax, Date invDate, String docNumber) {
+        String debStr = (acc.DATEV_Debitor_Number__c == null) ? 'null'
+            : '"' + String.valueOf(acc.DATEV_Debitor_Number__c) + '"';
+        String json = '{'
+            + '"attributes":{"type":"Invoice"},'
+            + '"Id":"' + String.valueOf(fakeId) + '",'
+            + '"DocumentNumber":"' + docNumber + '",'
+            + '"InvoiceDate":"' + invDate.year() + '-'
+                + String.valueOf(invDate.month()).leftPad(2, '0') + '-'
+                + String.valueOf(invDate.day()).leftPad(2, '0') + '",'
+            + '"TotalAmountWithTax":' + amountWithTax + ','
+            + '"TotalAmount":' + (amountWithTax / 1.19).setScale(2) + ','
+            + '"BillingAccountId":"' + acc.Id + '",'
+            + '"BillingAccount":{'
+                + '"attributes":{"type":"Account"},'
+                + '"Id":"' + acc.Id + '",'
+                + '"Name":"' + String.escapeSingleQuotes(acc.Name).replace('"', '\\"') + '",'
+                + '"DATEV_Debitor_Number__c":' + debStr
+            + '}'
+            + '}';
+        return (Invoice) System.JSON.deserialize(json, Invoice.class);
+    }
+
+    /** Convenience overload: default amount / date / doc number. */
+    private static Invoice buildInvoiceForDatev(Account acc) {
+        return buildInvoiceForDatev(fakeInvoiceId(), acc, 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-001');
+    }
+
+    private static Account existingDebitorAccount() {
+        return [SELECT Id, Name, DATEV_Debitor_Number__c FROM Account
+                WHERE Name = 'Existing Debitor AG' LIMIT 1];
+    }
+
+    // ---------- Header row (EXTF v700 / category 21) ----------
+
+    @IsTest
+    static void generateCsv_headerRow_containsEXTF_700_21_Buchungsstapel() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String headerRow = csv.split('\r\n')[0];
+        System.assert(headerRow.contains('"EXTF"'),
+            'DATEV header must carry the quoted format tag "EXTF". Got: ' + headerRow);
+        System.assert(headerRow.contains(';700;'),
+            'DATEV header must carry version 700 (SKR04 Buchungsstapel format). Got: ' + headerRow);
+        System.assert(headerRow.contains(';21;'),
+            'DATEV header must carry category 21 (Buchungsstapel). Got: ' + headerRow);
+        System.assert(headerRow.contains('"Buchungsstapel"'),
+            'DATEV header must carry the quoted "Buchungsstapel" label. Got: ' + headerRow);
+        System.assert(headerRow.contains('"EUR"'),
+            'DATEV header must declare EUR currency. Got: ' + headerRow);
+        System.assert(headerRow.contains('"TechnoStore"'),
+            'DATEV header must carry the "TechnoStore" mandant name. Got: ' + headerRow);
+    }
+
+    // ---------- Amounts — German comma decimal (1449.00 → "1449,00") ----------
+
+    @IsTest
+    static void generateCsv_amountsUseCommaDecimal_not_period() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), existingDebitorAccount(), 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-001');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        // Row 3 = booking row (index 2 after header + column-name rows)
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.startsWith('1449,00;'),
+            'German locale requires comma decimal on Umsatz. Expected "1449,00;". Got: ' + bookingRow);
+        System.assert(!bookingRow.startsWith('1449.00;'),
+            'Booking row must NOT use period as decimal separator (DATEV rejects it). Got: ' + bookingRow);
+    }
+
+    @IsTest
+    static void generateCsv_amountsUseTotalAmountWithTax_notTotalAmount() {
+        // TotalAmountWithTax is set → must win over TotalAmount (the pre-VAT figure).
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), existingDebitorAccount(), 1000.00, Date.newInstance(2026, 6, 15), 'RE-2026-002');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.startsWith('1000,00;'),
+            'Booking Umsatz must use TotalAmountWithTax (gross), not TotalAmount (net). Got: ' + bookingRow);
+    }
+
+    // ---------- Date — DDMM format (2026-06-15 → "1506") ----------
+
+    @IsTest
+    static void generateCsv_dateFormat_DDMM_zero_padded() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), existingDebitorAccount(), 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-003');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.contains(';"1506";'),
+            'Belegdatum must be DDMM (day-then-month). Expected "1506" for 2026-06-15. Got: ' + bookingRow);
+        System.assert(!bookingRow.contains(';"0615";'),
+            'Belegdatum must NOT be MMDD. Got: ' + bookingRow);
+    }
+
+    @IsTest
+    static void generateCsv_dateFormat_singleDigitDayMonth_padded() {
+        // Jan 3 → "0301" (both parts must be zero-padded).
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), existingDebitorAccount(), 500.00, Date.newInstance(2026, 1, 3), 'RE-2026-004');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.contains(';"0301";'),
+            'Belegdatum for Jan 3 must be "0301" (DD then MM, both padded). Got: ' + bookingRow);
+    }
+
+    // ---------- Separator + line endings ----------
+
+    @IsTest
+    static void generateCsv_semicolonSeparator_notComma() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        // Each row has >= 14 fields → >= 13 semicolons. Row 3 has exactly 13 semicolons
+        // between 14 fields.
+        String bookingRow = csv.split('\r\n')[2];
+        Integer semicolons = bookingRow.length() - bookingRow.replace(';', '').length();
+        System.assert(semicolons >= 13,
+            'DATEV booking row must have >=13 semicolons (14 fields). Got ' + semicolons + ' in: ' + bookingRow);
+    }
+
+    @IsTest
+    static void generateCsv_crlfLineEndings_notLF() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        // 3 CRLF terminators (header + column header + booking + trailing CRLF).
+        // \r\n is 2 chars → each occurrence removes 2 chars, so count = diff / 2.
+        Integer occurrences = (csv.length() - csv.replace('\r\n', '').length()) / 2;
+        System.assertEquals(3, occurrences,
+            'DATEV export must have exactly 3 CRLF line terminators (one per row). Got: ' + occurrences);
+        System.assert(!csv.contains('\n\n'),
+            'Blank lines are not permitted between DATEV rows');
+    }
+
+    // ---------- Text-field quoting + inner-quote escaping ----------
+
+    @IsTest
+    static void generateCsv_textFieldsQuoted_withEscapedInnerQuotes() {
+        Account acc = new Account(
+            Name                    = 'ACME "Quoted" GmbH',
+            DATEV_Debitor_Number__c = '30001'
+        );
+        insert acc;
+        acc = [SELECT Id, Name, DATEV_Debitor_Number__c FROM Account WHERE Id = :acc.Id];
+
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), acc, 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-005');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        // Buchungstext = "Rechnung ACME ""Quoted"" GmbH" — inner quotes doubled per DATEV rules.
+        System.assert(bookingRow.contains('""Quoted""'),
+            'Inner double-quotes must be escaped by doubling ("" per DATEV/CSV convention). Got: ' + bookingRow);
+        System.assert(bookingRow.contains('"Rechnung ACME ""Quoted"" GmbH"'),
+            'Buchungstext must be wrapped in outer quotes with doubled inner quotes. Got: ' + bookingRow);
+    }
+
+    // ---------- Revenue account (SKR04 4400) ----------
+
+    @IsTest
+    static void generateCsv_revenueAccount_4400_SKR04() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        // Row shape: gross;S;EUR;;;;<debitor>;4400;;<DDMM>;<docNum>;;;<buchungstext>
+        // Gegenkonto (8th field, after 7 semicolons) must equal 4400 unquoted (numeric).
+        System.assert(bookingRow.contains(';4400;'),
+            'Gegenkonto must be SKR04 revenue account 4400 (Erlöse 19% USt), unquoted. Got: ' + bookingRow);
+    }
+
+    @IsTest
+    static void generateCsv_debitor_fromBillingAccount_10005() {
+        // Existing Debitor AG carries 10005 → must appear as Konto (7th field).
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.contains(';10005;4400;'),
+            'Konto (Debitor) must be 10005 immediately preceding Gegenkonto 4400. Got: ' + bookingRow);
+    }
+
+    // ---------- Buchungstext truncation ----------
+
+    @IsTest
+    static void generateCsv_buchungstext_truncatedAt60Chars() {
+        // "Rechnung " prefix is 9 chars. Account name padded to 80 chars would produce
+        // "Rechnung <80 chars>" = 89 chars → abbreviate(60) trims to 60 chars total
+        // (57 chars + "..." per Apex's String.abbreviate contract).
+        // Built via rightPad (safer than String.repeat across Apex API versions).
+        String longName = ''.rightPad(80, 'A');
+        Account acc = new Account(
+            Name                    = longName,
+            DATEV_Debitor_Number__c = '30002'
+        );
+        insert acc;
+        acc = [SELECT Id, Name, DATEV_Debitor_Number__c FROM Account WHERE Id = :acc.Id];
+
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), acc, 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-006');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        // Extract Buchungstext (last field on the row, wrapped in quotes).
+        Integer lastQuoteEnd = bookingRow.length() - 1;
+        Integer lastQuoteStart = bookingRow.lastIndexOf('"', lastQuoteEnd - 1);
+        String buchungstext = bookingRow.substring(lastQuoteStart + 1, lastQuoteEnd);
+        System.assert(buchungstext.length() <= 60,
+            'Buchungstext must be abbreviated to <= 60 chars. Got length ' + buchungstext.length() + ': ' + buchungstext);
+        System.assert(buchungstext.endsWith('...'),
+            'Over-length Buchungstext must end with the "..." abbreviation marker. Got: ' + buchungstext);
+    }
+
+    // ---------- Column-header row ----------
+
+    @IsTest
+    static void generateCsv_columnHeader_containsDATEVGermanNames() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String colHeader = csv.split('\r\n')[1];
+        // Sample of required DATEV column headings (v700 spec, category 21).
+        System.assert(colHeader.contains('Umsatz (ohne Soll/Haben-Kz)'),
+            'Column header must carry Umsatz label. Got: ' + colHeader);
+        System.assert(colHeader.contains('Soll/Haben-Kennzeichen'),
+            'Column header must carry Soll/Haben-Kennzeichen. Got: ' + colHeader);
+        System.assert(colHeader.contains('Konto'),
+            'Column header must include Konto. Got: ' + colHeader);
+        System.assert(colHeader.contains('Belegdatum'),
+            'Column header must include Belegdatum. Got: ' + colHeader);
+        System.assert(colHeader.contains('Buchungstext'),
+            'Column header must include Buchungstext. Got: ' + colHeader);
+        System.assert(colHeader.contains('BU-Schlüssel'),
+            'Column header must carry umlaut in BU-Schlüssel (proves UTF-8 handling upstream of BOM). Got: ' + colHeader);
+    }
+
+    // ---------- Belegfeld 1 = DocumentNumber quoted ----------
+
+    @IsTest
+    static void generateCsv_documentNumber_appearsQuoted_inBelegfeld1() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), existingDebitorAccount(), 1449.00, Date.newInstance(2026, 6, 15), 'RE-2026-XYZ');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        System.assert(bookingRow.contains('"RE-2026-XYZ"'),
+            'Belegfeld 1 must carry the quoted DocumentNumber verbatim. Got: ' + bookingRow);
+    }
+
+    // ---------- exportFromButton happy path (via testSkipDml) ----------
+
+    @IsTest
+    static void exportFromButton_happyPath_returnsSuccessResult_withCsvPreview() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+        DatevExportService.testSkipDml = true;
+
+        Test.startTest();
+        DatevExportService.Result r = DatevExportService.exportFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertEquals('Success', r.status,
+            'Happy-path exportFromButton must return Success. Got status="' + r.status + '" message="' + r.message + '"');
+        System.assertNotEquals(null, r.fileName,
+            'Success Result must expose the generated file name');
+        System.assert(r.fileName.startsWith('DATEV_Buchungsstapel_RE-2026-001_'),
+            'File name must include the DocumentNumber. Got: ' + r.fileName);
+        System.assert(r.fileName.endsWith('.csv'),
+            'File name must end with .csv. Got: ' + r.fileName);
+        System.assertNotEquals(null, r.csvPreview,
+            'Success Result must expose a csvPreview for the LWC toast');
+        System.assert(r.csvPreview.contains('"EXTF"'),
+            'csvPreview must carry the EXTF header for visual confirmation. Got: ' + r.csvPreview);
+    }
+
+    @IsTest
+    static void exportFromButton_utf8BomPrepended_toContentVersionBlob() {
+        // ADR-031: the CSV Blob attached to ContentVersion must be prefixed with the UTF-8
+        // BOM (EF BB BF) so DATEV / Excel render umlauts correctly. Verified byte-wise via
+        // the @TestVisible testLastCsvBlob capture (which mirrors the exact bytes fed to
+        // ContentVersion.VersionData just before insert).
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+        DatevExportService.testSkipDml = true;
+
+        Test.startTest();
+        DatevExportService.exportFromButton(fakeInvoiceId());
+        Test.stopTest();
+
+        System.assertNotEquals(null, DatevExportService.testLastCsvBlob,
+            'Happy path must populate testLastCsvBlob (the BOM-prefixed CSV Blob)');
+        String hex = EncodingUtil.convertToHex(DatevExportService.testLastCsvBlob).toUpperCase();
+        System.assert(hex.startsWith('EFBBBF'),
+            'CSV Blob must start with UTF-8 BOM bytes EF BB BF. Got: ' + hex.substring(0, Math.min(20, hex.length())));
+    }
+
+    // ---------- Invocable surface happy path ----------
+
+    @IsTest
+    static void export_invocable_happyPath_returnsSuccess() {
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(existingDebitorAccount());
+        DatevExportService.testSkipDml = true;
+
+        Test.startTest();
+        List<DatevExportService.Result> results = DatevExportService.export(
+            new List<DatevExportService.Request>{ buildRequest(fakeInvoiceId()) }
+        );
+        Test.stopTest();
+
+        System.assertEquals(1, results.size(), 'One Request must produce one Result');
+        System.assertEquals('Success', results[0].status,
+            'Happy-path invocable must map to Success. Got: ' + results[0].message);
+        System.assert(results[0].fileName.endsWith('.csv'),
+            'Success invocable Result must expose a .csv file name. Got: ' + results[0].fileName);
+    }
+
+    // ---------- allocateDebitor path (blank debitor → Account update) ----------
+
+    @IsTest
+    static void generateCsv_blankDebitor_triggersAllocation_stampsAccount() {
+        // BillingAccount has no debitor → the code path branches through allocateDebitor,
+        // which scans max existing (seed = 10005 → next = 10006) and updates the Account.
+        Account fresh = [SELECT Id, Name, DATEV_Debitor_Number__c FROM Account
+                         WHERE Name = 'Debitor Free GmbH' LIMIT 1];
+        DatevExportService.testInvoiceOverride = buildInvoiceForDatev(
+            fakeInvoiceId(), fresh, 1449.00, Date.newInstance(2026, 6, 15), 'RE-ALLOC-001');
+
+        Test.startTest();
+        String csv = DatevExportService.generateCsv(fakeInvoiceId());
+        Test.stopTest();
+
+        String bookingRow = csv.split('\r\n')[2];
+        // The debitor written back must be 10006 (max 10005 + 1) and appear in the row.
+        System.assert(bookingRow.contains(';10006;4400;'),
+            'Allocated Debitor must be max(10005)+1 = 10006, adjacent to Gegenkonto 4400. Got: ' + bookingRow);
+
+        Account after = [SELECT DATEV_Debitor_Number__c FROM Account WHERE Id = :fresh.Id];
+        System.assertEquals('10006', after.DATEV_Debitor_Number__c,
+            'allocateDebitor must persist the new debitor back to the Account (idempotent for future exports)');
+    }
 }

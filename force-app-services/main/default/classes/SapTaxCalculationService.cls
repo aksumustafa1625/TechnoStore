@@ -54,6 +54,13 @@ public with sharing class SapTaxCalculationService {
     };
     private static final Decimal DEFAULT_RATE = 19.00;  // Demo defaults to Germany if country unknown
 
+    // ------- @TestVisible seams (ADR-024 / TS-TEST-008) -------
+    // Native Invoice is Apex-DML-blocked, so unit tests inject an in-memory
+    // Invoice map (built via JSON.deserialize) and skip the final `update`.
+    // Production callers never touch these seams.
+    @TestVisible private static Map<Id, Invoice> testInvoiceOverride = null;
+    @TestVisible private static Boolean testSkipDml = false;
+
     @InvocableMethod(label='Calculate Tax via SAP for Invoice' description='Two-tier: tries SAP S/4HANA tax API first; falls back to country-based rate table if SAP is unavailable. Writes results to SAP_Tax_* fields on the Invoice.')
     public static List<Result> calculateForInvoice(List<Request> requests) {
         List<Result> results = new List<Result>();
@@ -75,12 +82,22 @@ public with sharing class SapTaxCalculationService {
         for (Request r : requests) if (r.invoiceId != null) invoiceIds.add(r.invoiceId);
         if (invoiceIds.isEmpty()) return results;
 
-        Map<Id, Invoice> invoiceMap = new Map<Id, Invoice>([
-            SELECT Id, DocumentNumber, BillingAccount.Name, BillingAccount.BillingCountry,
-                   TotalAmount, TotalTaxAmount
-            FROM Invoice
-            WHERE Id IN :invoiceIds
-        ]);
+        Map<Id, Invoice> invoiceMap;
+        if (testInvoiceOverride != null) {
+            // Test seam: filter the injected map by the requested Ids so callers
+            // still get the "not found" branch for Ids they didn't stub.
+            invoiceMap = new Map<Id, Invoice>();
+            for (Id iid : invoiceIds) {
+                if (testInvoiceOverride.containsKey(iid)) invoiceMap.put(iid, testInvoiceOverride.get(iid));
+            }
+        } else {
+            invoiceMap = new Map<Id, Invoice>([
+                SELECT Id, DocumentNumber, BillingAccount.Name, BillingAccount.BillingCountry,
+                       TotalAmount, TotalTaxAmount
+                FROM Invoice
+                WHERE Id IN :invoiceIds
+            ]);
+        }
 
         String baseUrl = cfg.API_Base_URL__c;
         if (!baseUrl.startsWith('http')) baseUrl = 'https://' + baseUrl;
@@ -134,7 +151,7 @@ public with sharing class SapTaxCalculationService {
             results.add(res);
         }
 
-        if (!updates.isEmpty()) {
+        if (!updates.isEmpty() && !testSkipDml) {
             try {
                 update updates;
             } catch (Exception e) {

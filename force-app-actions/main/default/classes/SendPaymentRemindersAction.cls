@@ -8,6 +8,14 @@
  */
 public with sharing class SendPaymentRemindersAction {
 
+    // ---- Test seams ----
+    // Salesforce Industries Billing rejects `insert new Invoice(...)` in Apex tests
+    // ("Can't create Invoice in Apex. Use REST API instead."). These @TestVisible seams
+    // let unit tests inject in-memory Invoice records (built via JSON.deserialize) and
+    // suppress the final DML update, which would fail on synthetic Ids.
+    @TestVisible private static List<Invoice> testInvoicesOverride = null;
+    @TestVisible private static Boolean testSkipDml = false;
+
     public class Request {
         @InvocableVariable(
             label='Invoice Number'
@@ -93,7 +101,9 @@ public with sharing class SendPaymentRemindersAction {
             }
 
             EventBus.publish(events);
-            update invoicesToUpdate;
+            if (!testSkipDml) {
+                update invoicesToUpdate;
+            }
 
             resp.remindersSent = invoicesToUpdate.size();
             resp.outcomeMessage = 'Successfully sent ' + resp.remindersSent + ' Stripe payment reminder(s) totaling $'
@@ -105,6 +115,9 @@ public with sharing class SendPaymentRemindersAction {
     }
 
     private static List<Invoice> findInvoices(String identifier) {
+        if (testInvoicesOverride != null) {
+            return testInvoicesOverride;
+        }
         if (identifier.equalsIgnoreCase('all')) {
             return [
                 SELECT Id, DocumentNumber, TotalAmountWithTax, Stripe_Payment_Status__c,

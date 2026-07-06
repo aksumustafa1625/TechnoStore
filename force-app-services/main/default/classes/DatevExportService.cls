@@ -26,6 +26,16 @@ public with sharing class DatevExportService {
     private static final String REVENUE_ACCOUNT = '4400';   // SKR04 Erlöse 19% USt
     private static final Integer DEBITOR_START = 10001;     // first auto-allocated Debitor
 
+    // @TestVisible seams — Salesforce Industries Billing forbids `insert new Invoice(...)` in
+    // Apex DML (documented in TestDataFactory + TS-TEST-009). Tests build an in-memory Invoice
+    // via JSON.deserialize (afigueiredo pattern) and inject it here so the CSV formatter can
+    // be exercised end-to-end without a real Invoice row. `testSkipDml` short-circuits the
+    // ContentVersion insert whose FirstPublishLocationId would fail against a fake Invoice Id.
+    // `testLastCsvBlob` captures the BOM-prefixed payload for byte-level assertions.
+    @TestVisible private static Invoice testInvoiceOverride = null;
+    @TestVisible private static Boolean testSkipDml = false;
+    @TestVisible private static Blob testLastCsvBlob = null;
+
     public class Result {
         @AuraEnabled @InvocableVariable public Id invoiceId;
         @AuraEnabled @InvocableVariable public Id contentVersionId;
@@ -56,11 +66,16 @@ public with sharing class DatevExportService {
 
     // Returns the full DATEV Buchungsstapel CSV without attaching it (used by the REST endpoint).
     public static String generateCsv(Id invoiceId) {
-        Invoice inv = [
-            SELECT Id, DocumentNumber, TotalAmount, TotalAmountWithTax, InvoiceDate,
-                   BillingAccountId, BillingAccount.Name, BillingAccount.DATEV_Debitor_Number__c
-            FROM Invoice WHERE Id = :invoiceId LIMIT 1
-        ];
+        Invoice inv;
+        if (testInvoiceOverride != null) {
+            inv = testInvoiceOverride;
+        } else {
+            inv = [
+                SELECT Id, DocumentNumber, TotalAmount, TotalAmountWithTax, InvoiceDate,
+                       BillingAccountId, BillingAccount.Name, BillingAccount.DATEV_Debitor_Number__c
+                FROM Invoice WHERE Id = :invoiceId LIMIT 1
+            ];
+        }
         String debitor = inv.BillingAccount != null ? inv.BillingAccount.DATEV_Debitor_Number__c : null;
         if (String.isBlank(debitor) && inv.BillingAccountId != null) {
             debitor = allocateDebitor(inv.BillingAccountId);
@@ -74,7 +89,12 @@ public with sharing class DatevExportService {
         res.invoiceId = invoiceId;
         try {
             String csv = generateCsv(invoiceId);
-            Invoice inv = [SELECT DocumentNumber FROM Invoice WHERE Id = :invoiceId LIMIT 1];
+            Invoice inv;
+            if (testInvoiceOverride != null) {
+                inv = testInvoiceOverride;
+            } else {
+                inv = [SELECT DocumentNumber FROM Invoice WHERE Id = :invoiceId LIMIT 1];
+            }
             res.csvPreview = csv.abbreviate(1000);
 
             String fileName = 'DATEV_Buchungsstapel_' + inv.DocumentNumber + '_' +
@@ -83,15 +103,17 @@ public with sharing class DatevExportService {
             // correctly (umlauts like "BU-Schlüssel" render properly, not "BU-SchlÃ¼ssel"). ADR-031.
             // Built via hex concat because Apex Blob has no direct concatenation.
             Blob csvWithBom = EncodingUtil.convertFromHex('EFBBBF' + EncodingUtil.convertToHex(Blob.valueOf(csv)));
+            testLastCsvBlob = csvWithBom;
             ContentVersion cv = new ContentVersion(
                 Title = fileName,
                 PathOnClient = fileName,
                 VersionData = csvWithBom,
                 FirstPublishLocationId = invoiceId
             );
-            insert cv;
-
-            res.contentVersionId = cv.Id;
+            if (!testSkipDml) {
+                insert cv;
+                res.contentVersionId = cv.Id;
+            }
             res.fileName = fileName;
             res.status = 'Success';
             res.message = 'DATEV CSV generated and attached: ' + fileName;

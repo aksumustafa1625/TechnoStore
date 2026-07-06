@@ -24,13 +24,25 @@
  *   - Case + whitespace tolerance
  *   - Rounding invariants (setScale(2))
  *
- * What is NOT covered (roadmap TS-TEST-008):
- *   - HTTP 200 SAP response parsing (`d.results[0].TaxRate`) + Invoice write-back.
- *     Requires either (a) refactoring calculateForInvoice to accept a passed-in Invoice
- *     record for testability, or (b) an Invoice-DML mock harness. Recommendation:
- *     extract a package-private overload `List<Result> calculateForInvoices(Map<Id, Invoice> invoices, ...)`
- *     that skips the SOQL step — tests pass an in-memory Invoice with hydrated
- *     BillingAccount relationship via JSON deserialization.
+ * What IS covered via @TestVisible Invoice injection (TS-TEST-008 resolved):
+ *   - HTTP 200 SAP response parsing (`d.results[0].TaxRate`) — engineUsed=SAP_API,
+ *     endpoint + APIKey header + GET method all asserted on the mock
+ *   - HTTP 200 with malformed body (missing d.results) — parser returns null,
+ *     fallback engages (SAP_FALLBACK_TABLE)
+ *   - HTTP 403 (SAP sandbox license-gated) — fallback engaged, Success result
+ *   - HTTP 500 — fallback engaged
+ *   - CalloutException / timeout — caught, fallback engaged
+ *   - Per-country write-back via Result assertions: DE 19% / AT 20% / CH 7.7% / US 0%
+ *   - Null country -> DEFAULT_RATE
+ *   - Null TotalAmount -> zero taxable amount (defensive coercion)
+ *   - Bulk mixed: some Invoices injected, some not — correct Success + Error mix
+ *
+ *   Pattern (community-standard, ADR-024): Invoice is Apex-DML-blocked
+ *   (Salesforce Industries Billing native object), so the service exposes a
+ *   `@TestVisible Map<Id, Invoice> testInvoiceOverride` seam. Tests build
+ *   Invoice records via JSON.deserialize with a hydrated BillingAccount
+ *   relationship, inject them, and set `testSkipDml = true` so the final
+ *   `update updates` skips (fabricated Ids can't survive real DML).
  *
  * Mock design notes:
  *   Every mock records via INSTANCE fields (Apex bans `static` on inner-class members),
@@ -436,6 +448,316 @@ private class SapTaxCalculationServiceTest {
         System.assert(results[0].message.startsWith('Invoice not found'));
         System.assertEquals(0, mock.callCount,
             'Timeout mock must not be invoked when Invoice SOQL guard fires first');
+    }
+
+    // =====================================================================
+    //  Public entry point — SAP-write + fallback paths driven via @TestVisible
+    //  Invoice injection (JSON deserialization pattern — Invoice is Apex-DML-
+    //  blocked). testInvoiceOverride bypasses the SOQL; testSkipDml=true stops
+    //  the final `update updates` from touching the (invalid) in-memory Ids.
+    // =====================================================================
+
+    /** Fabricate a well-formed Invoice Id. */
+    private static Id fakeInvoiceId(String suffix) {
+        String prefix = Invoice.SObjectType.getDescribe().getKeyPrefix();
+        // 3-char prefix + 12-char body = 15 total.
+        return Id.valueOf(prefix + suffix);
+    }
+
+    /** JSON-deserialize an Invoice with a hydrated BillingAccount relationship. */
+    private static Invoice buildInvoice(Id fakeId, Decimal totalAmount, String country) {
+        String bogusAccountId = '001000000000001AAA';
+        String json = '{'
+            + '"attributes":{"type":"Invoice"},'
+            + '"Id":"' + String.valueOf(fakeId) + '",'
+            + '"DocumentNumber":"INV-TEST-001",'
+            + '"TotalAmount":' + totalAmount + ','
+            + '"TotalTaxAmount":0,'
+            + '"BillingAccountId":"' + bogusAccountId + '",'
+            + '"BillingAccount":{"attributes":{"type":"Account"},"Id":"' + bogusAccountId + '","Name":"Acme AG","BillingCountry":' + (country == null ? 'null' : ('"' + country + '"')) + '}'
+            + '}';
+        return (Invoice) System.JSON.deserialize(json, Invoice.class);
+    }
+
+    /** Wire up the @TestVisible seams with a single-Invoice map. */
+    private static void injectInvoice(Invoice inv) {
+        SapTaxCalculationService.testInvoiceOverride = new Map<Id, Invoice>{ inv.Id => inv };
+        SapTaxCalculationService.testSkipDml = true;
+    }
+
+    @IsTest
+    static void calculateForInvoice_sapReturns200_writesSapAuditFields_taxEngineUsed_SAP_API() {
+        Id fid = fakeInvoiceId('000000000A01');
+        Invoice inv = buildInvoice(fid, 1000.00, 'DE');
+        injectInvoice(inv);
+        SapTaxMock200 mock = new SapTaxMock200();
+        mock.returnedRate = 19.00;
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, mock);
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals(1, results.size(), 'One Request -> one Result');
+        SapTaxCalculationService.Result r = results[0];
+        System.assertEquals('Success', r.status, 'Happy-path SAP 200 must be Success');
+        System.assertEquals('SAP_API', r.engineUsed,
+            'When SAP responds 200 with a parseable rate, engineUsed must be SAP_API');
+        System.assertEquals(19.00, r.taxRate, 'Rate must be pulled from mock body');
+        System.assertEquals(190.00, r.taxAmount,
+            '1000.00 @ 19% must equal 190.00 (setScale(2))');
+        System.assertEquals(fid, r.invoiceId, 'Result must echo the Invoice Id');
+        System.assertEquals(1, mock.callCount, 'Exactly one SAP callout expected');
+        System.assert(mock.lastEndpoint.contains('API_DETERMINE_TAX_SRV'),
+            'Endpoint must target the SAP tax OData service. Got: ' + mock.lastEndpoint);
+        System.assertEquals('GET', mock.lastMethod, 'SAP tax API is a GET');
+        System.assertEquals(SAP_API_KEY, mock.lastHeaders.get('APIKey'),
+            'APIKey header must be pulled from SAP_Config__c');
+    }
+
+    @IsTest
+    static void calculateForInvoice_sap403_fallsBackToCountryTable_taxEngineUsed_SAP_FALLBACK_TABLE() {
+        Id fid = fakeInvoiceId('000000000A02');
+        Invoice inv = buildInvoice(fid, 500.00, 'DE');
+        injectInvoice(inv);
+        SapTaxMock403 mock = new SapTaxMock403();
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, mock);
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        SapTaxCalculationService.Result r = results[0];
+        System.assertEquals('Success', r.status,
+            '403 is a graceful fallback — not an Error');
+        System.assertEquals('SAP_FALLBACK_TABLE', r.engineUsed,
+            'SAP 403 (license-gated sandbox) must trigger country-table fallback');
+        System.assertEquals(19.00, r.taxRate, 'DE fallback rate is 19.00');
+        System.assertEquals(95.00, r.taxAmount, '500.00 @ 19% = 95.00');
+        System.assertEquals(1, mock.callCount, 'SAP was attempted before fallback');
+    }
+
+    @IsTest
+    static void calculateForInvoice_sap500_fallsBackToCountryTable() {
+        Id fid = fakeInvoiceId('000000000A03');
+        Invoice inv = buildInvoice(fid, 200.00, 'AT');
+        injectInvoice(inv);
+        SapTaxMock500 mock = new SapTaxMock500();
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, mock);
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        SapTaxCalculationService.Result r = results[0];
+        System.assertEquals('SAP_FALLBACK_TABLE', r.engineUsed,
+            'SAP 500 must fall through to country-table');
+        System.assertEquals(20.00, r.taxRate, 'AT fallback rate is 20.00');
+        System.assertEquals(40.00, r.taxAmount, '200.00 @ 20% = 40.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_calloutException_fallsBackToCountryTable() {
+        Id fid = fakeInvoiceId('000000000A04');
+        Invoice inv = buildInvoice(fid, 100.00, 'CH');
+        injectInvoice(inv);
+        SapTaxMockTimeout mock = new SapTaxMockTimeout();
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, mock);
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        SapTaxCalculationService.Result r = results[0];
+        System.assertEquals('Success', r.status,
+            'CalloutException is caught; end state is a Successful fallback result');
+        System.assertEquals('SAP_FALLBACK_TABLE', r.engineUsed,
+            'Timeout must NOT propagate — caught by try/catch, fallback engaged');
+        System.assertEquals(7.70, r.taxRate, 'CH fallback rate is 7.70');
+        System.assertEquals(7.70, r.taxAmount, '100.00 @ 7.70% = 7.70');
+    }
+
+    @IsTest
+    static void calculateForInvoice_countryDE_writes19PercentVat_toInMemoryInvoice() {
+        Id fid = fakeInvoiceId('000000000A05');
+        Invoice inv = buildInvoice(fid, 1000.00, 'DE');
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403()); // force fallback
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        SapTaxCalculationService.Result r = results[0];
+        System.assertEquals(19.00, r.taxRate, 'German VAT is 19%');
+        System.assertEquals(190.00, r.taxAmount, '1000.00 @ 19% = 190.00');
+        System.assertEquals('SAP_FALLBACK_TABLE', r.engineUsed);
+        System.assert(r.message.contains('19'), 'Message must mention the rate. Got: ' + r.message);
+    }
+
+    @IsTest
+    static void calculateForInvoice_countryAT_writes20PercentVat() {
+        Id fid = fakeInvoiceId('000000000A06');
+        Invoice inv = buildInvoice(fid, 500.00, 'AT');
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals(20.00, results[0].taxRate, 'Austrian VAT is 20%');
+        System.assertEquals(100.00, results[0].taxAmount, '500.00 @ 20% = 100.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_countryCH_writes_7_7_PercentVat() {
+        Id fid = fakeInvoiceId('000000000A07');
+        Invoice inv = buildInvoice(fid, 1000.00, 'CH');
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals(7.70, results[0].taxRate, 'Swiss VAT is 7.70%');
+        System.assertEquals(77.00, results[0].taxAmount, '1000.00 @ 7.70% = 77.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_countryUS_writes_0_PercentVat() {
+        Id fid = fakeInvoiceId('000000000A08');
+        Invoice inv = buildInvoice(fid, 1000.00, 'US');
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals(0.00, results[0].taxRate,
+            'US federal is 0 — state-level would come from SAP jurisdiction code');
+        System.assertEquals(0.00, results[0].taxAmount, '1000.00 @ 0% = 0.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_nullCountry_usesDefaultRate() {
+        Id fid = fakeInvoiceId('000000000A09');
+        Invoice inv = buildInvoice(fid, 100.00, null);
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals(19.00, results[0].taxRate,
+            'Null country must fall through to DEFAULT_RATE (19%)');
+        System.assertEquals(19.00, results[0].taxAmount, '100 @ 19% = 19.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_nullTotalAmount_treatedAsZero() {
+        // The service defensively coerces null TotalAmount to 0.
+        Id fid = fakeInvoiceId('000000000A0A');
+        String bogusAccountId = '001000000000001AAA';
+        String json = '{'
+            + '"attributes":{"type":"Invoice"},'
+            + '"Id":"' + fid + '",'
+            + '"BillingAccountId":"' + bogusAccountId + '",'
+            + '"BillingAccount":{"attributes":{"type":"Account"},"Id":"' + bogusAccountId + '","BillingCountry":"DE"}'
+            + '}';
+        Invoice inv = (Invoice) System.JSON.deserialize(json, Invoice.class);
+        injectInvoice(inv);
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals('Success', results[0].status,
+            'Null TotalAmount must not throw — coerced to 0');
+        System.assertEquals(19.00, results[0].taxRate, 'DE rate still resolved');
+        System.assertEquals(0.00, results[0].taxAmount,
+            'Zero taxable amount @ 19% = 0.00');
+    }
+
+    @IsTest
+    static void calculateForInvoice_bulkMixed_someInjectedSomeMissing_correctResultsForEach() {
+        // 2 in-memory Invoices + 1 fabricated Id NOT in the override map ->
+        // 2 Successes + 1 "Invoice not found".
+        Id fidA = fakeInvoiceId('000000000B01');
+        Id fidB = fakeInvoiceId('000000000B02');
+        Id fidC = fakeInvoiceId('000000000B03'); // not injected
+        Invoice invA = buildInvoice(fidA, 100.00, 'DE');
+        Invoice invB = buildInvoice(fidB, 200.00, 'AT');
+
+        SapTaxCalculationService.testInvoiceOverride = new Map<Id, Invoice>{
+            fidA => invA, fidB => invB
+        };
+        SapTaxCalculationService.testSkipDml = true;
+
+        List<SapTaxCalculationService.Request> reqs = new List<SapTaxCalculationService.Request>{
+            buildRequest(fidA), buildRequest(fidB), buildRequest(fidC)
+        };
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock403());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(reqs);
+        Test.stopTest();
+
+        System.assertEquals(3, results.size(), '3 requests -> 3 results');
+        // Result order matches request order.
+        System.assertEquals('Success', results[0].status);
+        System.assertEquals(19.00, results[0].taxRate);
+        System.assertEquals('Success', results[1].status);
+        System.assertEquals(20.00, results[1].taxRate);
+        System.assertEquals('Error', results[2].status);
+        System.assert(results[2].message.startsWith('Invoice not found'),
+            'Third result must be Invoice not found. Got: ' + results[2].message);
+    }
+
+    @IsTest
+    static void calculateForInvoice_sap200_butMalformedBody_fallsBackToCountryTable() {
+        // Body doesn't match the d.results[0].TaxRate schema -> trySapTaxApi returns
+        // null -> fallback engages. Proves the parser is defensive.
+        Id fid = fakeInvoiceId('000000000C01');
+        Invoice inv = buildInvoice(fid, 100.00, 'DE');
+        injectInvoice(inv);
+
+        // Anonymous 200-with-garbage-body mock.
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new SapTaxMock200Malformed());
+        List<SapTaxCalculationService.Result> results =
+            SapTaxCalculationService.calculateForInvoice(singleRequest(fid));
+        Test.stopTest();
+
+        System.assertEquals('SAP_FALLBACK_TABLE', results[0].engineUsed,
+            'Malformed 200 body must yield rate=null -> fallback engaged');
+        System.assertEquals(19.00, results[0].taxRate);
+    }
+
+    /** 200 OK with a body that does NOT match the expected schema. */
+    public class SapTaxMock200Malformed implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse resp = new HttpResponse();
+            resp.setStatusCode(200);
+            resp.setStatus('OK');
+            resp.setBody('{"unexpected":"shape"}');
+            return resp;
+        }
     }
 
     @IsTest

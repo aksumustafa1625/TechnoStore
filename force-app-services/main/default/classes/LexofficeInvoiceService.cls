@@ -25,6 +25,24 @@ public with sharing class LexofficeInvoiceService {
     private static final String SOURCE = 'lexoffice';
     private static final Decimal DE_VAT_RATE = 19;
 
+    // ---------------------------------------------------------------------
+    // Test-only seams
+    //
+    // Salesforce Industries Billing blocks `insert new Invoice(...)` in Apex
+    // (FIELD_INTEGRITY_EXCEPTION: "Can't create Invoice in Apex. Use REST
+    // API instead."), so the doPublish() SOQL for Invoice + InvoiceLine can
+    // never resolve to real records during a unit test. These @TestVisible
+    // hooks let a test synthesize an Invoice in memory via JSON.deserialize
+    // (BillingAccount + BillToContact + fake Id) and inject it, so the full
+    // 2-callout choreography (createContact → createInvoice → write-back)
+    // is reachable behind HttpCalloutMock. testSkipUpdateDml short-circuits
+    // the "update new Invoice(...)" write-back for those in-memory records.
+    // Production code path (all three flags null/false) is unchanged.
+    // ---------------------------------------------------------------------
+    @TestVisible private static Invoice testInvoiceOverride = null;
+    @TestVisible private static List<InvoiceLine> testInvoiceLinesOverride = null;
+    @TestVisible private static Boolean testSkipUpdateDml = false;
+
     public class Request {
         @InvocableVariable(label='Invoice Id' required=true)
         public Id invoiceId;
@@ -72,43 +90,57 @@ public with sharing class LexofficeInvoiceService {
         String baseUrl = String.isBlank(cfg.API_Base_URL__c) ? 'https://api.lexoffice.io' : cfg.API_Base_URL__c;
         if (baseUrl.endsWith('/')) baseUrl = baseUrl.removeEnd('/');
 
-        List<Invoice> invs = [
-            SELECT Id, DocumentNumber, TotalAmount, TotalAmountWithTax, InvoiceDate,
-                   BillingAccountId, BillingAccount.Name,
-                   BillingAccount.BillingStreet, BillingAccount.BillingCity,
-                   BillingAccount.BillingPostalCode, BillingAccount.BillingCountry
-            FROM Invoice WHERE Id = :invoiceId LIMIT 1
-        ];
-        if (invs.isEmpty()) {
-            res.status = 'Error';
-            res.message = 'Invoice not found: ' + invoiceId;
-            return res;
+        Invoice inv;
+        if (Test.isRunningTest() && testInvoiceOverride != null) {
+            inv = testInvoiceOverride;
+        } else {
+            List<Invoice> invs = [
+                SELECT Id, DocumentNumber, TotalAmount, TotalAmountWithTax, InvoiceDate,
+                       BillingAccountId, BillingAccount.Name,
+                       BillingAccount.BillingStreet, BillingAccount.BillingCity,
+                       BillingAccount.BillingPostalCode, BillingAccount.BillingCountry
+                FROM Invoice WHERE Id = :invoiceId LIMIT 1
+            ];
+            if (invs.isEmpty()) {
+                res.status = 'Error';
+                res.message = 'Invoice not found: ' + invoiceId;
+                return res;
+            }
+            inv = invs[0];
         }
-        Invoice inv = invs[0];
 
-        List<InvoiceLine> lines = [
-            SELECT Id, Product2Id, Product2.Name, Description, Quantity,
-                   GrossUnitPrice, UnitPrice, ChargeAmountWithTax
-            FROM InvoiceLine WHERE InvoiceId = :invoiceId
-        ];
+        List<InvoiceLine> lines;
+        if (Test.isRunningTest() && testInvoiceLinesOverride != null) {
+            lines = testInvoiceLinesOverride;
+        } else {
+            lines = [
+                SELECT Id, Product2Id, Product2.Name, Description, Quantity,
+                       GrossUnitPrice, UnitPrice, ChargeAmountWithTax
+                FROM InvoiceLine WHERE InvoiceId = :invoiceId
+            ];
+        }
 
         try {
             String contactId = createContact(baseUrl, cfg.API_Key__c, inv, correlationId);
             String lexInvoiceId = createInvoice(baseUrl, cfg.API_Key__c, inv, lines, contactId, correlationId);
 
-            update new Invoice(
-                Id = inv.Id,
-                Lexoffice_Invoice_Id__c = lexInvoiceId,
-                Lexoffice_Status__c = 'Published',
-                Lexoffice_Published_At__c = System.now()
-            );
+            if (!(Test.isRunningTest() && testSkipUpdateDml)) {
+                update new Invoice(
+                    Id = inv.Id,
+                    Lexoffice_Invoice_Id__c = lexInvoiceId,
+                    Lexoffice_Status__c = 'Published',
+                    Lexoffice_Published_At__c = System.now()
+                );
+            }
 
             res.lexofficeInvoiceId = lexInvoiceId;
             res.status = 'Success';
             res.message = 'Published to lexoffice. Invoice id: ' + lexInvoiceId;
         } catch (Exception e) {
             try {
-                update new Invoice(Id = inv.Id, Lexoffice_Status__c = 'Publish Failed');
+                if (!(Test.isRunningTest() && testSkipUpdateDml)) {
+                    update new Invoice(Id = inv.Id, Lexoffice_Status__c = 'Publish Failed');
+                }
             } catch (Exception ignored) { /* status update is non-critical */ }
 
             IntegrationErrorLogger.log(SOURCE, 'publishInvoice', e, invoiceId, correlationId);
