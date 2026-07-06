@@ -1,7 +1,10 @@
 // Test webhook idempotency: fire the JIRA webhook twice with the same External_Id,
 // expect 2nd call to be deduped.
+// SECRET: read the live secret from Inventory_Integration_Config__mdt so this diagnostic
+// stays in sync with rotations. Never inline the secret in a committed script — see SECURITY.md.
 Http http = new Http();
-String url = 'https://your-org.develop.my.salesforce-sites.com/docusign/services/apexrest/jira/webhook?secret=technostore-warehouse-secret-2026';
+Inventory_Integration_Config__mdt cfg = Inventory_Integration_Config__mdt.getInstance('Default');
+String url = 'https://your-org.develop.my.salesforce-sites.com/docusign/services/apexrest/jira/webhook?secret=' + cfg.Shared_Secret__c;
 String testIssueKey = 'TS-DEDUP-TEST-' + DateTime.now().getTime();
 String body = JSON.serialize(new Map<String, Object>{
     'issueKey' => testIssueKey,

@@ -31,6 +31,8 @@ In a project with 50+ Apex classes, 7 external integrations, and a 6-package SFD
 | [008](ADR-008-flying-saucer-vf-pdf.md) | Flying Saucer VF over LWC for branded PDFs | Accepted | 2026-04-22 |
 | [009](ADR-009-quote-tax-formula-invoice-tax-adapter.md) | Quote tax via formula fields, Invoice tax via commercetax adapter | Accepted | 2026-05-03 |
 | [010](ADR-010-notion-api-multi-call-orchestration.md) | Notion API multi-call orchestration for 3-level nested toggles | **Superseded** (2026-05-14 — refactored to single-POST flat-heading structure; see ADR's Supersession Note) | 2026-05-11 |
+| [032](ADR-032-rlm-bundle-pricing-research-first-diagnostic.md) | RLM bundle pricing research-first diagnostic before more org changes | Accepted | 2026-06-29 |
+| [033](ADR-033-rlm-bundle-pricing-forensic-debug-log.md) | RLM bundle pricing forensic debug log and lessons learned | Accepted | 2026-06-30 |
 
 ## When to write a new ADR
 

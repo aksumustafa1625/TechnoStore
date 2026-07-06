@@ -1,0 +1,9 @@
+{
+  "inputs": [
+    {
+      "contextDefinitionId": "RevSalesTransactionContext",
+      "contextMappingId": "11jaj000032RUAoAAO",
+      "contextData": "{\"Quote\":{\"Id\":\"0Q0aj000002hDwzCAE\"}}"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "inputs": [
+    {
+      "contextDefinitionId": "RLM_SalesTransactionContext",
+      "contextMappingId": "11jaj000032RUAdAAO",
+      "pricingProcedureId": "Pricing_Procedure_Demo_4",
+      "pricingData": "{\"Quote\":{\"Id\":\"0Q0aj000002hDwzCAE\"}}",
+      "skipDiscovery": true,
+      "persistContext": false,
+      "useSessionScopedContext": false
+    }
+  ]
+}

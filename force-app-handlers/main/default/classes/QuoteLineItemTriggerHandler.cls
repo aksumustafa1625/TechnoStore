@@ -7,13 +7,9 @@
  *   3. Apply attribute-based price adjustments on Bundle QLIs in beforeUpdate, sourced from
  *      Techno_Attribute_Price_Rule__mdt custom metadata (see applyAttributeAdjustmentsInPlace
  *      docstring for why custom metadata instead of native AttributeBasedAdjustment).
- *   4. Auto-decompose Bundle parents into child QLIs ASYNCHRONOUSLY after the parent QLI is
- *      updated (i.e. after Configure UI's Save & Exit transaction commits). Decomposing
- *      synchronously inside the trigger would expose the orphan children (their
- *      ParentQuoteLineItemId is platform-managed and not writeable from Apex) to Configure
- *      UI's commit-time validation, producing the misleading "Required fields missing:
- *      [Price Book Entry]" + "Your quote was not updated" red toasts. Running async via
- *      @future moves the insert outside the LWC's validation window — toasts disappear.
+ *   4. Auto-decompose Bundle parents into child QLIs asynchronously after the parent QLI is
+ *      inserted. The @future boundary keeps child rows outside the Configure UI
+ *      save transaction.
  *   5. Async cleanup of duplicate Bundle QLIs that Configure UI commits as transient drafts
  *      during Save & Exit. The OLDEST bundle of each (Quote, Product2) pair is the user's
  *      intentional add and is preserved; newer duplicates are deleted.
@@ -45,30 +41,18 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     protected override void afterInsert() {
-        // Bundle decomposition is NOT done here — see afterUpdate. Inserting children at bundle-add
-        // time would cause orphan children (ParentQuoteLineItemId is platform-managed and not
-        // writeable from Apex) to be visible to Configure UI's commit-time validation when the
-        // user later does Save & Exit, producing the misleading "Required fields missing:
-        // [Price Book Entry]" + "Your quote was not updated" toasts.
+        // Queue child-line decomposition after the add transaction commits. The async boundary
+        // keeps Apex-inserted children out of Configure UI's commit-time validation window.
         Set<Id> insertedIds = new Set<Id>();
         for (QuoteLineItem q : records) if (q.Id != null) insertedIds.add(q.Id);
         if (!insertedIds.isEmpty() && !System.isFuture() && !System.isBatch() && !System.isQueueable()) {
             cleanupDuplicateBundlesAsync(insertedIds);
+            decomposeBundlesAsync(insertedIds);
         }
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
     protected override void afterUpdate() {
-        // Queue async decomposition for any updated Bundle QLIs. Running async (after Configure
-        // UI's Save & Exit transaction commits) means the orphan children we insert never appear
-        // inside the LWC's commit-time validation window — no toast. Idempotent dedupe inside
-        // autoDecomposeBundles ensures repeat updates (Reprice All, attribute re-edits) don't
-        // duplicate children.
-        Set<Id> updatedIds = new Set<Id>();
-        for (QuoteLineItem q : records) if (q.Id != null) updatedIds.add(q.Id);
-        if (!updatedIds.isEmpty() && !System.isFuture() && !System.isBatch() && !System.isQueueable()) {
-            decomposeBundlesAsync(updatedIds);
-        }
         recalculateQuoteTax(quoteIdsFromRecords(records));
     }
 
@@ -107,9 +91,10 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
     }
 
     /**
-     * Auto-decompose Bundle parent QLIs into child QLIs at $0.
+     * Auto-decompose Bundle parent QLIs into child QLIs.
+     * Included components are priced at 0; non-included add-ons use their Price Book price.
      *
-     * Skips decomposition if a bundle of the same Product2 already exists on the same Quote —
+     * Skips decomposition if a bundle of the same Product2 already exists on the same Quote.
      * that earlier bundle is the user's intentional add. The new insert is virtually always a
      * Configure UI Save & Exit transient draft, which cleanupDuplicateBundlesAsync deletes.
      */
@@ -155,25 +140,22 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         bundleParentQlis = filteredBundleParents;
 
         Set<Id> parentProductIds = new Set<Id>();
-        Map<Id, Id> parentClassificationByProduct = new Map<Id, Id>();
         for (QuoteLineItem q : bundleParentQlis.values()) {
             parentProductIds.add(q.Product2Id);
-            if (q.Product2.BasedOnId != null) parentClassificationByProduct.put(q.Product2Id, q.Product2.BasedOnId);
         }
 
         List<ProductRelatedComponent> components = [
-            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId, Quantity, IsDefaultComponent
+            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId, Quantity,
+                   IsDefaultComponent, DoesBundlePriceIncludeChild, Sequence
             FROM ProductRelatedComponent
             WHERE ParentProductId IN :parentProductIds AND IsDefaultComponent = true
+            ORDER BY ParentProductId, Sequence
         ];
         if (components.isEmpty()) return;
 
         Map<Id, List<ProductRelatedComponent>> childrenByParent = new Map<Id, List<ProductRelatedComponent>>();
         Set<Id> childProductIds = new Set<Id>();
         for (ProductRelatedComponent c : components) {
-            Id parentClassif = parentClassificationByProduct.get(c.ParentProductId);
-            Id childClassif = c.ChildProduct != null ? c.ChildProduct.BasedOnId : null;
-            if (parentClassif != null && childClassif == parentClassif) continue;
             if (!childrenByParent.containsKey(c.ParentProductId)) childrenByParent.put(c.ParentProductId, new List<ProductRelatedComponent>());
             childrenByParent.get(c.ParentProductId).add(c);
             childProductIds.add(c.ChildProductId);
@@ -196,11 +178,12 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         }
         Map<String, PricebookEntry> pbeKeyToEntry = new Map<String, PricebookEntry>();
         for (PricebookEntry pbe : [
-            SELECT Id, Product2Id, Pricebook2Id, ProductSellingModel.SellingModelType
+            SELECT Id, Product2Id, Pricebook2Id, UnitPrice, ProductSellingModelId,
+                   ProductSellingModel.SellingModelType
             FROM PricebookEntry
             WHERE Product2Id IN :childProductIds AND Pricebook2Id IN :pricebookIds AND IsActive = true
         ]) {
-            pbeKeyToEntry.put(pbe.Pricebook2Id + '|' + pbe.Product2Id, pbe);
+            putPreferredPricebookEntry(pbeKeyToEntry, pbe);
         }
 
         Set<String> queued = new Set<String>();
@@ -223,7 +206,7 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
                 child.Product2Id = c.ChildProductId;
                 child.PricebookEntryId = pbe.Id;
                 child.Quantity = (c.Quantity != null) ? c.Quantity : 1;
-                child.UnitPrice = 0;
+                child.UnitPrice = childUnitPrice(c, pbe);
                 childQlis.add(child);
                 queued.add(childKey);
             }
@@ -233,17 +216,144 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             isBundleDecompositionRunning = true;
             try {
                 insert childQlis;
+                insertDefaultChildAttributes(childQlis);
             } finally {
                 isBundleDecompositionRunning = false;
             }
         }
     }
 
+    private static void putPreferredPricebookEntry(Map<String, PricebookEntry> entriesByKey, PricebookEntry candidate) {
+        if (candidate == null || candidate.Pricebook2Id == null || candidate.Product2Id == null) return;
+        String key = candidate.Pricebook2Id + '|' + candidate.Product2Id;
+        PricebookEntry existing = entriesByKey.get(key);
+        if (existing == null || pricebookEntryScore(candidate) > pricebookEntryScore(existing)) {
+            entriesByKey.put(key, candidate);
+        }
+    }
+
+    private static Integer pricebookEntryScore(PricebookEntry pbe) {
+        if (pbe == null) return 0;
+        String sellingType = (pbe.ProductSellingModel != null) ? pbe.ProductSellingModel.SellingModelType : null;
+        if (sellingType == 'OneTime') return 3;
+        if (pbe.ProductSellingModelId == null) return 2;
+        if (sellingType == 'Evergreen' || sellingType == 'TermDefined') return 0;
+        return 1;
+    }
+
+    private static Decimal childUnitPrice(ProductRelatedComponent component, PricebookEntry pbe) {
+        if (component != null && component.DoesBundlePriceIncludeChild == true) return 0;
+        return (pbe != null && pbe.UnitPrice != null) ? pbe.UnitPrice : 0;
+    }
+
+    private class DefaultAttributeValue {
+        Id attributeDefinitionId;
+        Id attributePicklistValueId;
+        String attributeValue;
+
+        DefaultAttributeValue(Id attributeDefinitionId, Id attributePicklistValueId, String attributeValue) {
+            this.attributeDefinitionId = attributeDefinitionId;
+            this.attributePicklistValueId = attributePicklistValueId;
+            this.attributeValue = attributeValue;
+        }
+    }
+
+    private class SelectedAttributeValue {
+        String attributeValue;
+        Id attributePicklistValueId;
+
+        SelectedAttributeValue(String attributeValue, Id attributePicklistValueId) {
+            this.attributeValue = attributeValue;
+            this.attributePicklistValueId = attributePicklistValueId;
+        }
+    }
+
+    private static void insertDefaultChildAttributes(List<QuoteLineItem> childQlis) {
+        if (childQlis == null || childQlis.isEmpty()) return;
+
+        Set<Id> childQliIds = new Set<Id>();
+        for (QuoteLineItem child : childQlis) {
+            if (child.Id != null) childQliIds.add(child.Id);
+        }
+        if (childQliIds.isEmpty()) return;
+
+        Map<String, List<DefaultAttributeValue>> defaultsByProductCode = defaultAttributesByProductCode();
+        if (defaultsByProductCode.isEmpty()) return;
+
+        Map<Id, QuoteLineItem> insertedChildren = new Map<Id, QuoteLineItem>([
+            SELECT Id, Product2.ProductCode
+            FROM QuoteLineItem
+            WHERE Id IN :childQliIds
+        ]);
+
+        Set<String> existingKeys = new Set<String>();
+        for (QuoteLineItemAttribute existing : [
+            SELECT QuoteLineItemId, AttributeDefinitionId
+            FROM QuoteLineItemAttribute
+            WHERE QuoteLineItemId IN :childQliIds
+        ]) {
+            existingKeys.add(existing.QuoteLineItemId + '|' + existing.AttributeDefinitionId);
+        }
+
+        List<QuoteLineItemAttribute> attrsToInsert = new List<QuoteLineItemAttribute>();
+        for (QuoteLineItem child : insertedChildren.values()) {
+            String productCode = child.Product2 != null ? child.Product2.ProductCode : null;
+            List<DefaultAttributeValue> defaults = defaultsByProductCode.get(productCode);
+            if (defaults == null) continue;
+
+            for (DefaultAttributeValue defaultValue : defaults) {
+                String key = child.Id + '|' + defaultValue.attributeDefinitionId;
+                if (existingKeys.contains(key)) continue;
+
+                attrsToInsert.add(new QuoteLineItemAttribute(
+                    QuoteLineItemId = child.Id,
+                    AttributeDefinitionId = defaultValue.attributeDefinitionId,
+                    AttributePicklistValueId = defaultValue.attributePicklistValueId,
+                    AttributeValue = defaultValue.attributeValue,
+                    ExternalId = 'auto-default-' + child.Id + '-' + String.valueOf(defaultValue.attributeDefinitionId)
+                ));
+                existingKeys.add(key);
+            }
+        }
+
+        if (!attrsToInsert.isEmpty()) {
+            Database.insertImmediate(attrsToInsert);
+        }
+    }
+
+    private static Map<String, List<DefaultAttributeValue>> defaultAttributesByProductCode() {
+        Map<String, List<DefaultAttributeValue>> result = new Map<String, List<DefaultAttributeValue>>();
+
+        result.put('COMP-LAP-001', new List<DefaultAttributeValue>{
+            new DefaultAttributeValue('0tjaj000000FbXJAA0', '0v6aj000000G24WAAS', 'RAM 16GB'),
+            new DefaultAttributeValue('0tjaj000000FbXNAA0', '0v6aj000000G24iAAC', 'SSD Hard Drive 512GB'),
+            new DefaultAttributeValue('0tjaj000000FbXMAA0', '0v6aj000000G24cAAC', 'i7-CPU 4.7GHz'),
+            new DefaultAttributeValue('0tjaj000000FbXHAA0', '0v6aj000000G24RAAS', '15 Inch')
+        });
+
+        result.put('COMP-LAP-003', new List<DefaultAttributeValue>{
+            new DefaultAttributeValue('0tjaj000000FbXJAA0', '0v6aj000000G24XAAS', 'RAM 8GB'),
+            new DefaultAttributeValue('0tjaj000000FbXNAA0', '0v6aj000000G24hAAC', 'SSD Hard Drive 256GB'),
+            new DefaultAttributeValue('0tjaj000000FbXMAA0', '0v6aj000000G24eAAC', 'i5-CPU 4.4GHz'),
+            new DefaultAttributeValue('0tjaj000000FbXHAA0', '0v6aj000000G24PAAS', '13 Inch')
+        });
+
+        result.put('AV-MON-001', new List<DefaultAttributeValue>{
+            new DefaultAttributeValue('0tjaj000000FbXFAA0', '0v6aj000000G24KAAS', '2k Built-in Display'),
+            new DefaultAttributeValue('0tjaj000000FbXHAA0', '0v6aj000000G24OAAS', '27 Inch')
+        });
+
+        result.put('SVC-WAR-001', new List<DefaultAttributeValue>{
+            new DefaultAttributeValue('0tjaj000000FbXBAA0', '0v6aj000000G251AAC', 'Business')
+        });
+
+        return result;
+    }
+
     /**
-     * Async wrapper that runs autoDecomposeBundles AFTER the inserting/updating transaction
+     * Async wrapper that runs autoDecomposeBundles after the inserting/updating transaction
      * commits. By the time this @future fires, Configure UI's Save & Exit session has closed,
-     * so the orphan children we insert are never seen by its commit-time validation — eliminating
-     * the misleading "Required fields missing: [Price Book Entry]" toast.
+     * so the child rows we insert are never seen by its commit-time validation.
      */
     @future
     public static void decomposeBundlesAsync(Set<Id> qliIds) {
@@ -348,16 +458,30 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         if (bundleInfoById.isEmpty()) return;
 
         // Step 2: Read attribute selections per QLI
-        Map<Id, Map<Id, String>> qliAttrValues = new Map<Id, Map<Id, String>>();
+        Map<Id, Map<Id, SelectedAttributeValue>> qliAttrValues = new Map<Id, Map<Id, SelectedAttributeValue>>();
+        Set<Id> selectedPicklistValueIds = new Set<Id>();
         for (QuoteLineItemAttribute qlia : [
-            SELECT QuoteLineItemId, AttributeDefinitionId, AttributeValue
+            SELECT QuoteLineItemId, AttributeDefinitionId, AttributeValue, AttributePicklistValueId
             FROM QuoteLineItemAttribute
             WHERE QuoteLineItemId IN :bundleInfoById.keySet()
         ]) {
-            if (!qliAttrValues.containsKey(qlia.QuoteLineItemId)) qliAttrValues.put(qlia.QuoteLineItemId, new Map<Id, String>());
-            qliAttrValues.get(qlia.QuoteLineItemId).put(qlia.AttributeDefinitionId, qlia.AttributeValue);
+            if (!qliAttrValues.containsKey(qlia.QuoteLineItemId)) qliAttrValues.put(qlia.QuoteLineItemId, new Map<Id, SelectedAttributeValue>());
+            qliAttrValues.get(qlia.QuoteLineItemId).put(
+                qlia.AttributeDefinitionId,
+                new SelectedAttributeValue(qlia.AttributeValue, qlia.AttributePicklistValueId)
+            );
+            if (qlia.AttributePicklistValueId != null) selectedPicklistValueIds.add(qlia.AttributePicklistValueId);
         }
         if (qliAttrValues.isEmpty()) return;
+
+        Map<Id, AttributePicklistValue> picklistValuesById = new Map<Id, AttributePicklistValue>();
+        if (!selectedPicklistValueIds.isEmpty()) {
+            picklistValuesById = new Map<Id, AttributePicklistValue>([
+                SELECT Id, Name, DisplayValue
+                FROM AttributePicklistValue
+                WHERE Id IN :selectedPicklistValueIds
+            ]);
+        }
 
         // Step 3: Load active rules from custom metadata, indexed by (ProductId|AttrDefId|AttrValue)
         Map<String, Techno_Attribute_Price_Rule__mdt> rulesByKey = new Map<String, Techno_Attribute_Price_Rule__mdt>();
@@ -377,22 +501,23 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
         for (QuoteLineItem q : qlis) {
             QuoteLineItem dbInfo = bundleInfoById.get(q.Id);
             if (dbInfo == null) continue;
-            Map<Id, String> selectedAttrs = qliAttrValues.get(q.Id);
+            Map<Id, SelectedAttributeValue> selectedAttrs = qliAttrValues.get(q.Id);
             if (selectedAttrs == null || selectedAttrs.isEmpty()) continue;
             if (dbInfo.PricebookEntry == null || dbInfo.PricebookEntry.UnitPrice == null) continue;
 
             Decimal totalAdjustment = 0;
             for (Id attrDefId : selectedAttrs.keySet()) {
-                String selectedValue = selectedAttrs.get(attrDefId);
+                SelectedAttributeValue selected = selectedAttrs.get(attrDefId);
+                String selectedValue = selected != null ? selected.attributeValue : null;
                 if (String.isBlank(selectedValue)) continue;
                 String key = dbInfo.Product2Id + '|' + attrDefId + '|' + selectedValue;
                 Techno_Attribute_Price_Rule__mdt rule = rulesByKey.get(key);
-                if (rule == null) continue;
-
-                if (rule.AdjustmentType__c == 'Amount') {
+                if (rule != null && rule.AdjustmentType__c == 'Amount') {
                     totalAdjustment += rule.AdjustmentValue__c;
-                } else if (rule.AdjustmentType__c == 'Percent') {
+                } else if (rule != null && rule.AdjustmentType__c == 'Percent') {
                     totalAdjustment += (dbInfo.PricebookEntry.UnitPrice * rule.AdjustmentValue__c / 100);
+                } else if (selected != null && selected.attributePicklistValueId != null) {
+                    totalAdjustment += adjustmentFromPicklistLabel(picklistValuesById.get(selected.attributePicklistValueId));
                 }
             }
 
@@ -400,6 +525,30 @@ public with sharing class QuoteLineItemTriggerHandler extends TriggerHandler {
             Decimal newUnitPrice = (dbInfo.PricebookEntry.UnitPrice + totalAdjustment).setScale(2);
             System.debug('applyAttributeAdjustmentsInPlace: QLI ' + q.Id + ' base=' + dbInfo.PricebookEntry.UnitPrice + ' adj=' + totalAdjustment + ' new=' + newUnitPrice);
             q.UnitPrice = newUnitPrice;
+        }
+    }
+
+    private static Decimal adjustmentFromPicklistLabel(AttributePicklistValue picklistValue) {
+        if (picklistValue == null) return 0;
+
+        String label = String.isNotBlank(picklistValue.DisplayValue)
+            ? picklistValue.DisplayValue
+            : picklistValue.Name;
+        if (String.isBlank(label)) return 0;
+
+        Integer marker = label.indexOf('+$');
+        if (marker < 0) return 0;
+
+        Integer endMarker = label.indexOf(')', marker);
+        if (endMarker < 0) return 0;
+
+        String amountText = label.substring(marker + 2, endMarker).replace(',', '').trim();
+        if (String.isBlank(amountText)) return 0;
+
+        try {
+            return Decimal.valueOf(amountText);
+        } catch (Exception e) {
+            return 0;
         }
     }
 

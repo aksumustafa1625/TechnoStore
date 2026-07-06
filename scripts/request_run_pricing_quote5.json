@@ -1,0 +1,11 @@
+{
+  "inputs": [
+    {
+      "contextInstanceId": "0Q0aj000002hDwzCAE",
+      "pricingProcedureName": "Revenue_Management_Default_Pricing_Procedure_V1",
+      "isDeveloperName": true,
+      "skipDiscovery": false,
+      "isSkipWaterfall": false
+    }
+  ]
+}

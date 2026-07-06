@@ -31,7 +31,7 @@ public with sharing class BundleDecompositionAction {
         public String statusMessage;
     }
 
-    @InvocableMethod(label='Decompose Bundle Quote Line Items' description='For each Bundle QLI on the given Quote, inserts default child QLIs at $0 based on ProductRelatedComponent (IsDefaultComponent=true). Skips Bundles that already have decomposed children.')
+    @InvocableMethod(label='Decompose Bundle Quote Line Items' description='For each Bundle QLI on the given Quote, inserts default child QLIs based on ProductRelatedComponent (IsDefaultComponent=true). Included components are $0; add-on components use their Price Book price.')
     public static List<Result> decompose(List<Request> requests) {
         List<Result> results = new List<Result>();
         if (requests == null || requests.isEmpty()) return results;
@@ -68,24 +68,21 @@ public with sharing class BundleDecompositionAction {
         }
 
         Set<Id> parentProductIds = new Set<Id>();
-        Map<Id, Id> parentClassificationByProduct = new Map<Id, Id>();
         for (QuoteLineItem q : bundleParentQlis.values()) {
             parentProductIds.add(q.Product2Id);
-            if (q.Product2.BasedOnId != null) parentClassificationByProduct.put(q.Product2Id, q.Product2.BasedOnId);
         }
 
         List<ProductRelatedComponent> components = [
-            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId, Quantity, IsDefaultComponent
+            SELECT Id, ParentProductId, ChildProductId, ChildProduct.BasedOnId, Quantity,
+                   IsDefaultComponent, DoesBundlePriceIncludeChild, Sequence
             FROM ProductRelatedComponent
             WHERE ParentProductId IN :parentProductIds AND IsDefaultComponent = true
+            ORDER BY ParentProductId, Sequence
         ];
 
         Map<Id, List<ProductRelatedComponent>> childrenByParent = new Map<Id, List<ProductRelatedComponent>>();
         Set<Id> childProductIds = new Set<Id>();
         for (ProductRelatedComponent c : components) {
-            Id parentClassif = parentClassificationByProduct.get(c.ParentProductId);
-            Id childClassif = c.ChildProduct != null ? c.ChildProduct.BasedOnId : null;
-            if (parentClassif != null && childClassif == parentClassif) continue;
             if (!childrenByParent.containsKey(c.ParentProductId)) childrenByParent.put(c.ParentProductId, new List<ProductRelatedComponent>());
             childrenByParent.get(c.ParentProductId).add(c);
             childProductIds.add(c.ChildProductId);
@@ -109,11 +106,12 @@ public with sharing class BundleDecompositionAction {
         }
         Map<String, PricebookEntry> pbeKeyToEntry = new Map<String, PricebookEntry>();
         for (PricebookEntry pbe : [
-            SELECT Id, Product2Id, Pricebook2Id, ProductSellingModel.SellingModelType
+            SELECT Id, Product2Id, Pricebook2Id, UnitPrice, ProductSellingModelId,
+                   ProductSellingModel.SellingModelType
             FROM PricebookEntry
             WHERE Product2Id IN :childProductIds AND Pricebook2Id IN :pricebookIds AND IsActive = true
         ]) {
-            pbeKeyToEntry.put(pbe.Pricebook2Id + '|' + pbe.Product2Id, pbe);
+            putPreferredPricebookEntry(pbeKeyToEntry, pbe);
         }
 
         // Track keys already queued for insert in THIS run, so duplicate Bundle QLIs of the same
@@ -140,7 +138,7 @@ public with sharing class BundleDecompositionAction {
                 child.Product2Id = c.ChildProductId;
                 child.PricebookEntryId = pbe.Id;
                 child.Quantity = (c.Quantity != null) ? c.Quantity : 1;
-                child.UnitPrice = 0;
+                child.UnitPrice = childUnitPrice(c, pbe);
                 childQlis.add(child);
                 alreadyQueued.add(childKey);
             }
@@ -157,5 +155,28 @@ public with sharing class BundleDecompositionAction {
             results.add(res);
         }
         return results;
+    }
+
+    private static void putPreferredPricebookEntry(Map<String, PricebookEntry> entriesByKey, PricebookEntry candidate) {
+        if (candidate == null || candidate.Pricebook2Id == null || candidate.Product2Id == null) return;
+        String key = candidate.Pricebook2Id + '|' + candidate.Product2Id;
+        PricebookEntry existing = entriesByKey.get(key);
+        if (existing == null || pricebookEntryScore(candidate) > pricebookEntryScore(existing)) {
+            entriesByKey.put(key, candidate);
+        }
+    }
+
+    private static Integer pricebookEntryScore(PricebookEntry pbe) {
+        if (pbe == null) return 0;
+        String sellingType = (pbe.ProductSellingModel != null) ? pbe.ProductSellingModel.SellingModelType : null;
+        if (sellingType == 'OneTime') return 3;
+        if (pbe.ProductSellingModelId == null) return 2;
+        if (sellingType == 'Evergreen' || sellingType == 'TermDefined') return 0;
+        return 1;
+    }
+
+    private static Decimal childUnitPrice(ProductRelatedComponent component, PricebookEntry pbe) {
+        if (component != null && component.DoesBundlePriceIncludeChild == true) return 0;
+        return (pbe != null && pbe.UnitPrice != null) ? pbe.UnitPrice : 0;
     }
 }

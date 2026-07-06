@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "contextDefinitionId": "RevSalesTransactionContext",
+      "contextMappingId": "11jaj000032RUAoAAO",
+      "pricingProcedureId": "Rev_Mgmt_Default_Pricing_Procedure2",
+      "discoveryProcedure": "Default_Discovery_Procedure",
+      "pricingData": "{\"Quote\":{\"Id\":\"0Q0aj000002hDwzCAE\"}}",
+      "persistContext": false,
+      "useSessionScopedContext": true,
+      "displayContext": true
+    }
+  ]
+}

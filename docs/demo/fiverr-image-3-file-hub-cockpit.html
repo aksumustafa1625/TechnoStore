@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Urla Shoes — Partner Compliance Cockpit</title>
+<style>
+  :root {
+    --navy: #0b2545;
+    --teal: #13856e;
+    --teal-soft: #e6f4f0;
+    --green: #16a34a;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --grey-100: #f5f7fa;
+    --grey-200: #e5e9ee;
+    --grey-300: #c9d6df;
+    --grey-700: #475569;
+    --bg: #f8fafc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    width: 1280px;
+    min-height: 769px;
+    padding: 40px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+  .title-block { }
+  .badge {
+    display: inline-block;
+    background: var(--teal);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--grey-700);
+    margin-top: 4px;
+  }
+  .stat-row {
+    display: flex;
+    gap: 12px;
+  }
+  .stat-card {
+    background: white;
+    border: 1px solid var(--grey-200);
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-width: 120px;
+    text-align: center;
+  }
+  .stat-card .num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .stat-card .label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--grey-700);
+    margin-top: 2px;
+  }
+  .stat-card.green .num { color: var(--green); }
+  .stat-card.amber .num { color: var(--amber); }
+  .stat-card.red .num { color: var(--red); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+  }
+  .card {
+    background: white;
+    border: 1px solid var(--grey-200);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  .card h2 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--teal);
+    letter-spacing: 0.3px;
+  }
+  table.matrix {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+  }
+  table.matrix th {
+    text-align: left;
+    color: var(--grey-700);
+    font-weight: 600;
+    padding: 8px 6px;
+    border-bottom: 2px solid var(--grey-200);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  table.matrix td {
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--grey-100);
+  }
+  table.matrix td.reseller {
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+  .dot.ok { background: var(--green); }
+  .dot.expiring { background: var(--amber); }
+  .dot.expired { background: var(--red); }
+  .dot.missing { background: var(--grey-300); }
+  .score-cell {
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .ring {
+    width: 36px;
+    height: 36px;
+  }
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .loop-card {
+    background: linear-gradient(135deg, var(--navy) 0%, #1a3a66 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 22px;
+  }
+  .loop-card h2 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    color: white;
+  }
+  .loop-card .sub {
+    font-size: 11px;
+    color: #9bb3cf;
+    margin-bottom: 16px;
+  }
+  .loop-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .loop-num {
+    background: var(--teal);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .loop-step strong { color: white; }
+  .loop-step span { color: #cfdcec; }
+  .legend {
+    background: white;
+    border: 1px solid var(--grey-200);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 11px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: var(--grey-700);
+  }
+  .legend-row:last-child { margin-bottom: 0; }
+  .footer-strip {
+    margin-top: 28px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--grey-700);
+    border-top: 1px solid var(--grey-200);
+    padding-top: 14px;
+  }
+  .footer-strip strong { color: var(--navy); }
+  .ai-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, var(--teal), #2bb593);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title-block">
+    <span class="badge">URLA SHOES  ·  SALESFORCE FILE HUB</span>
+    <h1>Partner Compliance Cockpit <span class="ai-badge">AI-driven</span></h1>
+    <div class="subtitle">Detect missing documents · request via email · AI-validate the upload · self-close — no manual intervention.</div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-card green"><div class="num">82%</div><div class="label">Network score</div></div>
+    <div class="stat-card"><div class="num">12</div><div class="label">Resellers</div></div>
+    <div class="stat-card amber"><div class="num">3</div><div class="label">Expiring</div></div>
+    <div class="stat-card red"><div class="num">2</div><div class="label">Missing</div></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Compliance Matrix · Resellers × Requirements</h2>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Reseller</th>
+          <th>Contract</th>
+          <th>Tax cert.</th>
+          <th>Insurance</th>
+          <th>Bank details</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="reseller">Aurora Retail GmbH</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">100</td>
+        </tr>
+        <tr>
+          <td class="reseller">Berlin Outfitters AG</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot expiring"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">100</td>
+        </tr>
+        <tr>
+          <td class="reseller">Frankfurt FootWorks</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot expired"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">75</td>
+        </tr>
+        <tr>
+          <td class="reseller">Hamburg Sport Co.</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot missing"></span></td>
+          <td class="score-cell">75</td>
+        </tr>
+        <tr>
+          <td class="reseller">Köln Schuh Partner</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot expiring"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">100</td>
+        </tr>
+        <tr>
+          <td class="reseller">München Premium Retail</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">100</td>
+        </tr>
+        <tr>
+          <td class="reseller">Vienna Footstyle</td>
+          <td><span class="dot expired"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot expiring"></span></td>
+          <td class="score-cell">75</td>
+        </tr>
+        <tr>
+          <td class="reseller">Zürich Footworks</td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td><span class="dot missing"></span></td>
+          <td><span class="dot ok"></span></td>
+          <td class="score-cell">75</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="right-col">
+    <div class="loop-card">
+      <h2>🔄 Autonomous AI Loop</h2>
+      <div class="sub">detect → request → AI-validate → self-fulfill</div>
+      <div class="loop-step">
+        <div class="loop-num">1</div>
+        <div><strong>Detect.</strong> <span>Cockpit finds a reseller is missing Bank Details.</span></div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">2</div>
+        <div><strong>Request.</strong> <span>Document_Request__c created · email sent to partner.</span></div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">3</div>
+        <div><strong>AI-validate.</strong> <span>Partner uploads. Einstein Prompt Template (GPT-4o mini) classifies → JSON: category + expiry.</span></div>
+      </div>
+      <div class="loop-step">
+        <div class="loop-num">4</div>
+        <div><strong>Self-fulfill.</strong> <span>Matching request auto-closes. LMS broadcasts. Cockpit score updates live — no polling.</span></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-row"><span class="dot ok"></span> <strong style="color:var(--navy)">OK</strong> — present and valid</div>
+      <div class="legend-row"><span class="dot expiring"></span> <strong style="color:var(--navy)">Expiring</strong> — within warning window</div>
+      <div class="legend-row"><span class="dot expired"></span> <strong style="color:var(--navy)">Expired</strong> — past expiry date</div>
+      <div class="legend-row"><span class="dot missing"></span> <strong style="color:var(--navy)">Missing</strong> — no file in category</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-strip">
+  Built on Salesforce · <strong>Apex (with/without sharing split)</strong> · <strong>Lightning Web Components + LMS</strong> · <strong>Einstein Prompt Template (metadata-deployable)</strong> · <strong>Custom Metadata-driven rules</strong> · <strong>WITH USER_MODE FLS enforcement</strong>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+    "inputs":  [
+                   {
+                       "contextId":  "0000000r24tq18g0025178282505497198a6e58d3af540fe98bfdab2a48179b4",
+                       "tagsList":  [
+                                        "SalesTransaction",
+                                        "SalesTransactionItem",
+                                        "ItemContractPrice",
+                                        "ItemContractDiscountType",
+                                        "ItemContractDiscountValue",
+                                        "AttributeValue"
+                                    ]
+                   }
+               ]
+}

@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "contextDefinitionId": "11Oaj000000whZGEAY",
+      "contextMappingId": "11jaj000032RUAdAAO",
+      "pricingProcedureId": "0k1aj000000HkksAAC",
+      "pricingData": "{\"Quote\":{\"Id\":\"0Q0aj000002hDwzCAE\"}}",
+      "persistContext": false,
+      "useSessionScopedContext": false,
+      "skipDiscovery": true,
+      "isSkipWaterfall": false
+    }
+  ]
+}

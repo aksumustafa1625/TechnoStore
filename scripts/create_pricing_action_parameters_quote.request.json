@@ -1,0 +1,9 @@
+{
+  "DeveloperName": "Quote_Default_RLM_Pricing",
+  "MasterLabel": "Quote Default RLM Pricing",
+  "ObjectName": "Quote",
+  "ContextDefinition": "RLM_SalesTransactionContext",
+  "ContextMapping": "QuoteEntitiesMapping",
+  "PricingProcedure": "Revenue_Management_Default_Pricing_Procedure_V1",
+  "EffectiveFrom": "2026-06-30T00:00:00.000+0000"
+}

@@ -1,0 +1,9 @@
+{
+  "DeveloperName": "Quote_Default_Rev_Pricing",
+  "MasterLabel": "Quote Default Revenue Pricing",
+  "ObjectName": "Quote",
+  "ContextDefinition": "RevSalesTransactionContext",
+  "ContextMapping": "QuoteEntitiesMapping",
+  "PricingProcedure": "Rev_Mgmt_Default_Pricing_Procedure2",
+  "EffectiveFrom": "2026-06-30T00:00:00.000+0000"
+}

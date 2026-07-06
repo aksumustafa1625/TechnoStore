@@ -1,0 +1,9 @@
+{
+  "inputs": [
+    {
+      "contextDefinitionId": "RLM_SalesTransactionContext",
+      "contextMappingId": "11jaj000032RUAdAAO",
+      "contextData": "{\"Quote\":{\"Id\":\"0Q0aj000002hDwzCAE\"}}"
+    }
+  ]
+}
