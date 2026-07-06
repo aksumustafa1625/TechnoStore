@@ -139,6 +139,7 @@ public with sharing class SapSalesOrderService {
         }
     }
 
+    @TestVisible
     private static Map<String, Object> buildSapPayload(Order o) {
         // OData v2 deep-insert: SO header + SO items in one POST.
         List<Map<String, Object>> items = new List<Map<String, Object>>();
@@ -166,6 +167,7 @@ public with sharing class SapSalesOrderService {
         return payload;
     }
 
+    @TestVisible
     private static String fetchCsrfToken(String baseUrl, String apiKey) {
         try {
             HttpRequest req = new HttpRequest();
@@ -186,6 +188,7 @@ public with sharing class SapSalesOrderService {
         }
     }
 
+    @TestVisible
     private static String extractSalesOrderNumber(String body) {
         if (String.isBlank(body)) return null;
         try {

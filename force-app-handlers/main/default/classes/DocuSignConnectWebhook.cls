@@ -10,6 +10,18 @@
 @RestResource(urlMapping='/docusign/webhook/*')
 global without sharing class DocuSignConnectWebhook {
 
+    // ---- Test seams (TS-TEST-021) ---------------------------------------------------
+    // Two defensive branches in handle() cannot be triggered from a unit test without
+    // a Salesforce-platform failure we cannot simulate:
+    //   1. EventBus.publish returning a failed SaveResult (Salesforce accepts any
+    //      well-formed platform event under governor limits — publish rarely fails).
+    //   2. An unhandled exception between checkAndRecord and markProcessed (no line
+    //      of code between those two points normally throws).
+    // These booleans let the test suite exercise both branches without invasive
+    // refactoring. Production code paths remain identical (both default to false).
+    @TestVisible private static Boolean testForcePublishFailure = false;
+    @TestVisible private static Boolean testForceUnhandledException = false;
+
     @HttpPost
     global static void handle() {
         RestRequest req = RestContext.request;
@@ -41,7 +53,18 @@ global without sharing class DocuSignConnectWebhook {
                 Envelope_Id__c = envelopeId,
                 DocuSign_Status__c = dsStatus
             );
-            Database.SaveResult sr = EventBus.publish(evt);
+            Database.SaveResult sr;
+            if (testForcePublishFailure) {
+                // Deserialize a synthetic failed SaveResult — Database.SaveResult has no public
+                // constructor but is JSON-deserializable. This lets the test suite drive the
+                // publish-failure branch below without needing Salesforce to reject the event.
+                sr = (Database.SaveResult) JSON.deserialize(
+                    '{"success":false,"errors":[{"message":"Simulated publish failure (test seam)","statusCode":"UNKNOWN_EXCEPTION","fields":[]}],"id":null}',
+                    Database.SaveResult.class
+                );
+            } else {
+                sr = EventBus.publish(evt);
+            }
             if (!sr.isSuccess()) {
                 String pubErr = sr.getErrors()[0].getMessage();
                 IntegrationErrorLogger.Request errReq = new IntegrationErrorLogger.Request();
@@ -56,6 +79,11 @@ global without sharing class DocuSignConnectWebhook {
                 WebhookEventLogger.markFailed(eventRecord.row, new EventPublishException(pubErr));
                 respondJson(res, 500, 'Event publish failed: ' + pubErr, envelopeId, dsStatus);
                 return;
+            }
+            if (testForceUnhandledException) {
+                // Test seam — simulates a runtime exception AFTER checkAndRecord has
+                // populated eventRecord.row, so the outer catch's markFailed branch runs.
+                throw new EventPublishException('Simulated unhandled exception (test seam)');
             }
             WebhookEventLogger.markProcessed(eventRecord.row, null);
             respondJson(res, 200, 'Event published', envelopeId, dsStatus);

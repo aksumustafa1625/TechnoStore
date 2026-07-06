@@ -240,6 +240,87 @@ private class WebhookEventLoggerTest {
         System.assertEquals(sources.size(), count);
     }
 
+    // ---------- Race condition: DUPLICATE_VALUE catch branch ----------
+    // In production, this branch fires when two parallel webhook deliveries race past the
+    // pre-query into the insert step and the DB Unique constraint rejects the loser.
+    // We reproduce it deterministically by flipping the @TestVisible testSkipPreQuery seam
+    // so the pre-query is bypassed and the insert path is forced to collide with the row
+    // we planted first.
+    @IsTest
+    static void checkAndRecord_duplicateValueRaceCondition_catchBranchReturnsWinner() {
+        // Winner already in the table (simulates the parallel writer that won the race).
+        Webhook_Event__c winner = new Webhook_Event__c(
+            External_Id__c = 'RACE-TEST-001',
+            Source__c = 'Stripe',
+            Event_Type__c = 'charge.succeeded',
+            Payload__c = '{"winner":true}',
+            Status__c = 'Received'
+        );
+        insert winner;
+
+        Test.startTest();
+        WebhookEventLogger.testSkipPreQuery = true;
+        WebhookEventLogger.RecordResult result = WebhookEventLogger.checkAndRecord(
+            'RACE-TEST-001', 'Stripe', 'charge.succeeded', '{"loser":true}'
+        );
+        WebhookEventLogger.testSkipPreQuery = false;
+        Test.stopTest();
+
+        System.assertEquals(true, result.isDuplicate,
+            'Race-condition catch branch must return isDuplicate=true when Unique constraint fires on insert');
+        System.assertNotEquals(null, result.row, 'Winner row must be re-queried and returned');
+        System.assertEquals(winner.Id, result.row.Id,
+            'Race-condition catch must return the pre-existing winner row, not the failed insert');
+
+        Integer physicalRows = [SELECT COUNT() FROM Webhook_Event__c WHERE External_Id__c = 'RACE-TEST-001'];
+        System.assertEquals(1, physicalRows,
+            'DB Unique constraint must prevent a second physical row for the same External_Id__c');
+    }
+
+    // ---------- markProcessed / markFailed: catch branch on structural update failure ----------
+    // Database.update(record, false) does NOT throw on save-result-level failures, but it DOES
+    // throw when the underlying record has been deleted (or otherwise vanished). The catch
+    // block logs a warning and swallows so the webhook handler never 500s just because
+    // audit tracking couldn't write.
+
+    @IsTest
+    static void markProcessed_updateFailsOnDeletedRow_catchBranchLogsWarnGracefully() {
+        WebhookEventLogger.RecordResult r = WebhookEventLogger.checkAndRecord(
+            'evt_deleted_processed', 'Stripe', 'charge.succeeded', '{}'
+        );
+        Id rowId = r.row.Id;
+        delete r.row;
+        Database.emptyRecycleBin(new List<Id>{ rowId });
+
+        Test.startTest();
+        // The record is gone — Database.update(upd, false) will throw internally. The catch
+        // block must swallow it so we return cleanly.
+        WebhookEventLogger.markProcessed(r.row, null);
+        Test.stopTest();
+
+        Integer stillGone = [SELECT COUNT() FROM Webhook_Event__c WHERE Id = :rowId];
+        System.assertEquals(0, stillGone,
+            'Deleted row must remain deleted; markProcessed catch branch must not resurrect it');
+    }
+
+    @IsTest
+    static void markFailed_updateFailsOnDeletedRow_catchBranchLogsWarnGracefully() {
+        WebhookEventLogger.RecordResult r = WebhookEventLogger.checkAndRecord(
+            'evt_deleted_failed', 'Stripe', 'charge.failed', '{}'
+        );
+        Id rowId = r.row.Id;
+        delete r.row;
+        Database.emptyRecycleBin(new List<Id>{ rowId });
+
+        Test.startTest();
+        WebhookEventLogger.markFailed(r.row, new DmlException('boom'));
+        Test.stopTest();
+
+        Integer stillGone = [SELECT COUNT() FROM Webhook_Event__c WHERE Id = :rowId];
+        System.assertEquals(0, stillGone,
+            'Deleted row must remain deleted; markFailed catch branch must not resurrect it');
+    }
+
     // ---------- Volume within governor limits ----------
     // This class is invoked ONCE per inbound webhook (not looped), so the realistic
     // volume test verifies a fleet of independent single calls within one Apex

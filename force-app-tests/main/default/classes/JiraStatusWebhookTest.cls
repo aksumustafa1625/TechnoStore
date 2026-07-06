@@ -469,6 +469,113 @@ private class JiraStatusWebhookTest {
     }
 
     // ================================================================
+    // Config-missing 500 branch — exercised via @TestVisible testConfigKey seam
+    // ================================================================
+
+    /**
+     * Handler asks Inventory_Integration_Config__mdt.getInstance(testConfigKey ?? 'Default')
+     * for its shared secret. If the record is null OR its Shared_Secret__c is blank,
+     * it 500s immediately with 'Server config missing.' before reaching auth. Custom
+     * Metadata records can't be mutated inside an Apex test, so we point the lookup
+     * at a nonexistent developer name — getInstance returns null and the 500 branch fires.
+     */
+    @IsTest
+    static void handle_configMissing_returns500() {
+        JiraStatusWebhook.testConfigKey = 'NONEXISTENT_KEY_' + System.now().getTime();
+        installRestContext(customShapeBody(JIRA_KEY, 'Done'), 'irrelevant-secret', null);
+
+        Test.startTest();
+        JiraStatusWebhook.handle();
+        Test.stopTest();
+
+        // reset seam so it never leaks into another test
+        JiraStatusWebhook.testConfigKey = null;
+
+        System.assertEquals(500, RestContext.response.statusCode,
+            'Missing/null Inventory_Integration_Config__mdt row must produce 500 before auth');
+        String body = (RestContext.response.responseBody == null) ? '' : RestContext.response.responseBody.toString();
+        System.assert(body.contains('Server config missing'),
+            'Body must call out the config-missing condition. Got: ' + body);
+        Order after = fetchSeededOrder();
+        System.assertEquals('Draft', after.Status,
+            'Config-missing 500 must NOT publish the platform event → Order stays Draft');
+    }
+
+    // ================================================================
+    // JSON parse error catch — malformed body → 400 + Integration_Error__c
+    // ================================================================
+
+    @IsTest
+    static void handle_malformedJsonBody_returns400() {
+        if (!secretIsUsable()) return;
+        // Deliberately broken JSON — deserializeUntyped throws → caught → 400 + logged.
+        installRestContext('{ not-valid-json', getConfiguredSecret(), null);
+
+        Test.startTest();
+        JiraStatusWebhook.handle();
+        Test.stopTest();
+
+        System.assertEquals(400, RestContext.response.statusCode,
+            'Unparseable request body must be caught and produce 400');
+        String body = (RestContext.response.responseBody == null) ? '' : RestContext.response.responseBody.toString();
+        System.assert(body.contains('Invalid JSON'),
+            'Body must call out the JSON error. Got: ' + body);
+        Order after = fetchSeededOrder();
+        System.assertEquals('Draft', after.Status,
+            'Parse failure must NOT publish the platform event → Order stays Draft');
+    }
+
+    @IsTest
+    static void handle_emptyBody_returns400() {
+        if (!secretIsUsable()) return;
+        // Empty body → deserializeUntyped returns null → the null-cast to Map throws → parse catch → 400
+        installRestContext('', getConfiguredSecret(), null);
+
+        Test.startTest();
+        JiraStatusWebhook.handle();
+        Test.stopTest();
+
+        // Empty body may trip either the parse catch (400) or the missing-issueKey branch (400).
+        // Both are acceptable — a well-behaved handler must not 500 on empty input and must
+        // not activate the Order.
+        System.assertEquals(400, RestContext.response.statusCode,
+            'Empty request body must produce 400 (either via parse catch or missing-issueKey branch)');
+        Order after = fetchSeededOrder();
+        System.assertEquals('Draft', after.Status,
+            'Empty body must NOT publish the platform event → Order stays Draft');
+    }
+
+    // ================================================================
+    // Order-already-Activated branch — 200, no re-activation
+    // ================================================================
+
+    @IsTest
+    static void handle_orderAlreadyActivated_returns200NoAction() {
+        if (!secretIsUsable()) return;
+
+        // Pre-flip the seeded Order to Activated so the handler hits the "already Activated" branch.
+        Order seed = fetchSeededOrder();
+        seed.Status = 'Activated';
+        seed.Inventory_Status__c = 'In Stock';
+        update seed;
+
+        installRestContext(customShapeBody(JIRA_KEY, 'Done'), getConfiguredSecret(), null);
+
+        Test.startTest();
+        JiraStatusWebhook.handle();
+        Test.stopTest();
+
+        System.assertEquals(200, RestContext.response.statusCode,
+            'Order already Activated must be a soft 200 no-op (idempotent replay)');
+        String body = (RestContext.response.responseBody == null) ? '' : RestContext.response.responseBody.toString();
+        System.assert(body.contains('already Activated') || body.contains('no action'),
+            'Response body must explain the no-op. Got: ' + body);
+        Order after = fetchSeededOrder();
+        System.assertEquals('Activated', after.Status,
+            'Already-Activated Order must remain Activated (no double-activation cascade)');
+    }
+
+    // ================================================================
     // Health check
     // ================================================================
 

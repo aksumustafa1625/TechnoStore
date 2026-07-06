@@ -39,6 +39,13 @@
 @RestResource(urlMapping='/jira/webhook/*')
 global without sharing class JiraStatusWebhook {
 
+    /**
+     * @TestVisible seam: allows tests to force a lookup key that will NOT match any
+     * deployed Inventory_Integration_Config__mdt record, so the null-config 500 branch
+     * can be exercised. Never set outside test context — remains null in production.
+     */
+    @TestVisible private static String testConfigKey = null;
+
     @HttpPost
     global static void handle() {
         RestRequest req = RestContext.request;
@@ -48,7 +55,8 @@ global without sharing class JiraStatusWebhook {
         WebhookEventLogger.RecordResult eventRecord = null;
 
         try {
-            Inventory_Integration_Config__mdt config = Inventory_Integration_Config__mdt.getInstance('Default');
+            String cfgKey = String.isNotBlank(testConfigKey) ? testConfigKey : 'Default';
+            Inventory_Integration_Config__mdt config = Inventory_Integration_Config__mdt.getInstance(cfgKey);
             if (config == null || String.isBlank(config.Shared_Secret__c)) {
                 respond(res, 500, 'Server config missing.');
                 return;

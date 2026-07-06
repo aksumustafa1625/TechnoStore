@@ -435,4 +435,290 @@ private class SapSalesOrderServiceTest {
         System.assertEquals(0, Limits.getCallouts(),
             'null/empty input must not queue an @future or issue any HTTP callouts');
     }
+
+    // ---------- Direct @TestVisible helper tests ----------
+    //
+    // These bypass @future and validate the private helpers directly (in-memory Order
+    // for payload shape, in-transaction mock for CSRF HEAD). Closes the coverage gap
+    // for payload construction, response parsing, and CSRF fetch that side-effect
+    // assertions on Order alone can't reach.
+
+    /**
+     * Query the seeded Order with the exact SOQL shape publishToSapAsync uses so the
+     * Product2 relationship on OrderItems is populated for buildSapPayload.
+     */
+    private static Order querySeededOrderWithItems() {
+        return [
+            SELECT Id, OrderNumber, TotalAmount, Status_In_SAP__c, SAP_Sales_Order_Number__c,
+                   Account.Name, Account.BillingCountry, EffectiveDate,
+                   (SELECT Id, Product2.Name, Product2.SAP_Material_Number__c, Quantity, UnitPrice
+                    FROM OrderItems ORDER BY UnitPrice DESC)
+            FROM Order LIMIT 1
+        ];
+    }
+
+    /**
+     * buildSapPayload — single OrderItem produces to_Item.results with position 10
+     * and full SAP OData v2 deep-insert header shape.
+     */
+    @IsTest
+    static void buildSapPayload_singleOrderItem_producesToItemResultsWithPosition10() {
+        // Build a new Order with exactly one OrderItem so we can validate position 10.
+        Account a = [SELECT Id FROM Account LIMIT 1];
+        Id stdPB = Test.getStandardPricebookId();
+        Product2 p = new Product2(Name = 'SinglePayloadTest', IsActive = true, SAP_Material_Number__c = 'MAT-777');
+        insert p;
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = stdPB, Product2Id = p.Id, UnitPrice = 100, IsActive = true, UseStandardPrice = false
+        );
+        insert pbe;
+        Order o = new Order(AccountId = a.Id, Status = 'Draft', EffectiveDate = Date.today(), Pricebook2Id = stdPB);
+        insert o;
+        insert new OrderItem(OrderId = o.Id, PricebookEntryId = pbe.Id, Quantity = 4, UnitPrice = 100);
+
+        Order fresh = [
+            SELECT Id, OrderNumber,
+                   (SELECT Id, Product2.Name, Product2.SAP_Material_Number__c, Quantity, UnitPrice FROM OrderItems)
+            FROM Order WHERE Id = :o.Id
+        ];
+
+        Test.startTest();
+        Map<String, Object> payload = SapSalesOrderService.buildSapPayload(fresh);
+        Test.stopTest();
+
+        System.assertEquals('OR',       payload.get('SalesOrderType'),      'SalesOrderType must be OR (Standard Order)');
+        System.assertEquals('1010',     payload.get('SalesOrganization'),   'SalesOrganization must be 1010 (DACH sandbox default)');
+        System.assertEquals('10',       payload.get('DistributionChannel'), 'DistributionChannel must be 10 (Direct sales)');
+        System.assertEquals('00',       payload.get('OrganizationDivision'),'OrganizationDivision must be 00');
+        System.assertEquals('17100001', payload.get('SoldToParty'),         'SoldToParty must be 17100001 (sandbox default customer)');
+
+        Map<String, Object> toItem = (Map<String, Object>) payload.get('to_Item');
+        System.assertNotEquals(null, toItem, 'to_Item envelope must exist for OData v2 deep-insert');
+        List<Object> results = (List<Object>) toItem.get('results');
+        System.assertEquals(1, results.size(), 'Exactly one item row expected');
+
+        Map<String, Object> row = (Map<String, Object>) results[0];
+        System.assertEquals('10',     row.get('SalesOrderItem'),        'First item position must be 10');
+        System.assertEquals('MAT-777', row.get('Material'),             'Material must come from Product2.SAP_Material_Number__c');
+        Decimal qty = (Decimal) row.get('RequestedQuantity');
+        System.assertEquals(4, qty.intValue(), 'RequestedQuantity must mirror OrderItem.Quantity');
+        System.assertEquals('EA',     row.get('RequestedQuantityUnit'), 'RequestedQuantityUnit must be EA (each)');
+    }
+
+    /**
+     * buildSapPayload — 3 OrderItems on the seeded Order produce positions 10, 20, 30.
+     */
+    @IsTest
+    static void buildSapPayload_multipleOrderItems_positionsIncrementBy10() {
+        Order o = querySeededOrderWithItems();
+        System.assertEquals(3, o.OrderItems.size(), 'Seed should have exactly 3 OrderItems');
+
+        Test.startTest();
+        Map<String, Object> payload = SapSalesOrderService.buildSapPayload(o);
+        Test.stopTest();
+
+        Map<String, Object> toItem = (Map<String, Object>) payload.get('to_Item');
+        List<Object> results = (List<Object>) toItem.get('results');
+        System.assertEquals(3, results.size(), 'Three item rows expected for three OrderItems');
+
+        Map<String, Object> r0 = (Map<String, Object>) results[0];
+        Map<String, Object> r1 = (Map<String, Object>) results[1];
+        Map<String, Object> r2 = (Map<String, Object>) results[2];
+        System.assertEquals('10', r0.get('SalesOrderItem'), 'Position 1 must be 10');
+        System.assertEquals('20', r1.get('SalesOrderItem'), 'Position 2 must be 20');
+        System.assertEquals('30', r2.get('SalesOrderItem'), 'Position 3 must be 30');
+    }
+
+    /**
+     * buildSapPayload — Order.OrderNumber flows through to PurchaseOrderByCustomer so the
+     * customer-side PO reference is present in the SAP SO for round-trip traceability.
+     */
+    @IsTest
+    static void buildSapPayload_purchaseOrderByCustomer_equalsOrderNumber() {
+        Order o = querySeededOrderWithItems();
+        System.assertNotEquals(null, o.OrderNumber, 'Seeded Order should have a Salesforce-assigned OrderNumber');
+
+        Test.startTest();
+        Map<String, Object> payload = SapSalesOrderService.buildSapPayload(o);
+        Test.stopTest();
+
+        System.assertEquals(o.OrderNumber, payload.get('PurchaseOrderByCustomer'),
+            'PurchaseOrderByCustomer must equal Order.OrderNumber');
+    }
+
+    /**
+     * buildSapPayload — Order with no child OrderItems must still produce a valid envelope
+     * with an empty results array (defensive: null vs empty subquery).
+     */
+    @IsTest
+    static void buildSapPayload_orderWithNoItems_producesEmptyResultsArray() {
+        Account a = [SELECT Id FROM Account LIMIT 1];
+        Id stdPB = Test.getStandardPricebookId();
+        Order o = new Order(AccountId = a.Id, Status = 'Draft', EffectiveDate = Date.today(), Pricebook2Id = stdPB);
+        insert o;
+
+        Order fresh = [
+            SELECT Id, OrderNumber,
+                   (SELECT Id, Product2.Name, Product2.SAP_Material_Number__c, Quantity, UnitPrice FROM OrderItems)
+            FROM Order WHERE Id = :o.Id
+        ];
+
+        Test.startTest();
+        Map<String, Object> payload = SapSalesOrderService.buildSapPayload(fresh);
+        Test.stopTest();
+
+        Map<String, Object> toItem = (Map<String, Object>) payload.get('to_Item');
+        System.assertNotEquals(null, toItem, 'to_Item envelope must still be present');
+        List<Object> results = (List<Object>) toItem.get('results');
+        System.assertEquals(0, results.size(), 'No OrderItems → empty results array (never null)');
+    }
+
+    // ---------- extractSalesOrderNumber ----------
+
+    @IsTest
+    static void extractSalesOrderNumber_validResponseBody_returnsSoNumber() {
+        Test.startTest();
+        String result = SapSalesOrderService.extractSalesOrderNumber(
+            '{"d":{"SalesOrder":"SAP-1234567","SalesOrderType":"OR"}}'
+        );
+        Test.stopTest();
+
+        System.assertEquals('SAP-1234567', result,
+            'Well-formed SAP OData v2 response body must yield d.SalesOrder verbatim');
+    }
+
+    @IsTest
+    static void extractSalesOrderNumber_missingSalesOrderField_returnsNull() {
+        Test.startTest();
+        String result = SapSalesOrderService.extractSalesOrderNumber('{"d":{"SalesOrderType":"OR"}}');
+        Test.stopTest();
+
+        System.assertEquals(null, result,
+            'Response body without d.SalesOrder key must return null so caller can fall back to SANDBOX- synthesis');
+    }
+
+    @IsTest
+    static void extractSalesOrderNumber_malformedJson_returnsNull() {
+        Test.startTest();
+        String result = SapSalesOrderService.extractSalesOrderNumber('this is not json');
+        Test.stopTest();
+
+        System.assertEquals(null, result,
+            'Malformed JSON must be caught and null returned — must NEVER propagate a JSON parse exception to the caller');
+    }
+
+    @IsTest
+    static void extractSalesOrderNumber_emptyBody_returnsNull() {
+        Test.startTest();
+        String resultEmpty = SapSalesOrderService.extractSalesOrderNumber('');
+        String resultNull  = SapSalesOrderService.extractSalesOrderNumber(null);
+        Test.stopTest();
+
+        System.assertEquals(null, resultEmpty, 'Empty body must short-circuit to null');
+        System.assertEquals(null, resultNull,  'Null body must short-circuit to null');
+    }
+
+    @IsTest
+    static void extractSalesOrderNumber_dNotAMap_returnsNull() {
+        Test.startTest();
+        String result = SapSalesOrderService.extractSalesOrderNumber('{"d":"not-a-map"}');
+        Test.stopTest();
+
+        System.assertEquals(null, result,
+            'When d is not a Map (odd SAP response shape) parser must return null defensively');
+    }
+
+    // ---------- fetchCsrfToken (in-transaction mock — no @future) ----------
+
+    /** HEAD 200 with X-CSRF-Token header — token returned. */
+    public class CsrfMockHeadWithToken implements HttpCalloutMock {
+        public Integer callCount = 0;
+        public String lastMethod;
+        public String lastCsrfHeader;
+        public HttpResponse respond(HttpRequest req) {
+            callCount++;
+            lastMethod     = req.getMethod();
+            lastCsrfHeader = req.getHeader('X-CSRF-Token');
+            HttpResponse resp = new HttpResponse();
+            resp.setStatusCode(200);
+            resp.setStatus('OK');
+            resp.setHeader('X-CSRF-Token', CSRF_TOKEN);
+            return resp;
+        }
+    }
+
+    /** HEAD 200 but no X-CSRF-Token header at all — defensive null. */
+    public class CsrfMockHeadNoToken implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse resp = new HttpResponse();
+            resp.setStatusCode(200);
+            resp.setStatus('OK');
+            return resp;
+        }
+    }
+
+    /** HEAD 403 with no token header — SAP denies CSRF fetch. */
+    public class CsrfMockHead403 implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse resp = new HttpResponse();
+            resp.setStatusCode(403);
+            resp.setStatus('Forbidden');
+            return resp;
+        }
+    }
+
+    /** HEAD throws — network/callout exception path. */
+    public class CsrfMockThrows implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            throw new CalloutException('CSRF endpoint unreachable');
+        }
+    }
+
+    @IsTest
+    static void fetchCsrfToken_mock200WithHeader_returnsTokenFromHeader() {
+        CsrfMockHeadWithToken mock = new CsrfMockHeadWithToken();
+
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, mock);
+        String token = SapSalesOrderService.fetchCsrfToken(BASE_URL, API_KEY);
+        Test.stopTest();
+
+        System.assertEquals(CSRF_TOKEN, token, 'CSRF token from response header X-CSRF-Token must be returned verbatim');
+        System.assertEquals(1, mock.callCount, 'Exactly one HEAD call must be issued');
+        System.assertEquals('HEAD', mock.lastMethod, 'Method must be HEAD per SAP OData v2 CSRF handshake');
+        System.assertEquals('Fetch', mock.lastCsrfHeader, 'Request must send X-CSRF-Token: Fetch to trigger token issue');
+    }
+
+    @IsTest
+    static void fetchCsrfToken_mock200WithoutHeader_returnsNull() {
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new CsrfMockHeadNoToken());
+        String token = SapSalesOrderService.fetchCsrfToken(BASE_URL, API_KEY);
+        Test.stopTest();
+
+        System.assertEquals(null, token,
+            'HEAD 200 with no X-CSRF-Token header must return null defensively (sandbox may not enforce CSRF)');
+    }
+
+    @IsTest
+    static void fetchCsrfToken_mock403_returnsNull() {
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new CsrfMockHead403());
+        String token = SapSalesOrderService.fetchCsrfToken(BASE_URL, API_KEY);
+        Test.stopTest();
+
+        System.assertEquals(null, token,
+            'HEAD 403 (no X-CSRF-Token header) must return null — publishToSapAsync then POSTs without the header');
+    }
+
+    @IsTest
+    static void fetchCsrfToken_calloutException_returnsNullDefensively() {
+        Test.startTest();
+        Test.setMock(HttpCalloutMock.class, new CsrfMockThrows());
+        String token = SapSalesOrderService.fetchCsrfToken(BASE_URL, API_KEY);
+        Test.stopTest();
+
+        System.assertEquals(null, token,
+            'Callout exception during CSRF HEAD must be swallowed and null returned — never crash publishToSapAsync');
+    }
 }

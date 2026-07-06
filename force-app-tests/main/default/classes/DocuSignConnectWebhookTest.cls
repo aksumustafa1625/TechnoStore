@@ -470,4 +470,110 @@ private class DocuSignConnectWebhookTest {
         System.assertEquals('Draft', after.Status,
             'Unknown envelopeId must be a safe no-op on Contract.Status — seeded Draft Contract untouched. Actual: ' + after.Status);
     }
+
+    // ============================================================
+    // Health check (GET) — separate handler method
+    // ============================================================
+
+    @IsTest
+    static void healthCheck_GET_returns200OkJson() {
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/docusign/webhook';
+        req.httpMethod = 'GET';
+        RestContext.request = req;
+        RestContext.response = new RestResponse();
+
+        Test.startTest();
+        DocuSignConnectWebhook.healthCheck();
+        Test.stopTest();
+
+        System.assertEquals(200, RestContext.response.statusCode,
+            'GET /docusign/webhook health probe must return 200');
+        String body = RestContext.response.responseBody == null
+            ? null
+            : RestContext.response.responseBody.toString();
+        System.assert(body != null && body.contains('"status":"ok"'),
+            'Health check body must be {"status":"ok"}. Got: ' + body);
+        System.assertEquals('application/json',
+            RestContext.response.headers.get('Content-Type'),
+            'Health check must advertise Content-Type: application/json');
+    }
+
+    // ============================================================
+    // Defensive error branches — driven via @TestVisible seams
+    // See DocuSignConnectWebhook header comment (TS-TEST-021) for why seams exist.
+    // ============================================================
+
+    @IsTest
+    static void handle_publishFailure_returns500_marksEventFailed_logsIntegrationError() {
+        // Simulate EventBus.publish returning a failed SaveResult. Under normal Apex,
+        // publish of a well-formed platform event succeeds — the failure branch (~lines
+        // 45-59 of the class) exists to catch real-org platform issues (per-tx event
+        // volume caps, mid-flight EventBus outages). Seam lets us exercise it.
+        mockPost(buildNewShapePayload(TEST_ENVELOPE_ID, 'completed'));
+        DocuSignConnectWebhook.testForcePublishFailure = true;
+
+        Test.startTest();
+        try {
+            DocuSignConnectWebhook.handle();
+        } finally {
+            DocuSignConnectWebhook.testForcePublishFailure = false;
+        }
+        Test.stopTest();
+
+        System.assertEquals(500, RestContext.response.statusCode,
+            'Publish failure must surface as HTTP 500 so DocuSign Connect retries. Body: ' + responseMessage());
+        String msg = responseMessage();
+        System.assert(msg != null && msg.toLowerCase().contains('publish failed'),
+            'Response must call out publish failure. Got: ' + msg);
+
+        // Webhook_Event__c row was created by checkAndRecord and then flipped to Failed
+        // by markFailed inside the publish-failure branch.
+        List<Webhook_Event__c> rows = [
+            SELECT Status__c FROM Webhook_Event__c
+            WHERE External_Id__c = :(TEST_ENVELOPE_ID + '|completed')
+        ];
+        System.assertEquals(1, rows.size(),
+            'Exactly one Webhook_Event__c row must be present after a publish-failure delivery. Got: ' + rows.size());
+        System.assertEquals('Failed', rows[0].Status__c,
+            'markFailed must have flipped Status__c to Failed on the event row. Actual: ' + rows[0].Status__c);
+
+        // Contract must NOT be flipped — the platform event was never actually published.
+        Contract after = [SELECT Status FROM Contract LIMIT 1];
+        System.assertEquals('Draft', after.Status,
+            'Contract.Status must remain Draft when EventBus.publish fails. Actual: ' + after.Status);
+    }
+
+    @IsTest
+    static void handle_unhandledExceptionAfterCheckAndRecord_returns500_marksEventFailed() {
+        // Simulate an unhandled exception thrown AFTER checkAndRecord has successfully
+        // recorded the event row but BEFORE markProcessed runs. Exercises the outer catch's
+        // `if (eventRecord != null && eventRecord.row != null) markFailed(...)` branch.
+        mockPost(buildNewShapePayload(TEST_ENVELOPE_ID, 'completed'));
+        DocuSignConnectWebhook.testForceUnhandledException = true;
+
+        Test.startTest();
+        try {
+            DocuSignConnectWebhook.handle();
+        } finally {
+            DocuSignConnectWebhook.testForceUnhandledException = false;
+        }
+        Test.stopTest();
+
+        System.assertEquals(500, RestContext.response.statusCode,
+            'Unhandled exception after eventRecord captured must return 500. Body: ' + responseMessage());
+        String msg = responseMessage();
+        System.assert(msg != null && msg.toLowerCase().contains('simulated unhandled exception'),
+            'Response body must carry the exception type + message. Got: ' + msg);
+
+        // markFailed in the outer catch must have flipped the row to Failed.
+        List<Webhook_Event__c> rows = [
+            SELECT Status__c FROM Webhook_Event__c
+            WHERE External_Id__c = :(TEST_ENVELOPE_ID + '|completed')
+        ];
+        System.assertEquals(1, rows.size(),
+            'Event row must exist — checkAndRecord ran before the seam threw');
+        System.assertEquals('Failed', rows[0].Status__c,
+            'Outer catch must invoke markFailed on the populated eventRecord row. Actual: ' + rows[0].Status__c);
+    }
 }

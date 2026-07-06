@@ -26,6 +26,12 @@
  */
 public without sharing class WebhookEventLogger {
 
+    // Test-only seam: when true, checkAndRecord skips the pre-query dedupe branch and jumps
+    // straight into the insert/DUPLICATE_VALUE catch path. Lets a test force the race-condition
+    // branch that in production only fires under concurrent parallel inserts.
+    @TestVisible
+    private static Boolean testSkipPreQuery = false;
+
     public class RecordResult {
         public Boolean isDuplicate;
         public Webhook_Event__c row;
@@ -49,16 +55,18 @@ public without sharing class WebhookEventLogger {
             return result;
         }
 
-        List<Webhook_Event__c> existing = [
-            SELECT Id, Status__c, External_Id__c, CreatedDate
-            FROM Webhook_Event__c
-            WHERE External_Id__c = :externalId
-            LIMIT 1
-        ];
-        if (!existing.isEmpty()) {
-            result.isDuplicate = true;
-            result.row = existing[0];
-            return result;
+        if (!testSkipPreQuery) {
+            List<Webhook_Event__c> existing = [
+                SELECT Id, Status__c, External_Id__c, CreatedDate
+                FROM Webhook_Event__c
+                WHERE External_Id__c = :externalId
+                LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                result.isDuplicate = true;
+                result.row = existing[0];
+                return result;
+            }
         }
 
         try {
