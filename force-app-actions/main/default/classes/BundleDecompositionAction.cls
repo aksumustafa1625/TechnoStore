@@ -166,6 +166,7 @@ public with sharing class BundleDecompositionAction {
         }
     }
 
+    @TestVisible
     private static Integer pricebookEntryScore(PricebookEntry pbe) {
         if (pbe == null) return 0;
         String sellingType = (pbe.ProductSellingModel != null) ? pbe.ProductSellingModel.SellingModelType : null;
