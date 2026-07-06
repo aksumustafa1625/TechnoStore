@@ -99,7 +99,9 @@ global with sharing class LogisticsSystemAdapter implements industriesintegratio
     public static void saveTrackingReference(String orderItemId){
     // save Tracking number on the Order Item
         OrderItem oi = [select id,  Description from OrderItem where id=:orderItemId];
-        oi.Description = 'TrackingRef:TRK-HUBSWQT18-4238';
+        String trackingRef = 'TRK-' + orderItemId.substring(0, 8).toUpperCase() + '-' +
+                             String.valueOf(System.currentTimeMillis()).right(4);
+        oi.Description = 'TrackingRef:' + trackingRef;
         update oi;
    
     }

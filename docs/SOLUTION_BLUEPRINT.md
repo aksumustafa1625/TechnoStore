@@ -142,7 +142,7 @@ External system communication channels — what protocol, what direction, what a
 | Slack #payments-team | Outbound | HTTP POST JSON Block Kit | Webhook URL = credential | MuleSoft `slack-payments-notify.xml` |
 | Slack #warehouse | Outbound | HTTP POST JSON Block Kit | Webhook URL = credential | MuleSoft `slack-warehouse-notify.xml` |
 | DocuSign (Send) | Outbound | HTTP POST JSON | OAuth via Named Credential | Apex `DocuSignSendForSignatureService` |
-| DocuSign (Connect) | Inbound | HTTP POST JSON | HMAC-SHA256 `X-DocuSign-Signature-1` | Apex `DocuSignConnectWebhook` (SF Site) |
+| DocuSign (Connect) | Inbound | HTTP POST JSON | Payload-shape validation + envelope-id idempotency (HMAC planned — see SECURITY.md) | Apex `DocuSignConnectWebhook` (SF Site) |
 | JIRA Cloud | Outbound | HTTP POST/PUT JSON | Basic Auth (email + API token) | Apex `JiraTicketService`, `JiraSprintService` |
 | Notion | Outbound | HTTP POST/PATCH JSON | Bearer token | Apex `NotionPublishService` |
 
@@ -362,7 +362,9 @@ MuleSoft deployments are out-of-band — not part of this Salesforce CI/CD flow 
 - **HTTP Basic Auth (Custom Setting credentials)** — JIRA Cloud (email + API token), Stripe (secret key as username), Sendcloud (public + secret keys).
 - **Bearer Token (Custom Setting credentials)** — Notion (Internal Integration token).
 - **Webhook URL = credential** — Slack incoming webhooks (channel-scoped URL is the auth).
-- **HMAC-SHA256 signature verification** — all inbound webhooks (DocuSign Connect, Stripe Connect).
+- **Inbound webhook authentication (see SECURITY.md for full model):**
+  - **MuleSoft layer (Stripe Connect)** — HMAC-SHA256 signature verification with 5-min timestamp freshness (DataWeave `Crypto::HMACBinary`).
+  - **Apex Site webhooks (WhatsApp, JIRA, SAP, DocuSign Connect, Inventory callback)** — plaintext shared-secret equality check (`X-*-Secret` header or `?secret=` fallback) + external-id idempotency via `WebhookEventLogger`. Cryptographic HMAC hardening for Apex webhooks is on the roadmap (tracked issue TS-SEC-002).
 
 **FLS + Sharing:**
 

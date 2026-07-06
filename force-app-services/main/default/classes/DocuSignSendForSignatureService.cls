@@ -1,6 +1,23 @@
 public with sharing class DocuSignSendForSignatureService {
 
-    private static final String DOCUSIGN_ACCOUNT_ID = '47481170';
+    private static String cachedAccountId;
+
+    private static String getDocuSignAccountId() {
+        if (cachedAccountId != null) return cachedAccountId;
+        List<ESignatureConfig> cfg = [
+            SELECT ConfigValue FROM ESignatureConfig
+            WHERE DeveloperName = 'DocuSigneSignVendorAccountId' LIMIT 1
+        ];
+        if (cfg.isEmpty() || String.isBlank(cfg[0].ConfigValue)) {
+            throw new DocuSignConfigException(
+                'DocuSign account ID not configured. Add ESignatureConfig record with DeveloperName=DocuSigneSignVendorAccountId.'
+            );
+        }
+        cachedAccountId = cfg[0].ConfigValue;
+        return cachedAccountId;
+    }
+
+    public class DocuSignConfigException extends Exception {}
 
     public class Request {
         @InvocableVariable(required=true label='Contract Id')
@@ -46,7 +63,7 @@ public with sharing class DocuSignSendForSignatureService {
             String body = JSON.serialize(buildEnvelope(pdf, r));
 
             HttpRequest req = new HttpRequest();
-            req.setEndpoint('callout:DocuSign/restapi/v2.1/accounts/' + DOCUSIGN_ACCOUNT_ID + '/envelopes');
+            req.setEndpoint('callout:DocuSign/restapi/v2.1/accounts/' + getDocuSignAccountId() + '/envelopes');
             req.setMethod('POST');
             req.setHeader('Content-Type', 'application/json');
             req.setHeader('Accept', 'application/json');

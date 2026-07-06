@@ -1,3 +1,12 @@
+/**
+ * DocuSign Connect inbound webhook.
+ *
+ * SECURITY NOTE: This endpoint currently relies on payload-shape validation +
+ * envelope-id idempotency (via WebhookEventLogger) rather than a shared-secret
+ * or HMAC signature. That is a known gap tracked as TS-SEC-002 in SECURITY.md.
+ * Production hardening path: verify DocuSign's `X-DocuSign-Signature-1` header
+ * against Crypto.generateMac('hmacSHA256', body, secret) before dispatch.
+ */
 @RestResource(urlMapping='/docusign/webhook/*')
 global without sharing class DocuSignConnectWebhook {
 

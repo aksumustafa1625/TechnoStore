@@ -8,6 +8,6 @@
     </values>
     <values>
         <field>Shared_Secret__c</field>
-        <value xsi:type="xsd:string">technostore-warehouse-secret-2026</value>
+        <value xsi:type="xsd:string">REPLACE-IN-ORG-AFTER-DEPLOY</value>
     </values>
 </CustomMetadata>

@@ -91,6 +91,12 @@ The Blueprint synthesizes everything in this repo — README, ADRs, Mermaid diag
 
 ---
 
+## 🔐 Security Model
+
+For the accurate, per-webhook authentication reality, secret-storage table, and the HMAC hardening roadmap (issue TS-SEC-002), see **[SECURITY.md](SECURITY.md)**. Short version: MuleSoft-layer Stripe webhook uses true HMAC-SHA256; the six Apex Site webhooks (DocuSign, JIRA, SAP, WhatsApp, Inventory callback, DocuSign Connect) use shared-secret equality plus external-id idempotency — cryptographic HMAC migration is planned, not shipped.
+
+---
+
 ## 🔌 API Documentation
 
 TechnoStore exposes inbound webhook APIs (Salesforce Public Site + MuleSoft HTTP listeners) and consumes outbound APIs from seven external systems. Both surfaces are formally documented:
@@ -247,7 +253,7 @@ The integration choice per system follows an explicit **Mule vs Apex decision ma
 |---|---|---|
 | `Notion_Config__c` | Protected Hierarchy Custom Setting | Stores Notion integration token + parent page id (gitignored setup script) |
 | `Jira_Config__c` | Protected Hierarchy Custom Setting | Stores JIRA Cloud API token + base URL + project key |
-| `DocuSign_Config__c` | Protected Hierarchy Custom Setting | Stores DocuSign account id + HMAC secret for webhook verification |
+| `ESignatureConfig` records | Standard sObject managed via Setup → Electronic Signature Configuration | DocuSign vendor account id + Named Credential mapping (see SECURITY.md for the exact records and rotation procedure) |
 | `Inventory_Check_Requested__e` | Platform Event | Fires on Order activation → Mule subscriber → Slack #warehouse |
 | `DocuSign_Signed__e` | Platform Event | Published by Guest User in webhook → trigger subscriber updates Contract.Status |
 | `Techno_Attribute_Price_Rule__mdt` | Custom Metadata Type | Bundle attribute pricing (RAM/SSD/GPU upcharges) — workaround for broken native engine |

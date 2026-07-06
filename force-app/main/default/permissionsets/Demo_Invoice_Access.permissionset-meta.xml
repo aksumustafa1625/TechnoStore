@@ -135,6 +135,7 @@
         <field>Service_Activation__c.Sendcloud_Parcel_Id__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <description>CRUD on Demo_Invoice__c and Service_Activation__c for the Stripe/Sendcloud payment-journey demo. Record-level sharing enforced via OWD (no ViewAll/ModifyAll). Assign only to demo users.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Demo Invoice Access</label>
     <objectPermissions>
@@ -142,17 +143,17 @@
         <allowDelete>true</allowDelete>
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
+        <modifyAllRecords>false</modifyAllRecords>
         <object>Demo_Invoice__c</object>
-        <viewAllRecords>true</viewAllRecords>
+        <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
+        <modifyAllRecords>false</modifyAllRecords>
         <object>Service_Activation__c</object>
-        <viewAllRecords>true</viewAllRecords>
+        <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
 </PermissionSet>

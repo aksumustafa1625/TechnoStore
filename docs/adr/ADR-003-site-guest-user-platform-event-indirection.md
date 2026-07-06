@@ -43,7 +43,10 @@ Adopt the **Salesforce Site + Guest User + Platform Event indirection pattern** 
 
 1. **Salesforce Site** exposes the webhook URL (e.g., `https://your-org.my.site.com/docusign_webhook`).
 2. **Apex `@RestResource` controller** receives the POST under Guest User profile context.
-3. **HMAC signature verification** at the controller boundary (DocuSign uses `X-DocuSign-Signature-1`; Stripe uses `Stripe-Signature`). Reject with 401 on mismatch.
+3. **Webhook authentication at the controller boundary** — current implementation reality:
+   - **Stripe** (through MuleSoft, not this Apex site): true HMAC-SHA256 signature verification with 5-min timestamp freshness.
+   - **DocuSign Connect, JIRA, SAP Event, WhatsApp, Inventory callback** (Apex Site controllers): plaintext shared-secret equality check (`X-*-Secret` header or `?secret=` fallback) + external-id idempotency via `WebhookEventLogger`. Reject with 401 on mismatch.
+   - Cryptographic `Crypto.generateMac('hmacSHA256', ...)` migration for the Apex webhooks is on the roadmap (issue TS-SEC-002) — see SECURITY.md.
 4. **Guest User publishes a Platform Event** (`DocuSign_Signed__e`, `Stripe_Payment_Succeeded__e`, etc.) — Guest profiles can publish Platform Events even though they cannot directly write Contract/Order fields. This is a separately-permissioned action.
 5. **Apex trigger on the Platform Event channel** runs in **system context** with full FLS + sharing access; it queries internal records by the external correlation key (envelopeId, paymentIntentId) and performs the DML.
 6. **Idempotency guard** in the trigger subscriber: filter `WHERE Status != 'Signed'` (or equivalent target state) so re-delivery of the same event does not flip state twice.
@@ -53,7 +56,7 @@ For DocuSign signed webhook specifically:
 ```
 Customer signs → DocuSign Connect POST /docusign_webhook
     → Guest User context: DocuSignWebhookController.receiveSignedEvent()
-        → HMAC verify (X-DocuSign-Signature-1 vs HMAC-SHA256 of body + DocuSign_Config__c.HMAC_Secret__c)
+        → shared-secret verify (?secret= vs Inventory_Integration_Config__mdt.Default.Shared_Secret__c) — HMAC hardening tracked in SECURITY.md TS-SEC-002
         → if valid: EventBus.publish(new DocuSign_Signed__e(Envelope_Id__c=envelopeId, Envelope_Status__c='Completed'))
         → return 200 OK to DocuSign within 30 seconds (DocuSign's retry threshold)
     → System context: trigger on DocuSign_Signed__e (after insert)
@@ -66,7 +69,7 @@ Customer signs → DocuSign Connect POST /docusign_webhook
 ### Positive
 
 - **Security boundary is clean** — Guest User does NOT have direct write access to Contract/Order; the indirection enforces this architecturally.
-- **HMAC verification is enforced** at the webhook boundary — webhook spoofing is structurally prevented.
+- **Shared-secret verification is enforced** at every webhook boundary (401 on mismatch); Stripe path adds true HMAC in MuleSoft. Full Apex HMAC hardening tracked in SECURITY.md.
 - **System-context DML** in the Platform Event subscriber bypasses Guest FLS restriction without compromising the Guest profile's security posture.
 - **Idempotent under retry** — DocuSign + Stripe both retry aggressively on non-2xx; the `Status != 'Signed'` filter makes re-delivery a no-op.
 - **Reusable pattern** — same architecture works for DocuSign Connect (Contract.Status), Stripe webhook (Order.Status), Sendcloud delivery webhook (future), JIRA issue update webhook (future). Each new webhook needs: 1 Apex controller + 1 Platform Event + 1 trigger subscriber.
