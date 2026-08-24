@@ -31,6 +31,27 @@ In a project with 50+ Apex classes, 7 external integrations, and a 6-package SFD
 | [008](ADR-008-flying-saucer-vf-pdf.md) | Flying Saucer VF over LWC for branded PDFs | Accepted | 2026-04-22 |
 | [009](ADR-009-quote-tax-formula-invoice-tax-adapter.md) | Quote tax via formula fields, Invoice tax via commercetax adapter | Accepted | 2026-05-03 |
 | [010](ADR-010-notion-api-multi-call-orchestration.md) | Notion API multi-call orchestration for 3-level nested toggles | **Superseded** (2026-05-14 — refactored to single-POST flat-heading structure; see ADR's Supersession Note) | 2026-05-11 |
+| [011](ADR-011-inventory-approval-convergent-paths.md) | Inventory Approval — Two Convergent Activation Paths | Accepted |  |
+| [012](ADR-012-order-first-activation-pattern-1.md) | Order-First Activation (Pattern 1 — Transactional) | Accepted |  |
+| [013](ADR-013-webhook-idempotency-and-error-logging.md) | Webhook Idempotency + Centralised Integration Error Logging | lifecycle (`Received` → `Processed` / `Failed`) doesn't transition under the Guest User. Visible incompleteness on the audit dashboard. Future fix: have `InventoryStatusUpdateTriggerHandler` (or a new platform event consumer) flip the status when the downstream work completes — that trigger runs as Automated Process and has full CRUD. |  |
+| [014](ADR-014-multi-tier-discount-approval-matrix.md) | Multi-Tier Discount Approval Matrix | Accepted |  |
+| [015](ADR-015-production-externalization-strategy.md) | Production Externalization Strategy — What Lives in Salesforce vs. Outside It | Accepted |  |
+| [016](ADR-016-pricing-apex-workaround.md) | Bundle Attribute Pricing — Apex Workaround for RLM Pricing Procedure Builder | Accepted |  |
+| [017](ADR-017-clm-document-generation-custom-apex.md) | CLM Document Generation — Custom VF + Flying Saucer Over DocuSign CLM | Accepted |  |
+| [018](ADR-018-salesforce-invoice-vs-sap-invoice.md) | Salesforce Invoice as Billing Intent, SAP FI as Accounting System of Record | Accepted |  |
+| [019](ADR-019-slack-notification-vs-decision-surface.md) | Slack as Notification Surface, Not Decision Surface | Accepted |  |
+| [020](ADR-020-visualforce-vs-lwc-warehouse-approval.md) | Visualforce for Warehouse Approval Page (Demo) — LWC for Production | Accepted |  |
+| [021](ADR-021-customer-master-billto-source.md) | Customer Master / BillTo Source — Demo Backfill vs Production SAP BP Sync | Accepted |  |
+| [022](ADR-022-sap-mm-atp-integration.md) | SAP MM ATP Integration — SAP-First, JIRA-Fallback Hybrid for Inventory Check | Accepted |  |
+| [023](ADR-023-sap-sd-sales-order-acknowledgment.md) | SAP SD Sales Order Acknowledgment — Platform Event Decoupling on Order Activation | Accepted |  |
+| [024](ADR-024-sap-tax-determination-parallel-adapter.md) | SAP Tax Determination — Parallel Adapter to the Native commercetax Chain | Accepted |  |
+| [025](ADR-025-camt053-payment-reconciliation.md) | CAMT.053 Payment Reconciliation — Bank-Statement-Driven Invoice Closure | doesn't flip in the demo.** Visual demo impact is muted — Invoice.Status stays "Posted" or whatever it was; only the SAP_Payment_* fields populate. Recruiter has to inspect the Invoice detail page rather than seeing a green "Paid" pill. |  |
+| [026](ADR-026-sap-material-master-sync.md) | SAP Material Master Sync — Nightly Product2 Reconciliation | Accepted |  |
+| [027](ADR-027-sap-customer-master-sync.md) | SAP Customer Master Sync — Nightly Account Reconciliation from SAP Business Partner | Accepted |  |
+| [028](ADR-028-sap-event-mesh-inbound-webhook.md) | SAP Event Mesh Inbound Webhook + CloudEvents Dispatcher | Accepted |  |
+| [029](ADR-029-sap-trial-limitation-and-production-migration.md) | SAP Trial Tenant Limitation and Production Migration Path | Accepted |  |
+| [030](ADR-030-lexoffice-invoice-integration.md) | lexoffice Invoice Integration (DACH SME Cloud Accounting) | Accepted |  |
+| [031](ADR-031-datev-csv-export.md) | DATEV Buchungsstapel CSV Export (Steuerberater Segment) | Accepted |  |
 | [032](ADR-032-rlm-bundle-pricing-research-first-diagnostic.md) | RLM bundle pricing research-first diagnostic before more org changes | Accepted | 2026-06-29 |
 | [033](ADR-033-rlm-bundle-pricing-forensic-debug-log.md) | RLM bundle pricing forensic debug log and lessons learned | Accepted | 2026-06-30 |
 

@@ -556,4 +556,4 @@ Yerel karar kayitlari:
 
 - `docs/adr/ADR-002-custom-metadata-over-attribute-based-adjustment.md`
 - `docs/adr/ADR-016-pricing-apex-workaround.md`
-- `troubleshot.md`
+- `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`

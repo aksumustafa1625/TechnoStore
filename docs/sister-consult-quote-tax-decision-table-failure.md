@@ -21,7 +21,7 @@ Error: Exception while fetching matching records from Decision Table ID: 0lDaj00
        error: Decision Table lookup failed for request at index 0
 ```
 
-Critically: **Quote.Tax field DOES populate correctly (€66.31 = €349 × 19%)** via formula fields per [ADR-009](../adr/ADR-009-quote-tax-formula-invoice-tax-adapter.md). The architectural design is that RLM Tax Engine should NOT run on Quote — Quote tax is computed declaratively via formula fields, and only Invoice tax invokes `commercetax.TaxEngineAdapter`. Yet RLM is invoking the StandardTax Decision Table on Quote save, and the lookup fails.
+Critically: **Quote.Tax field DOES populate correctly (€66.31 = €349 × 19%)** via formula fields per [ADR-009](adr/ADR-009-quote-tax-formula-invoice-tax-adapter.md). The architectural design is that RLM Tax Engine should NOT run on Quote — Quote tax is computed declaratively via formula fields, and only Invoice tax invokes `commercetax.TaxEngineAdapter`. Yet RLM is invoking the StandardTax Decision Table on Quote save, and the lookup fails.
 
 We need to either:
 1. Make the StandardTax Decision Table lookup succeed (populate it correctly)

@@ -26,8 +26,8 @@ Pause further data-changing bundle/pricing experiments and switch to a research-
 
 Specifically:
 
-1. Preserve the current forensic state in `troubleshot.md`.
-2. Preserve the research and evidence in `research_rlm_pricing.md`.
+1. Preserve the current forensic state in `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`.
+2. Preserve the research and evidence in `docs/research/rlm-bundle-pricing-notes.md`.
 3. Use only read-only REST action describe, SOQL, Apex describe, and documentation research until the next explicit experiment is approved.
 4. Do not permanently add `QuoteLinePriceAdjustment`, validation cleanup, or trigger changes until pricing context/runtime behavior is understood.
 
@@ -136,7 +136,7 @@ No public, exact, actionable solution was found for the RLM-specific action/payl
 ### Positive
 
 - Avoids compounding quote state corruption by layering more repair scripts onto already-incomplete quotes.
-- Creates a durable handoff for future work: `troubleshot.md` contains the forensic timeline, while `research_rlm_pricing.md` separates facts, hypotheses, and next experiments.
+- Creates a durable handoff for future work: `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md` contains the forensic timeline, while `docs/research/rlm-bundle-pricing-notes.md` separates facts, hypotheses, and next experiments.
 - Narrows the next root-cause investigation to SalesTransaction context sync/default binding and headless pricing payload shape.
 - Keeps the org safe: the latest diagnostics used read-only SOQL, Apex describe, REST action describe, and local documentation changes only.
 
@@ -187,8 +187,8 @@ When work resumes:
 
 ## References
 
-- `troubleshot.md`
-- `research_rlm_pricing.md`
+- `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`
+- `docs/research/rlm-bundle-pricing-notes.md`
 - `scripts/diagnose_rlm_pricing_context_readonly.apex`
 - `scripts/diagnose_rlm_pricing_context_focused_readonly.apex`
 - `scripts/diagnose_rlm_pricing_context_focused_readonly.out.txt`

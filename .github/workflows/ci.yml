@@ -176,3 +176,58 @@ jobs:
       - name: Delete scratch org
         if: always()
         run: sf org delete scratch --no-prompt --target-org TechnoStoreCI || true
+
+  docs:
+    name: Documentation integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      # Thirty-three ADRs were on disk and twenty-one of them were missing from
+      # the index, which meant the catalogue read as complete while most of the
+      # decisions were invisible. That is the failure this guard exists for.
+      - name: The ADR index lists every ADR, with no duplicate numbers
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          files = sorted(f for f in os.listdir('docs/adr') if re.match(r'ADR-\d{3}-', f))
+          index = open('docs/adr/README.md', encoding='utf-8').read()
+          missing = [f for f in files if f not in index]
+          dupes = sorted(n for n in {f[:7] for f in files}
+                         if sum(1 for f in files if f.startswith(n)) > 1)
+          for f in files:
+              print(('  listed    ' if f not in missing else '  UNLISTED  ') + f)
+          if dupes:
+              sys.exit('Duplicate ADR numbers: %s' % ', '.join(dupes))
+          if missing:
+              sys.exit('ADRs missing from docs/adr/README.md: %s' % ', '.join(missing))
+          print('%d ADRs, all indexed, no duplicates.' % len(files))
+          PY
+
+      # A moved or renamed document leaves the links that pointed at it intact
+      # and broken. This caught references to two files after they were relocated.
+      - name: Relative links in root and docs markdown resolve
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          bad = []
+          for root, dirs, files in os.walk('.'):
+              if '.git' in root or 'node_modules' in root:
+                  continue
+              for fn in files:
+                  if not fn.endswith('.md'):
+                      continue
+                  p = os.path.join(root, fn)
+                  text = open(p, encoding='utf-8', errors='replace').read()
+                  for target in re.findall(r'\]\(([^)#:]+?)(?:#[^)]*)?\)', text):
+                      if target.startswith(('http', 'mailto:', '/')):
+                          continue
+                      if not os.path.exists(os.path.normpath(os.path.join(root, target))):
+                          bad.append('%s -> %s' % (p, target))
+          for b in bad:
+              print('  BROKEN ' + b)
+          if bad:
+              sys.exit('%d broken relative link(s).' % len(bad))
+          print('All relative markdown links resolve.')
+          PY

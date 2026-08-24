@@ -147,8 +147,8 @@ This became the strongest evidence that Apex was updating an editable field but 
 
 ### Research / handoff docs
 
-- `troubleshot.md`
-- `research_rlm_pricing.md`
+- `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`
+- `docs/research/rlm-bundle-pricing-notes.md`
 - `docs/adr/ADR-032-rlm-bundle-pricing-research-first-diagnostic.md`
 - This file, `docs/adr/ADR-033-rlm-bundle-pricing-forensic-debug-log.md`
 
@@ -985,8 +985,8 @@ Start by re-reading:
 
 - ADR-032
 - ADR-033
-- `research_rlm_pricing.md`
-- `troubleshot.md`
+- `docs/research/rlm-bundle-pricing-notes.md`
+- `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`
 
 ### Step 2 - Inspect UI setup
 
@@ -1085,8 +1085,8 @@ Current accepted direction:
 - ADR-002: `docs/adr/ADR-002-custom-metadata-over-attribute-based-adjustment.md`
 - ADR-016: `docs/adr/ADR-016-pricing-apex-workaround.md`
 - ADR-032: `docs/adr/ADR-032-rlm-bundle-pricing-research-first-diagnostic.md`
-- `troubleshot.md`
-- `research_rlm_pricing.md`
+- `docs/troubleshooting/rlm-bundle-troubleshooting-notes.md`
+- `docs/research/rlm-bundle-pricing-notes.md`
 - `scripts/diagnose_rlm_pricing_context_readonly.apex`
 - `scripts/diagnose_rlm_pricing_context_focused_readonly.apex`
 - `scripts/diagnose_rlm_pricing_context_focused_readonly.out.txt`
