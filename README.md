@@ -2,6 +2,14 @@
 
 > A production-grade Salesforce DX portfolio project that models a B2B electronics retailer serving the DACH market (Germany / Austria / Switzerland). Full **Quote-to-Cash lifecycle** built on **Revenue Lifecycle Management (RLM)** + **Contract Lifecycle Management (CLM)** + **Industries CPQ**, integrated end-to-end with **Stripe**, **Sendcloud / DHL**, **Slack (×2 channels)**, **DocuSign**, **JIRA**, and **Notion** via **MuleSoft Anypoint Studio** orchestration. Apex follows the **Kevin O'Hara `sfdc-trigger-framework`** pattern across a **six-package SFDX layout**.
 
+> **How this was built.**
+>
+> I used Claude to build this repository, the way an engineer today uses an IDE — I would rather say it first than have it asked. The model wrote code; I set the structure, and every decision went through me.
+>
+> So the question worth asking is not *whether* AI wrote it, but **who decided and who verified.** That record is in [`docs/adr/`](docs/adr/): **33 architecture decision records**, each naming the constraint, the choice, the alternatives rejected, and what rejecting them cost. A model does not turn down three options and price the fourth.
+>
+> **What this is not:** a demonstration, not a production system with real users. Built alone, so no colleague reviewed it. Every number is mine — please run them yourself.
+
 [![Trigger framework](https://img.shields.io/badge/trigger--framework-Kevin%20O%27Hara-blue)](https://github.com/kevinohara80/sfdc-trigger-framework)
 [![API version](https://img.shields.io/badge/Apex%20API-66.0-orange)]()
 [![RLM](https://img.shields.io/badge/Revenue%20Lifecycle%20Mgmt-active-brightgreen)]()
