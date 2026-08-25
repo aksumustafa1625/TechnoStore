@@ -134,3 +134,9 @@ scripts/deploy_errors.txt
 cv_payload.json
 docx_b64.txt
 new_maps.json
+
+# --- Not for the repo: career / commercial / internal audit (2026-08-19) ---
+docs/career-assessment-germany-2026.md
+docs/demo/WhatsApp-Interview-CheatSheet.pdf
+scripts/generate_whatsapp_cheatsheet.mjs
+scripts/generate_fiverr_blueprint_excerpt.mjs

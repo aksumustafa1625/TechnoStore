@@ -2,7 +2,11 @@
 
 Apex unit tests for **our custom classes** (controllers, services, handlers, actions).
 
-This package directory is currently empty — a placeholder for future test classes. Tests for Salesforce-auto-generated classes (`ChangePasswordControllerTest`, `CommunitiesLoginControllerTest`, etc.) live in `force-app/main/default/classes/` next to the auth/community classes they test, because those classes are platform-managed and not ours.
+**State on 2026-08-19 (counted, not remembered):** this package holds **39 `.cls` files — 38 `*Test.cls` classes + `TestDataFactory` — with ~426 `@isTest` methods and ~1,200 assert statements.** The bulk was written in the 2026-07-06 test wave (REST tests populate `RestContext` and assert side effects: Lead rows, `Webhook_Event__c` status, response codes, TwiML; synthetic failed `SaveResult`s via `JSON.deserialize`; both Twilio body shapes). The 13 tests for Salesforce-generated community controllers (`ChangePasswordControllerTest`, `CommunitiesLoginControllerTest`, …) **also live here**, not in `force-app/` as an earlier revision of this file said — they are 1-method coverage padding for stock code and should be read as such.
+
+**What is still missing:** 27 of the 66 non-test classes have no dedicated `<ClassName>Test.cls` companion (list in `CONTRIBUTING.md` → Testing). No test asserts any FLS / sharing property — consistent with the codebase running in system mode (SECURITY.md → Authorization model). The earlier text of this file ("currently empty — a placeholder") described the state of 2026-05-11 and was not updated when the tests landed.
+
+The sections below were written before any test existed and are kept as the conventions the suite now (mostly) follows.
 
 ## Why a separate `force-app-tests/` directory
 

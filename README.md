@@ -11,7 +11,7 @@
 > **What this is not:** a demonstration, not a production system with real users. Built alone, so no colleague reviewed it. Every number is mine — please run them yourself.
 
 [![Trigger framework](https://img.shields.io/badge/trigger--framework-Kevin%20O%27Hara-blue)](https://github.com/kevinohara80/sfdc-trigger-framework)
-[![API version](https://img.shields.io/badge/Apex%20API-66.0-orange)]()
+[![API version](https://img.shields.io/badge/Apex%20artifacts-API%2057.0%E2%80%9363.0-orange)]()
 [![RLM](https://img.shields.io/badge/Revenue%20Lifecycle%20Mgmt-active-brightgreen)]()
 [![CLM](https://img.shields.io/badge/Contract%20Lifecycle%20Mgmt-active-brightgreen)]()
 [![Integrations](https://img.shields.io/badge/external%20systems-7-blueviolet)]()
@@ -101,7 +101,7 @@ The Blueprint synthesizes everything in this repo — README, ADRs, Mermaid diag
 
 ## 🔐 Security Model
 
-For the accurate, per-webhook authentication reality, secret-storage table, and the HMAC hardening roadmap (issue TS-SEC-002), see **[SECURITY.md](SECURITY.md)**. Short version: MuleSoft-layer Stripe webhook uses true HMAC-SHA256; the six Apex Site webhooks (DocuSign, JIRA, SAP, WhatsApp, Inventory callback, DocuSign Connect) use shared-secret equality plus external-id idempotency — cryptographic HMAC migration is planned, not shipped.
+For the accurate, per-webhook authentication reality, secret-storage table, and the HMAC hardening roadmap (issue TS-SEC-002), see **[SECURITY.md](SECURITY.md)**. Short version: the MuleSoft-layer Stripe webhook uses HMAC-SHA256 (that Mule flow is not committed to this repo, so take it as narrative); the five Apex Site webhooks (JIRA, SAP, WhatsApp, Inventory callback: plaintext shared-secret equality; DocuSign Connect: payload-shape validation only, no secret) rely on external-id idempotency — cryptographic HMAC migration is planned, not shipped. Execution mode is **system mode throughout** (all Apex pre-v67, zero `WITH USER_MODE`) — see SECURITY.md → Authorization model.
 
 ---
 
@@ -135,7 +135,7 @@ See [`openapi/README.md`](openapi/README.md) + [`postman/README.md`](postman/REA
 
 ## 📜 Architecture Decision Records (ADRs)
 
-Ten ADRs in [`docs/adr/`](docs/adr/) capturing the significant architectural decisions made during TechnoStore's development. Each follows the Michael Nygard format (Status / Context / Decision / Consequences / Alternatives Considered / References) and is **immutable once Accepted** — superseded by new ADRs rather than edited in place.
+**33 ADRs** (ADR-001 … ADR-033, contiguous) in [`docs/adr/`](docs/adr/) capturing the significant architectural decisions made during TechnoStore's development. Each follows the Michael Nygard format (Status / Context / Decision / Consequences / Alternatives Considered / References) and is **immutable once Accepted** — superseded by new ADRs rather than edited in place. The table below lists the first ten (the foundations); ADR-011…033 cover the inventory-approval flow, the SAP sprint (ADR-022…029, incl. ADR-028's deliberate drop of the Platform-Event hop and ADR-029's honest trial-limitation note), DACH finance (lexoffice ADR-030, DATEV ADR-031) and the RLM bundle-pricing forensics (ADR-032/033). Browse the directory for the full list.
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -263,17 +263,21 @@ The integration choice per system follows an explicit **Mule vs Apex decision ma
 | `Jira_Config__c` | Protected Hierarchy Custom Setting | Stores JIRA Cloud API token + base URL + project key |
 | `ESignatureConfig` records | Standard sObject managed via Setup → Electronic Signature Configuration | DocuSign vendor account id + Named Credential mapping (see SECURITY.md for the exact records and rotation procedure) |
 | `Inventory_Check_Requested__e` | Platform Event | Fires on Order activation → Mule subscriber → Slack #warehouse |
-| `DocuSign_Signed__e` | Platform Event | Published by Guest User in webhook → trigger subscriber updates Contract.Status |
+| `DocuSign_Status_Update__e` | Platform Event | Published by Guest User in webhook → trigger subscriber updates Contract.Status (an earlier README revision called this `DocuSign_Signed__e`; that name never existed in the repo) |
+| `Inventory_Status_Update__e`, `Invoice_Payment_Requested__e`, `Order_Activated__e` | Platform Events | Warehouse/JIRA decision inbound; Stripe payment-link request (Agentforce action → Mule); SAP sales-order push on activation |
+| `Integration_Error__c`, `Webhook_Event__c` | Custom objects | Correlation-id'd error log + webhook idempotency ledger (ADR-013) |
+| `SAP_Config__c`, `Lexoffice_Config__c`, `Email_Config__c` | Protected Hierarchy Custom Settings | SAP sandbox key; lexoffice key; fallback mailbox (the fix for the hardcoded-mailbox incident) |
 | `Techno_Attribute_Price_Rule__mdt` | Custom Metadata Type | Bundle attribute pricing (RAM/SSD/GPU upcharges) — workaround for broken native engine |
 
 ### Standard object customizations
 
 | Object | Custom fields |
 |---|---|
-| `Order` | `Jira_Ticket__c`, `Stripe_Payment_Intent_Id__c`, `Inventory_Status__c`, `Inventory_Approved_By__c`, `Inventory_Approved_At__c`, `Product_Type__c`, `License_Key__c`, `DocuSign_Envelope_Id__c` |
-| `Contract` | `DocuSign_Envelope_Id__c`, custom flow lifecycle buttons (Submit / Sign / Approve / Activate) |
-| `Quote` | `Total_Tax__c` (rollup), `Total_With_VAT__c` (formula) |
-| `QuoteLineItem` | `Tax_Rate__c`, `Tax_Amount__c`, `Configured_RAM__c`, `Configured_SSD__c`, `Configured_GPU__c`, `Configured_Price_Adjustment__c` |
+| `Order` | Committed custom fields (as of 2026-08-19): `JIRA_Ticket_Id__c`, `Inventory_Status__c`, `Inventory_Check_Requested_At__c`, `Inventory_Confirmed_By__c`, `Inventory_Confirmed_At__c`, `Inventory_Slack_Message_Ts__c`, `SAP_Sales_Order_Number__c`, `SAP_Available_Quantity__c`, `SAP_Inventory_Checked_At__c`, `Status_In_SAP__c`. Earlier README revisions listed `Jira_Ticket__c`, `Product_Type__c`, `License_Key__c`, `Stripe_Payment_Intent_Id__c`, `DocuSign_Envelope_Id__c` on Order — **none of those field files is in the repo**; the Stripe/DocuSign ids live on `Invoice` / `Contract` respectively. |
+| `Contract` | `DocuSign_Envelope_Id__c`, `Name__c`, custom flow lifecycle buttons (Submit / Sign / Approve / Activate) |
+| `Invoice` | `Stripe_Payment_Status__c` + Stripe ids, `SAP_Tax_*`, `SAP_Payment_*`, `Lexoffice_*`, fulfilment flags |
+| `Quote` | `Estimated_VAT_19_Percent__c`, `Total_With_Estimated_VAT__c` (formulas), `Approval_Tier_Label__c`, `Account_Industry__c` |
+| `QuoteLineItem` | `Estimated_VAT_Amount__c`, `Total_With_Estimated_VAT__c` (attribute-pricing rules live in `Techno_Attribute_Price_Rule__mdt`, not as QLI fields) |
 
 ### Apex (organized in 5 SFDX package directories)
 
@@ -313,25 +317,24 @@ The integration choice per system follows an explicit **Mule vs Apex decision ma
 ### UI
 
 - **TechnoStore Sales App** — branded Lightning App with custom orange/blue theme + TS logo
-- **Custom VF pages:** `TechnoStoreInvoicePdf.page` (orange branded), `TechnoStoreReceiptPdf.page` (green branded), `TechnoStoreContractPdf.page`, `WarehouseInventoryApproval.page`
-- **Reusable VF components:** `<c:TechnoStoreHeader/>` (logo + company info), `<c:TechnoStoreSignatureBlock/>`
+- **Custom VF pages (the 4 committed):** `TechnoStoreBrandedInvoice.page`, `TechnoStoreInvoicePreviewPdf.page`, `TechnoStoreContractPdf.page`, `WarehouseInventoryApproval.page`. Earlier README revisions also named `TechnoStoreInvoicePdf.page`, a green `TechnoStoreReceiptPdf.page` and reusable `<c:TechnoStoreHeader/>` / `<c:TechnoStoreSignatureBlock/>` components — **none of those files is in the repo** (`git ls-files '*.component'` = 0); the branded header is inlined in the pages.
 - **4 custom CLM lifecycle screen flows:** Submit For Approval / Send For Signature / Approve / Activate (replacing broken native CLM buttons)
 - **Custom Lightning App + Tab + List Views** for the 4 DACH demo accounts
 
 ### Permissions
 
-- `Notion_Publisher_Access` — Notion integration credentials FLS
-- `Warehouse_Inventory_Approval` — warehouse user access to approval VF page
-- Field-level security rules ensuring Sales reps see Inventory_Status as read-only
+The 8 committed permission sets (no `ViewAll`/`ModifyAll` anywhere — see SECURITY.md):
+- `Notion_Publisher_Access`, `Jira_Integration_Access`, `SAP_Integration_Access` — integration Custom Setting FLS + class access
+- `Inventory_Field_Access` — FLS on the inventory / SAP audit fields (Order, Invoice, Product2) read by the warehouse approval VF page and the SAP services (an earlier README revision called this `Warehouse_Inventory_Approval`, a permission set that does not exist in the repo)
+- `Inventory_Webhook_Access` (JIRA / SAP / WhatsApp / inventory-callback classes + Create/Read on `Inventory_Status_Update__e`, `Webhook_Event__c`, `Integration_Error__c`, `Lead`) and `DocuSign_Webhook_Access` (`DocuSignConnectWebhook` + `DocuSign_Status_Update__e`) — the Site Guest User grants
+- `Demo_Invoice_Access` — CRUD on `Demo_Invoice__c` / `Service_Activation__c`
+- `Bundle_Component_Display_Access` — read-only on `Quote_Bundle_Component__c`
 
 ### MuleSoft project
 
-- `mulesoft/` — Anypoint Studio 7.x project with flows for:
-  - `stripe-create-paymentintent.xml` (form-encoded outbound)
-  - `stripe-webhook-receive.xml` (HMAC verification + Scatter-Gather fan-out)
-  - `sendcloud-create-order-v3.xml` (bare-array payload + dynamic customer info)
-  - `slack-payments-notify.xml` + `slack-warehouse-notify.xml` (Block Kit messages)
-  - `post-payment-fulfillment-router.xml` (Choice router: Physical vs Digital vs Mixed)
+- `mulesoft/` — Anypoint Studio 7.x flows. **Only part of the Mule layer is committed** (checked 2026-08-19 with `git ls-files mulesoft/`):
+  - ✅ committed: `jira-integration-FULL.xml`, `inventory-jira-ticket-flow.xml`, `inventory-check-flow-snippet.xml`, `sap-integration-FULL.xml`, plus `dev.yaml.template` / `jira-properties.yaml.template` and the two `*_SETUP.md` guides
+  - ❌ **not committed** (exist only on the maintainer's machine / CloudHub): `stripe-create-paymentintent.xml` (form-encoded outbound), `stripe-webhook-receive.xml` (HMAC verification + Scatter-Gather fan-out), `sendcloud-create-order-v3.xml`, `slack-payments-notify.xml`, `slack-warehouse-notify.xml`, `post-payment-fulfillment-router.xml`. Consequently the Stripe HMAC claim in SECURITY.md cannot be checked from this repo — `grep -ri hmac mulesoft/` returns nothing.
 
 ### Scripts (`scripts/`)
 
@@ -355,9 +358,10 @@ TechnoStore/
 │       ├── fields/                     Custom fields on standard objects
 │       ├── layouts/                    Page layouts (Order, Contract, Quote, etc.)
 │       ├── flows/                      Screen flows + Autolaunched subflows
-│       ├── pages/                      Visualforce pages
-│       ├── components/                 Reusable VF components
-│       ├── permissionsets/             Per-feature permission sets
+│       ├── pages/                      Visualforce pages (4)
+│       ├── lwc/                        4 LWCs (revenuePulse, paymentJourney, invoiceFinanceActions, bundleIncludedComponents)
+│       ├── triggers/                   5 of the 8 triggers (the other 3 are in force-app-handlers/)
+│       ├── permissionsets/             Per-feature permission sets (8)
 │       ├── namedCredentials/           DocuSign + others
 │       ├── eSignatureConfigs/          CLM Signer Role configuration
 │       ├── approvalProcesses/          Contract.Submit_For_Manager_Approval
@@ -365,11 +369,11 @@ TechnoStore/
 │       ├── staticresources/            TechnoStore_Logo + brand assets
 │       ├── remoteSiteSettings/         External API allowlist
 │       └── sites/                      DocuSign webhook public endpoint
-├── force-app-controllers/            # VF + REST endpoints (~6 classes)
-├── force-app-services/               # External API callouts (~14 classes)
-├── force-app-handlers/               # TriggerHandler + per-sObject (~8 classes)
-├── force-app-actions/                # @InvocableMethod for Flow (~6 classes)
-├── force-app-tests/                  # Test classes (CI test-only deploys)
+├── force-app-controllers/            # VF + REST endpoints (19 classes: 6 custom + 13 stock community controllers)
+├── force-app-services/               # External API callouts (25 classes)
+├── force-app-handlers/               # TriggerHandler + handlers + webhooks (15 classes, 3 triggers)
+├── force-app-actions/                # @InvocableMethod for Flow / Agentforce (6 classes)
+├── force-app-tests/                  # 38 test classes + TestDataFactory (~426 @isTest methods)
 │
 ├── mulesoft/                         # Anypoint Studio 7.x project
 │   └── src/main/mule/flows/
@@ -378,10 +382,10 @@ TechnoStore/
 ├── manifest/                         # package.xml + destructiveChanges.xml
 ├── config/
 │   └── project-scratch-def.json        Scratch org with Industries CPQ + RLM + CLM
-├── .github/workflows/ci.yml          # PMD lint + scratch-org deploy + tests
+├── .github/workflows/ci.yml          # PMD lint (advisory, `|| true`) + scratch-org deploy + tests (needs SFDX_AUTH_URL)
 ├── pmd-ruleset.xml                   # Apex code-quality ruleset
 ├── CONTRIBUTING.md                   # Standing rules + setup
-├── LICENSE                           # MIT + third-party attributions
+├── LICENSE                           # Proprietary (since 2026-05-20) + MIT attribution for the vendored TriggerHandler
 └── README.md                         # This file
 ```
 
@@ -557,7 +561,7 @@ The full ranked analysis with rationale per option is in `memory/notion_portfoli
 
 ## Continuous integration
 
-GitHub Actions runs PMD static analysis on every push and pull request to `main`. A scratch-org deploy + test job runs when the `SFDX_AUTH_URL` repository secret is set (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
+GitHub Actions runs PMD static analysis on every push and pull request to `main` — **advisory only: the PMD step ends in `|| true`, so findings are reported in the log but never fail the build** (the workflow calls this warm-up mode; promoting it to a gate is a deliberate, still-pending decision). A scratch-org deploy + test job runs when the `SFDX_AUTH_URL` repository secret is set (see [.github/workflows/ci.yml](.github/workflows/ci.yml)); without that secret, the advisory lint is the only job that runs.
 
 The scratch-org config (`config/project-scratch-def.json`) requests Industries CPQ + RLM + CLM features. Without these, the deploy fails before any test runs.
 

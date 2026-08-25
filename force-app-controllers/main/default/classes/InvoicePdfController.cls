@@ -1,5 +1,9 @@
 public with sharing class InvoicePdfController {
 
+    // Demo constant: German standard VAT, hardcoded for the PDF's net/tax split. The real rate
+    // for an invoice is whatever the tax engine wrote (Invoice.SAP_Tax_Rate__c / the commercetax
+    // adapter — see ADR-009, ADR-024); a production controller would read that field per
+    // invoice instead of assuming 19% for every line.
     private static final Decimal VAT_RATE = 0.19;
 
     public Invoice invoice { get; set; }

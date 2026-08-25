@@ -36,9 +36,10 @@ TechnoStore/
 │       ├── GetRevenueSummaryAction.cls
 │       └── SendPaymentRemindersAction.cls
 │
-└── force-app-tests/                     ← Apex unit tests for our custom classes (placeholder, empty)
+└── force-app-tests/                     ← Apex tests: 38 *Test.cls + TestDataFactory, ~426 @isTest methods (counted 2026-08-19)
     └── main/default/classes/
-        └── (future *Test.cls files — co-locate or separate, see force-app-tests/README.md)
+        ├── SapEventWebhookTest.cls, WhatsAppWebhookRestServiceTest.cls, DocuSignConnectWebhookTest.cls, ...
+        └── (27 of the 66 non-test classes still have no dedicated companion test — see CONTRIBUTING.md → Testing)
 ```
 
 ## Why this layout
@@ -46,7 +47,7 @@ TechnoStore/
 1. **Discoverability** — A new developer (or recruiter) can immediately see "we have N controllers, M services, P actions" without grepping the entire `classes/` directory.
 2. **Architectural enforcement** — Code reviewers can spot violations like "this Service is doing UI work, why is it calling `ApexPages.currentPage()`?"
 3. **Refactoring leverage** — Moving a class to a different layer is a `git mv` away, and the package directory is part of the change.
-4. **Test discipline** — When unit tests are added, they mirror the layer structure (e.g., `force-app-services-test/`).
+4. **Test discipline** — Tests live in the single `force-app-tests/` package (Salesforce's flat class namespace makes per-layer test packages pointless); the `<ClassName>Test` naming keeps them visually grouped with their layer.
 
 ## Layer rules
 
