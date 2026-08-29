@@ -5,7 +5,7 @@ implementing code, its configuration storage, its architectural decision record,
 most importantly — the **live evidence in the org** that proves it ran.
 
 **Verification date**: 2026-08-20
-**Org**: TechnoStore Developer Edition (`ORG-TS-DEMOEAK`)
+**Org**: TechnoStore Developer Edition (`ORG-TS-DEMO`)
 **Method**: SOQL against business records, Tooling API against org configuration. Every
 "Live evidence" row below is a query result, not a claim.
 
